@@ -166,11 +166,9 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/db-check', async (req, res) => {
     try {
-        // Using async/await for promise-based MySQL2 pool
-        const connection = await db.getConnection();
-        const [result] = await connection.query('SELECT 1');
-        connection.release();
-        
+        // Query PostgreSQL directly using the pool
+        const result = await db.query('SELECT 1');
+
         res.json({
             success: true,
             message: 'Database connected',
@@ -185,6 +183,7 @@ app.get('/api/db-check', async (req, res) => {
         });
     }
 });
+
 
 // ============================================
 // 404 ERROR HANDLER
@@ -253,7 +252,7 @@ app.listen(PORT, HOST, async () => {
     // Test database connection using async/await
     try {
         const connection = await db.getConnection();
-        const [result] = await connection.query('SELECT 1');
+        const [result] = await db.query('SELECT 1');
         connection.release();
         console.log('✅ Database connected successfully\n');
     } catch (error) {
