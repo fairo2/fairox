@@ -1,5 +1,5 @@
 // ============================================
-// UPDATED SERVER.JS - with /logout endpoint
+// UPDATED SERVER.JS - Render-ready (PostgreSQL)
 // ============================================
 
 const express = require('express');
@@ -29,7 +29,7 @@ console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
 console.log('=====================================\n');
 
 const authRoutes = require('./routes/auth');
-const db = require('./config/db'); // should be a pg Pool or Client with .query()
+const db = require('./config/db'); // PostgreSQL pool/client with .query()
 
 const app = express();
 
@@ -62,7 +62,6 @@ const attachUserFromToken = (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
       req.user = decoded;
     } catch (error) {
-      // Token invalid, but routes can decide if they need auth
       console.log('Token verification failed:', error.message);
     }
   }
@@ -121,7 +120,6 @@ app.get('/logout', (req, res) => {
       success: true,
       message: 'Logged out successfully'
     });
-
   } catch (error) {
     console.error('❌ Logout error:', error.message);
     res.status(500).json({
@@ -161,7 +159,6 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/db-check', async (req, res) => {
   try {
-    // Query PostgreSQL directly using the pool
     await db.query('SELECT 1');
     res.json({
       success: true,
@@ -218,11 +215,11 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================
-// SERVER START
+// SERVER START (Render: bind 0.0.0.0 and PORT)
 // ============================================
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT || 10000;  // Render default port
+const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, async () => {
   console.log('\n╔════════════════════════════════════════╗');
@@ -231,14 +228,14 @@ app.listen(PORT, HOST, async () => {
   console.log(`║  ✅ Server running on port ${PORT.toString().padEnd(26)}║`);
   console.log(`║  📡 API URL: http://${HOST}:${PORT}/api${' '.repeat(18)}║`);
   console.log(`║  🏥 Health: http://${HOST}:${PORT}/api/health${' '.repeat(12)}║`);
-  console.log('║  📄 Static files: public/                ║');
-  console.log('║  ─────────────────────────────────────── ║');
-  console.log('║  Routes:                                 ║');
-  console.log('║  • http://localhost:5000/index.html      ║');
-  console.log('║  • http://localhost:5000/admin.html      ║');
-  console.log('║  • http://localhost:5000/pfms.html       ║');
-  console.log('║  • http://localhost:5000/dashboard.html  ║');
-  console.log('║  • http://localhost:5000/logout          ║');
+  console.log('║  📄 Static files: public/               ║');
+  console.log('║  ───────────────────────────────────────║');
+  console.log('║  Routes:                                ║');
+  console.log('║  • http://localhost:5000/index.html     ║');
+  console.log('║  • http://localhost:5000/admin.html     ║');
+  console.log('║  • http://localhost:5000/pfms.html      ║');
+  console.log('║  • http://localhost:5000/dashboard.html ║');
+  console.log('║  • http://localhost:5000/logout         ║');
   console.log('╚════════════════════════════════════════╝\n');
 
   // PostgreSQL connection test
