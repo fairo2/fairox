@@ -1,29 +1,25 @@
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-const pool = mysql.createPool({
+// PostgreSQL connection
+const pool = new Pool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  port: process.env.DB_PORT,
+  max: 10, // Max number of connections
+  idleTimeoutMillis: 30000, // Close idle clients after 30s
 });
 
 // Test connection
-pool.getConnection((err, connection) => {
-  if (err) {
+pool.connect()
+  .then(() => console.log('✅ PostgreSQL connected successfully'))
+  .catch(err => {
     console.error('❌ Database connection failed:', err.message);
     console.error('   Check your .env file credentials!');
-  } else {
-    console.log('✅ Database connected successfully');
-    connection.release();
-  }
-});
+  });
 
-const promisePool = pool.promise();
-
-module.exports = promisePool;
+module.exports = pool;
