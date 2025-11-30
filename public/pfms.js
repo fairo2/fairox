@@ -3,10 +3,10 @@
 // COMBINED: Core PFMS + Privacy Toggle + Dual Currency
 // ============================================
 
-const API_URL = 'http://localhost:5000/api/pfms';
-const PFMS_API_URL = 'http://localhost:5000/api/pfms';
-const RECURRING_API_URL = 'http://localhost:5000/api/recurring';
-const BUDGET_API_URL = 'http://localhost:5000/api/budget';
+const API_URL = 'https://fairox-backend.onrender.com/api/pfms';
+const PFMS_API_URL = 'https://fairox-backend.onrender.com/api/pfms';
+const RECURRING_API_URL = 'https://fairox-backend.onrender.com/api/recurring';
+const BUDGET_API_URL = 'https://fairox-backend.onrender.com/api/budget';
 
 
 // ✅ CRITICAL: Get token FRESH EVERY TIME (not just once on load)
@@ -1468,7 +1468,7 @@ async function exportToExcel() {
     try {
         console.log('📥 Exporting data to Excel...');
         
-        const response = await fetch('http://localhost:5000/api/export/excel', {
+        const response = await fetch('https://fairox-backend.onrender.com/api/export/excel', {
             headers: {
                 'Authorization': `Bearer ${getAuthToken()}`
             }
@@ -1556,7 +1556,7 @@ async function loadOverviewSummary() {
         initializeMonthFilter();
         
         const categoryResponse = await fetch(
-            `http://localhost:5000/api/overview/category-breakdown?month=${selectedMonth}&year=${selectedYear}`,
+            `https://fairox-backend.onrender.com/api/overview/category-breakdown?month=${selectedMonth}&year=${selectedYear}`,
             {
                 headers: { 'Authorization': `Bearer ${getAuthToken()}` }
             }

@@ -144,7 +144,7 @@ app.get('/logout', (req, res) => {
 const cron = require('node-cron');
 cron.schedule('0 0 * * *', () => {
     console.log('Auto-generating recurring transactions...');
-    fetch('http://localhost:5000/api/recurring/process/auto-generate', { method: 'POST' });
+    fetch('https://fairox-backend.onrender.com/api/recurring/process/auto-generate', { method: 'POST' });
 });
 
 // ============================================
