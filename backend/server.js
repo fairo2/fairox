@@ -242,8 +242,8 @@ app.get('/api/db-check', async (req, res) => {
 
 // ============================================
 // AUTO-INITIALIZE ADMIN USER ON STARTUP
+// FIXED: Only creates admin once, never resets password
 // ============================================
-
 
 async function initializeAdmin() {
   try {
@@ -253,13 +253,13 @@ async function initializeAdmin() {
 
     // Check if admin exists
     const adminCheck = await db.query(
-      'SELECT id, email FROM users WHERE email = $1 AND is_admin = $2',
+      'SELECT id, email, password FROM users WHERE email = $1 AND is_admin = $2',
       ['admin@fairox.co.in', true]
     );
 
     if (adminCheck.rows.length === 0) {
-      // Admin doesn't exist - create it
-      console.log('✅ Creating admin user...\n');
+      // Admin doesn't exist - create it ONLY ONCE with default password
+      console.log('✅ Creating admin user for the first time...\n');
       
       const hashedPassword = await bcrypt.hash('Admin@123', 10);
       
@@ -270,28 +270,21 @@ async function initializeAdmin() {
 
       console.log('✅ Admin created successfully!');
       console.log('   Email: admin@fairox.co.in');
-      console.log('   Password: Admin@123\n');
+      console.log('   Default Password: Admin@123');
+      console.log('   ⚠️  IMPORTANT: Change this password after first login!\n');
     } else {
-      // Admin exists - verify and fix password hash
-      console.log('✅ Admin exists, verifying password...\n');
-      
-      const hashedPassword = await bcrypt.hash('Admin@123', 10);
-      
-      // Update password to ensure it's correct
-      await db.query(
-        'UPDATE users SET password = $1 WHERE email = $2',
-        [hashedPassword, 'admin@fairox.co.in']
-      );
-
-      console.log('✅ Admin password verified/updated');
+      // Admin already exists - DO NOT MODIFY PASSWORD
+      // This respects any password changes made by the admin
+      console.log('✅ Admin user already exists');
       console.log('   Email: admin@fairox.co.in');
-      console.log('   Password: Admin@123\n');
+      console.log('   ✅ Using stored password (no reset on restart)\n');
     }
   } catch (error) {
     console.error('⚠️  Admin initialization failed:', error.message);
     console.error('   You may need to create admin manually\n');
   }
 }
+
 
 
 // ============================================
