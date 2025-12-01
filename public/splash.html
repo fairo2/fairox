@@ -1,188 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fairox - Loading</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fairox - Modern Business Solutions</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #001f3f, #007acc);
+    overflow: hidden;
+  }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-        }
+  /* Animated background circles */
+  .bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.15;
+    animation: floatCircles 20s ease-in-out infinite;
+  }
 
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            min-height: 100vh;
-        }
+  @keyframes floatCircles {
+    0% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(20px) translateX(20px); }
+    100% { transform: translateY(0) translateX(0); }
+  }
 
-        .splash-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 2rem;
-            text-align: center;
-        }
+  /* Main container */
+  .splash {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    color: white;
+  }
 
-        /* MAIN LOGO */
-        .splash-logo {
-            font-size: 4rem;
-            font-weight: 900;
-            color: white;
-            text-align: center;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            animation: fadeInScale 1.5s ease-out forwards;
-            opacity: 0;
-            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
-        }
+  /* Logo with 3D scale & rotation */
+  .logo {
+    font-size: 4rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    font-family: 'Arial Black', sans-serif;
+    background: linear-gradient(135deg, #ffffff, #cccccc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transform: scale(0.8) rotateY(0deg);
+    opacity: 0;
+    animation: logoEntrance 2s forwards;
+    filter: drop-shadow(0 0 20px rgba(255,255,255,0.2));
+  }
 
-        /* TAGLINE */
-        .splash-tagline {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.8);
-            letter-spacing: 0.05em;
-            font-weight: 300;
-            animation: fadeInUp 1.5s ease-out 0.5s forwards;
-            opacity: 0;
-        }
+@keyframes logoEntrance {
+  0% { opacity: 0; transform: scale(0.8) rotateY(90deg); filter: blur(5px); }
+  50% { opacity: 1; transform: scale(1.05) rotateY(10deg); filter: blur(2px); }
+  100% { opacity: 1; transform: scale(1) rotateY(0deg); filter: blur(0); }
+}
 
-        /* LOADING SPINNER */
-        .splash-loader {
-            width: 50px;
-            height: 50px;
-            position: relative;
-            animation: fadeIn 1.5s ease-out 1s forwards;
-            opacity: 0;
-        }
+  /* Tagline - animated letter by letter */
+#tagline {
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  opacity: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  overflow: hidden;
+  font-family: monospace;
+}
 
-        .splash-loader span {
-            position: absolute;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            opacity: 1;
-            border-radius: 50%;
-            animation: ripple 1.5s infinite;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
+#tagline span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(20px) scale(0.8);
+  animation: letterFade 0.5s forwards;
+}
 
-        .splash-loader span:nth-child(2) {
-            animation-delay: -0.5s;
-        }
+@keyframes letterFade {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
-        .splash-loader span:nth-child(3) {
-            animation-delay: -1s;
-        }
+/* Spinner layers */
+.spinners {
+  position: relative;
+  width: 80px; height: 80px;
+  margin-top: 2rem;
+}
 
-        /* ANIMATIONS */
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
+.spinner {
+  position: absolute; top: 50%; left: 50%;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  border: 4px solid transparent;
+  animation: spin 4s linear infinite;
+}
+.spinner:nth-child(1) {
+  border-top-color: #00ffff; width: 60px; height: 60px; animation-duration: 3s;
+}
+.spinner:nth-child(2) {
+  border-top-color: #ff00ff; width: 80px; height: 80px; animation-duration: 4s; animation-direction: reverse;
+}
+.spinner:nth-child(3) {
+  border-top-color: #0000ff; width: 70px; height: 70px; animation-duration: 2.5s; animation-delay: 0.5s;
+}
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+@keyframes spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
+/* Progress bar style */
+#progressContainer {
+  width: 80%;
+  max-width: 400px;
+  height: 8px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+  margin-top: 2rem;
+  overflow: hidden;
+}
 
-        @keyframes ripple {
-            from {
-                width: 0;
-                height: 0;
-                opacity: 1;
-            }
-            to {
-                width: 50px;
-                height: 50px;
-                opacity: 0;
-            }
-        }
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(135deg, #00ffff, #ff00ff, #00dfff);
+  animation: fillProgress 3s forwards;
+  border-radius: 4px;
+}
 
-        /* MOBILE RESPONSIVE */
-        @media (max-width: 768px) {
-            .splash-logo {
-                font-size: 3rem;
-            }
+@keyframes fillProgress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
 
-            .splash-tagline {
-                font-size: 1rem;
-            }
+/* Loading text with blinking dots */
+#loadingText {
+  margin-top: 1rem;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  animation: fadeIn 1s forwards 3.5s;
+}
 
-            .splash-container {
-                gap: 1.5rem;
-            }
-        }
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
 
-        @media (max-width: 480px) {
-            .splash-logo {
-                font-size: 2.5rem;
-            }
+.loading-dots {
+  display: inline-block;
+  margin-left: 0.5em;
+}
 
-            .splash-tagline {
-                font-size: 0.9rem;
-            }
-        }
-    </style>
+.loading-dots span {
+  opacity: 0;
+  display: inline-block;
+  margin-right: 5px;
+  animation: blink 1s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.4s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes blink {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+</style>
 </head>
 <body>
-    <!-- SPLASH SCREEN CONTAINER -->
-    <div class="splash-container">
-        <!-- FAIROX LOGO -->
-        <div class="splash-logo">FAIROX</div>
 
-        <!-- TAGLINE -->
-        <div class="splash-tagline">Modern Business Solutions</div>
+<!-- Floating animated background circles -->
+<div class="bg-circle" style="width: 150px; height: 150px; bottom: 10%; right: 5%; background: radial-gradient(circle, #00ffff, transparent);"></div>
+<div class="bg-circle" style="width: 200px; height: 200px; top: 20%; left: 10%; background: radial-gradient(circle, #ff00ff, transparent); animation-delay: 10s;"></div>
+<div class="bg-circle" style="width: 120px; height: 120px; top: 60%; right: 15%; background: radial-gradient(circle, #00dfff, transparent); animation-delay: 15s;"></div>
 
-        <!-- LOADING SPINNER -->
-        <div class="splash-loader">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-    </div>
+<!-- Splash container -->
+<div class="splash">
+  <!-- Advanced Logo -->
+  <div class="logo">FAIROX</div>
+  
+  <!-- Tagline animated letter by letter -->
+  <div id="tagline"></div>
+  
+  <!-- Multi-layer spinner -->
+  <div class="spinners">
+    <div class="spinner"></div>
+    <div class="spinner"></div>
+    <div class="spinner"></div>
+  </div>
+  
+  <!-- Progress bar -->
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
+  
+  <!-- Loading message with blinking dots -->
+  <div id="loadingText">
+    LOADING<span class="loading-dots">
+      <span>.</span>
+      <span>.</span>
+      <span>.</span>
+    </span>
+  </div>
+</div>
 
-    <script>
-        // Redirect to home page after 2.5 seconds
-        setTimeout(function() {
-            window.location.href = '/index.html';
-        }, 4500);
-    </script>
+<script>
+  // Animate the tagline letter by letter
+  const taglineText = "Fairox - Modern Business Solutions";
+  const taglineContainer = document.getElementById('tagline');
+
+  for (const [i, letter] of [...taglineText].entries()) {
+    const span = document.createElement('span');
+    span.textContent = letter;
+    span.style.animationDelay = `${0.1 + i * 0.05}s`;
+    // Optional: skip spaces
+    if (letter === ' ') {
+      span.style.width = '0.5em';
+    }
+    taglineContainer.appendChild(span);
+  }
+
+  // Automatic redirect after ~3.5 seconds
+  setTimeout(() => {
+    window.location.href = '/index.html';
+  }, 3500);
+</script>
+
 </body>
 </html>
