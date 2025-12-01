@@ -1,10 +1,13 @@
 {
   "name": "fairox-backend",
   "version": "1.0.0",
+  "description": "Fairox Management System - Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "create-admin": "node create-admin.js",
+    "setup-db": "npm run create-admin"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -23,5 +26,18 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  }
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "keywords": [
+    "fairox",
+    "management",
+    "api",
+    "rest",
+    "postgres"
+  ],
+  "author": "Fairox Team",
+  "license": "ISC"
 }
