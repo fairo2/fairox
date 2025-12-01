@@ -1,7 +1,8 @@
 ﻿// ============================================
-// COMPLETE AUTH ROUTES - PRODUCTION READY
+// ✅ COMPLETE AUTH ROUTES - PRODUCTION READY
 // File: routes/auth.js
-// Database: PostgreSQL (exports pool directly)
+// Database: PostgreSQL
+// Updated: Dec 1, 2025
 // ============================================
 
 const express = require('express');
@@ -10,7 +11,6 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 
 // ✅ FIXED: Import pool directly (NOT destructured)
-// Your config/db.js exports: module.exports = pool;
 const pool = require('../config/db');
 
 const router = express.Router();
@@ -27,8 +27,8 @@ try {
   process.exit(1);
 }
 
-// ✅ Import auth middleware
-const { authMiddleware } = require('../middleware/auth');
+// ✅ Import auth middleware - BOTH authMiddleware and adminMiddleware
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 console.log('✅ Auth routes loaded');
 
@@ -78,7 +78,7 @@ router.get('/test', (req, res) => {
 });
 
 // ============================================
-// ADMIN LOGIN
+// ADMIN LOGIN - ✅ FIXED VERSION
 // ============================================
 
 router.post('/admin-login', async (req, res) => {
@@ -86,7 +86,7 @@ router.post('/admin-login', async (req, res) => {
     const { email, password } = req.body;
 
     console.log('\n' + '='.repeat(60));
-    console.log('🔍 ADMIN LOGIN');
+    console.log('🔐 ADMIN LOGIN ATTEMPT');
     console.log('='.repeat(60));
     console.log('Email:', email);
     console.log('Password received:', !!password);
@@ -100,17 +100,18 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    console.log('\n[STEP 1] Database query...');
+    // ✅ Step 1: Query database
+    console.log('\n[STEP 1] Querying database...');
     const result = await pool.query(
       'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
       [email, true]
     );
 
     const users = result.rows;
-    console.log('Rows found:', users.length);
+    console.log('   Rows found:', users.length);
 
     if (!users || users.length === 0) {
-      console.log('❌ No admin found');
+      console.log('   ❌ No admin user found');
       return res.status(401).json({
         success: false,
         message: 'Invalid admin credentials'
@@ -118,41 +119,63 @@ router.post('/admin-login', async (req, res) => {
     }
 
     const admin = users[0];
-    console.log('✅ Admin found:', admin.email);
-    console.log('is_approved:', admin.is_approved);
+    console.log('   ✅ Admin found:', admin.email);
+    console.log('   is_approved:', admin.is_approved);
+    console.log('   is_admin:', admin.is_admin);
 
-    // Check approval
+    // ✅ Step 2: Check approval status
+    console.log('\n[STEP 2] Checking approval status...');
     if (!admin.is_approved) {
+      console.log('   ❌ Admin not approved');
       return res.status(401).json({
         success: false,
         message: 'Admin account not approved yet'
       });
     }
+    console.log('   ✅ Admin is approved');
 
-    console.log('\n[STEP 2] Password verification...');
+    // ✅ Step 3: Verify password
+    console.log('\n[STEP 3] Verifying password...');
     const isPasswordValid = await bcrypt.compare(password, admin.password);
-    console.log('Password match:', isPasswordValid);
+    console.log('   Password match:', isPasswordValid);
 
     if (!isPasswordValid) {
+      console.log('   ❌ Password incorrect');
       return res.status(401).json({
         success: false,
         message: 'Invalid admin credentials'
       });
     }
+    console.log('   ✅ Password correct');
 
-    console.log('\n[STEP 3] Generating token...');
+    // ✅ Step 4: Check JWT_SECRET
+    console.log('\n[STEP 4] Checking JWT_SECRET...');
+    if (!process.env.JWT_SECRET) {
+      console.error('   ❌ JWT_SECRET not set in environment!');
+      return res.status(500).json({
+        success: false,
+        message: 'Server error: JWT_SECRET not configured'
+      });
+    }
+    console.log('   ✅ JWT_SECRET is set');
+
+    // ✅ Step 5: Generate token
+    console.log('\n[STEP 5] Generating JWT token...');
     const token = jwt.sign(
       {
         id: admin.id,
         email: admin.email,
-        is_admin: true
+        is_admin: true,
+        name: admin.name
       },
-      process.env.JWT_SECRET || 'your_secret_key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    console.log('✅ Token generated');
+    console.log('   ✅ Token generated');
+    console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
+    console.log('   Token type:', typeof token);
 
-    console.log('✅ LOGIN SUCCESSFUL\n');
+    console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
 
     res.json({
       success: true,
@@ -257,7 +280,7 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('\n🔐 Login attempt:', email);
+    console.log('\n🔐 User login attempt:', email);
 
     if (!email || !password) {
       return res.status(400).json({
@@ -312,7 +335,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Login successful:', email);
+    console.log('✅ User login successful:', email);
 
     res.json({
       success: true,
@@ -325,7 +348,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('❌ User login error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error: ' + error.message
@@ -428,20 +451,20 @@ router.post('/contact', async (req, res) => {
 });
 
 // ============================================
-// ADMIN ROUTES
+// ✅ ADMIN ROUTES - FIXED WITH MIDDLEWARE
 // ============================================
 
-// Get admin stats
-router.get('/admin/stats', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false, message: 'Not authorized' });
-  }
-
+// ✅ Get admin stats - WITH authMiddleware + adminMiddleware
+router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    console.log('📊 Loading admin stats...');
+    
     const pending = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_approved = $1 AND is_admin = $2', [false, false]);
     const approved = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_approved = $1 AND is_admin = $2', [true, false]);
     const total = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = $1', [false]);
     const contacts = await pool.query('SELECT COUNT(*) as count FROM contacts');
+
+    console.log('✅ Stats loaded');
 
     res.json({
       success: true,
@@ -459,52 +482,48 @@ router.get('/admin/stats', authMiddleware, async (req, res) => {
   }
 });
 
-// Get pending users
-router.get('/admin/pending-users', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Get pending users - WITH authMiddleware + adminMiddleware
+router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    console.log('📋 Loading pending users...');
+    
     const result = await pool.query(
       'SELECT id, name, email, created_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY created_at DESC',
       [false, false]
     );
 
+    console.log('✅ Pending users loaded:', result.rows.length);
+
     res.json({ success: true, users: result.rows });
 
   } catch (error) {
     console.error('❌ Pending users error:', error);
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get approved users
-router.get('/admin/approved-users', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Get approved users - WITH authMiddleware + adminMiddleware
+router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    console.log('✅ Loading approved users...');
+    
     const result = await pool.query(
       'SELECT id, name, email, approved_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY approved_at DESC',
       [true, false]
     );
 
+    console.log('✅ Approved users loaded:', result.rows.length);
+
     res.json({ success: true, users: result.rows });
 
   } catch (error) {
     console.error('❌ Approved users error:', error);
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Approve user
-router.post('/admin/approve-user/:id', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Approve user - WITH authMiddleware + adminMiddleware
+router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
 
@@ -549,12 +568,8 @@ router.post('/admin/approve-user/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Reject user
-router.delete('/admin/reject-user/:id', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Reject user - WITH authMiddleware + adminMiddleware
+router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
 
@@ -595,12 +610,8 @@ router.delete('/admin/reject-user/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Revoke user access
-router.post('/admin/revoke-user/:id', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Revoke user access - WITH authMiddleware + adminMiddleware
+router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
 
@@ -645,24 +656,25 @@ router.post('/admin/revoke-user/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Get contacts
-router.get('/admin/contacts', authMiddleware, async (req, res) => {
-  if (!req.user.is_admin) {
-    return res.status(403).json({ success: false });
-  }
-
+// ✅ Get contacts - WITH authMiddleware + adminMiddleware
+router.get('/admin/contacts', authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    console.log('📞 Loading contacts...');
+    
     const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
+    
+    console.log('✅ Contacts loaded:', result.rows.length);
+    
     res.json({ success: true, contacts: result.rows });
 
   } catch (error) {
     console.error('❌ Contacts error:', error);
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
 // ============================================
-// CHANGE PASSWORD
+// CHANGE PASSWORD - ✅ UPDATED
 // ============================================
 
 router.post('/change-password', authMiddleware, async (req, res) => {
