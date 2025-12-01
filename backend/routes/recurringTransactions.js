@@ -24,19 +24,19 @@ router.post('/', authMiddleware, async (req, res) => {
         // ✅ Calculate next due date
         const nextDueDate = calculateNextDueDate(startDate, frequency);
         
-        // ✅ INSERT into database
+        // ✅ FIXED: PostgreSQL syntax with RETURNING id
         const insertQuery = `
             INSERT INTO recurring_transactions 
             (user_id, account_id, category_id, description, amount, mode, currency, frequency, start_date, end_date, next_due_date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+            RETURNING id
         `;
         
-        // ✅ Use array destructuring with mysql2/promise
-        const [result] = await db.query(insertQuery, [
+        const result = await db.query(insertQuery, [
             userId,
             parseInt(accountId),
             parseInt(categoryId),
-            description && description.trim() !== '' ? description : 'Recurring Transaction',  // ✅ FIXED
+            description && description.trim() !== '' ? description : 'Recurring Transaction',
             parseFloat(amount),
             mode || 'Income',
             currency || 'INR',
@@ -46,12 +46,12 @@ router.post('/', authMiddleware, async (req, res) => {
             nextDueDate
         ]);
         
-        console.log('✅ Inserted ID:', result.insertId);
+        console.log('✅ Inserted ID:', result.rows.id);
         
         res.json({
             success: true,
             message: 'Recurring transaction created successfully!',
-            id: result.insertId
+            id: result.rows.id
         });
         
     } catch (error) {
@@ -89,16 +89,16 @@ router.get('/', authMiddleware, async (req, res) => {
             FROM recurring_transactions rt
             LEFT JOIN categories c ON rt.category_id = c.id
             LEFT JOIN accounts a ON rt.account_id = a.id
-            WHERE rt.user_id = ?
+            WHERE rt.user_id = $1
             ORDER BY rt.created_at DESC
         `;
         
-        const [results] = await db.query(selectQuery, [req.user.id]);
+        const results = await db.query(selectQuery, [req.user.id]);
         
-        console.log('✅ Found:', results.length, 'recurring transactions');
+        console.log('✅ Found:', results.rows.length, 'recurring transactions');
         
         // ✅ Map field names for frontend compatibility
-        const mappedResults = results.map(row => ({
+        const mappedResults = results.rows.map(row => ({
             id: row.id,
             accountname: row.account_name,
             account_name: row.account_name,
@@ -142,11 +142,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         
         console.log('🗑️ DELETE /api/recurring/:id - Deleting:', id);
         
-        const deleteQuery = `DELETE FROM recurring_transactions WHERE id = ? AND user_id = ?`;
+        // ✅ FIXED: PostgreSQL syntax
+        const deleteQuery = `DELETE FROM recurring_transactions WHERE id = $1 AND user_id = $2`;
         
-        const [result] = await db.query(deleteQuery, [id, userId]);
+        const result = await db.query(deleteQuery, [id, userId]);
         
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Recurring transaction not found'
@@ -188,7 +189,7 @@ function calculateNextDueDate(baseDate, frequency) {
         
         if (isNaN(date.getTime())) {
             console.error('❌ Invalid date:', baseDate);
-            return new Date().toISOString().split('T')[0];
+            return new Date().toISOString().split('T');
         }
         
         switch(frequency) {
@@ -209,7 +210,7 @@ function calculateNextDueDate(baseDate, frequency) {
         return `${year}-${month}-${day}`;
     } catch (error) {
         console.error('❌ Error calculating next due date:', error);
-        return new Date().toISOString().split('T')[0];
+        return new Date().toISOString().split('T');
     }
 }
 

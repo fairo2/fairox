@@ -62,8 +62,12 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
 
         // Save file info to database
         const db = require('../config/db');
-        const [result] = await db.query(
-            'INSERT INTO uploads (user_id, filename, original_name, file_path, file_size, mime_type) VALUES (?, ?, ?, ?, ?, ?)',
+        
+        // ✅ FIXED: PostgreSQL syntax with RETURNING id
+        const result = await db.query(
+            `INSERT INTO uploads (user_id, filename, original_name, file_path, file_size, mime_type) 
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id`,
             [
                 req.user.id,
                 req.file.filename,
@@ -78,7 +82,7 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
             success: true,
             message: 'File uploaded successfully',
             file: {
-                id: result.insertId,
+                id: result.rows.id,
                 filename: req.file.originalname,
                 size: req.file.size,
                 type: req.file.mimetype
@@ -97,14 +101,19 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
 router.get('/files', authMiddleware, async (req, res) => {
     try {
         const db = require('../config/db');
-        const [files] = await db.query(
-            'SELECT id, original_name, file_size, mime_type, created_at FROM uploads WHERE user_id = ? ORDER BY created_at DESC',
+        
+        // ✅ FIXED: PostgreSQL syntax with $1 parameter
+        const result = await db.query(
+            `SELECT id, original_name, file_size, mime_type, created_at 
+             FROM uploads 
+             WHERE user_id = $1 
+             ORDER BY created_at DESC`,
             [req.user.id]
         );
 
         res.json({
             success: true,
-            files: files
+            files: result.rows
         });
     } catch (error) {
         console.error('Get files error:', error);
@@ -120,18 +129,21 @@ router.delete('/files/:id', authMiddleware, async (req, res) => {
     try {
         const db = require('../config/db');
         
-        // Get file info
-        const [[file]] = await db.query(
-            'SELECT file_path FROM uploads WHERE id = ? AND user_id = ?',
+        // ✅ FIXED: PostgreSQL syntax - no double destructuring
+        const fileResult = await db.query(
+            `SELECT file_path FROM uploads 
+             WHERE id = $1 AND user_id = $2`,
             [req.params.id, req.user.id]
         );
 
-        if (!file) {
+        if (fileResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'File not found'
             });
         }
+
+        const file = fileResult.rows;
 
         // Delete file from filesystem
         if (fs.existsSync(file.file_path)) {
@@ -139,7 +151,10 @@ router.delete('/files/:id', authMiddleware, async (req, res) => {
         }
 
         // Delete from database
-        await db.query('DELETE FROM uploads WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
+        await db.query(
+            `DELETE FROM uploads WHERE id = $1 AND user_id = $2`,
+            [req.params.id, req.user.id]
+        );
 
         res.json({
             success: true,
@@ -158,18 +173,22 @@ router.delete('/files/:id', authMiddleware, async (req, res) => {
 router.get('/download/:id', authMiddleware, async (req, res) => {
     try {
         const db = require('../config/db');
-        const [[file]] = await db.query(
-            'SELECT file_path, original_name FROM uploads WHERE id = ? AND user_id = ?',
+        
+        // ✅ FIXED: PostgreSQL syntax
+        const fileResult = await db.query(
+            `SELECT file_path, original_name FROM uploads 
+             WHERE id = $1 AND user_id = $2`,
             [req.params.id, req.user.id]
         );
 
-        if (!file) {
+        if (fileResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'File not found'
             });
         }
 
+        const file = fileResult.rows;
         res.download(file.file_path, file.original_name);
     } catch (error) {
         console.error('Download error:', error);

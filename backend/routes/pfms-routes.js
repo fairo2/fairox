@@ -1,8 +1,3 @@
-// ============================================
-// CORRECTED PFMS-ROUTES.JS STRUCTURE
-// The Template endpoint MUST be BEFORE authMiddleware
-// ============================================
-
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
@@ -46,24 +41,6 @@ router.get('/transactions/template', (req, res) => {
                 amount: 2000,
                 transaction_date: '2025-11-29',
                 description: 'Monthly rent'
-            },
-            {
-                account_name: 'HDFC',
-                category_name: 'Utilities',
-                mode: 'Expense',
-                currency: 'INR',
-                amount: 3000,
-                transaction_date: '2025-11-28',
-                description: 'Electricity bill'
-            },
-            {
-                account_name: 'Cash',
-                category_name: 'Transport',
-                mode: 'Expense',
-                currency: 'INR',
-                amount: 1000,
-                transaction_date: '2025-11-28',
-                description: 'Taxi fare'
             }
         ];
 
@@ -98,7 +75,15 @@ router.get('/transactions/template', (req, res) => {
 
 const authMiddleware = (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        if (!process.env.JWT_SECRET) {
+            console.error('❌ FATAL: JWT_SECRET not configured in .env');
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error'
+            });
+        }
+
+        const token = req.headers.authorization?.split(' ');
         
         if (!token) {
             return res.status(401).json({ 
@@ -108,12 +93,37 @@ const authMiddleware = (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id || decoded.userId || decoded.user_id;
+        
+        if (!userId) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid token: User ID not found' 
+            });
+        }
+        
         req.user = decoded;
+        req.user.id = userId;
+        req.userId = userId;
         next();
     } catch (error) {
+        console.error('❌ Auth error:', error.message);
+        
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Token expired. Please login again.' 
+            });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid token.' 
+            });
+        }
+        
         return res.status(401).json({ 
             success: false, 
-            message: 'Invalid or expired token.' 
+            message: 'Authentication failed.' 
         });
     }
 };
@@ -166,49 +176,55 @@ router.get('/transactions', async (req, res) => {
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
             JOIN categories c ON t.category_id = c.id
-            WHERE t.user_id = ?
+            WHERE t.user_id = $1
         `;
         
+        let paramIndex = 2;
         const params = [userId];
 
         if (currency) {
-            query += ` AND t.currency = ?`;
+            query += ` AND t.currency = $${paramIndex}`;
             params.push(currency);
+            paramIndex++;
         }
         if (mode) {
-            query += ` AND t.mode = ?`;
+            query += ` AND t.mode = $${paramIndex}`;
             params.push(mode);
+            paramIndex++;
         }
         if (from_date) {
-            query += ` AND t.transaction_date >= ?`;
+            query += ` AND t.transaction_date >= $${paramIndex}`;
             params.push(from_date);
+            paramIndex++;
         }
         if (to_date) {
-            query += ` AND t.transaction_date <= ?`;
+            query += ` AND t.transaction_date <= $${paramIndex}`;
             params.push(to_date);
+            paramIndex++;
         }
         if (search) {
-            query += ` AND (t.description LIKE ? OR a.name LIKE ? OR c.name LIKE ?)`;
             const searchTerm = `%${search}%`;
+            query += ` AND (t.description ILIKE $${paramIndex} OR a.name ILIKE $${paramIndex + 1} OR c.name ILIKE $${paramIndex + 2})`;
             params.push(searchTerm, searchTerm, searchTerm);
+            paramIndex += 3;
         }
 
-        query += ` ORDER BY t.${sortColumn} ${sortDir}`;
-
+        // Get count
         const countQuery = query.replace('SELECT t.*, a.name as account_name, c.name as category_name', 'SELECT COUNT(*) as total');
-        const [countResult] = await db.query(countQuery, params);
-        const total = countResult[0].total;
+        const countResult = await db.query(countQuery, params);
+        const total = parseInt(countResult.rows.total);
         const pages = Math.ceil(total / limit);
 
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-        query += ` LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), offset);
+        // Add sorting and pagination
+        query += ` ORDER BY t.${sortColumn} ${sortDir}`;
+        query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
-        const [transactions] = await db.query(query, params);
+        const result = await db.query(query, params);
 
         res.json({
             success: true,
-            transactions,
+            transactions: result.rows,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -236,25 +252,27 @@ router.post('/transactions', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Amount must be > 0' });
         }
 
-        const [accounts] = await db.query(
-            'SELECT id FROM accounts WHERE id = ? AND user_id = ?',
+        // Verify account ownership
+        const accountCheck = await db.query(
+            'SELECT id FROM accounts WHERE id = $1 AND user_id = $2',
             [account_id, userId]
         );
 
-        if (accounts.length === 0) {
+        if (accountCheck.rows.length === 0) {
             return res.status(403).json({ success: false, message: 'Account not found' });
         }
 
-        const [result] = await db.query(
+        const result = await db.query(
             `INSERT INTO transactions (user_id, currency, account_id, mode, category_id, transaction_date, description, amount)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id`,
             [userId, currency, account_id, mode, category_id, transaction_date, description, parsedAmount]
         );
 
         res.json({
             success: true,
             message: 'Transaction created successfully',
-            id: result.insertId
+            id: result.rows.id
         });
     } catch (error) {
         console.error('Error creating transaction:', error);
@@ -273,19 +291,20 @@ router.put('/transactions/:id', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Amount must be valid' });
         }
 
-        const [transactions] = await db.query(
-            'SELECT id FROM transactions WHERE id = ? AND user_id = ?',
+        // Verify transaction ownership
+        const transactionCheck = await db.query(
+            'SELECT id FROM transactions WHERE id = $1 AND user_id = $2',
             [id, userId]
         );
 
-        if (transactions.length === 0) {
+        if (transactionCheck.rows.length === 0) {
             return res.status(403).json({ success: false, message: 'Transaction not found' });
         }
 
         await db.query(
             `UPDATE transactions 
-             SET currency = ?, account_id = ?, mode = ?, category_id = ?, transaction_date = ?, description = ?, amount = ?
-             WHERE id = ? AND user_id = ?`,
+             SET currency = $1, account_id = $2, mode = $3, category_id = $4, transaction_date = $5, description = $6, amount = $7
+             WHERE id = $8 AND user_id = $9`,
             [currency, account_id, mode, category_id, transaction_date, description, parsedAmount, id, userId]
         );
 
@@ -300,12 +319,12 @@ router.delete('/transactions/:id', async (req, res) => {
         const userId = req.user.id;
         const { id } = req.params;
 
-        const [result] = await db.query(
-            'DELETE FROM transactions WHERE id = ? AND user_id = ?',
+        const result = await db.query(
+            'DELETE FROM transactions WHERE id = $1 AND user_id = $2',
             [id, userId]
         );
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Transaction not found' });
         }
 
@@ -319,14 +338,12 @@ router.delete('/transactions/:id', async (req, res) => {
 
 router.post('/transactions/import-preview', upload.single('file'), async (req, res) => {
     try {
-        const userId = req.user.id;
-
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
         const workbook = XLSX.readFile(req.file.path);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const worksheet = workbook.Sheets[workbook.SheetNames];
         const data = XLSX.utils.sheet_to_json(worksheet);
 
         if (!data || data.length === 0) {
@@ -334,7 +351,7 @@ router.post('/transactions/import-preview', upload.single('file'), async (req, r
             return res.status(400).json({ success: false, message: 'Excel file is empty' });
         }
 
-        const columns = Object.keys(data[0] || {});
+        const columns = Object.keys(data || {});
         const preview = data.slice(0, 10);
 
         fs.unlinkSync(req.file.path);
@@ -361,11 +378,8 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        // Read Excel file
         const workbook = XLSX.readFile(req.file.path);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        // IMPORTANT: raw: false forces XLSX to try reading as strings, but strictly getting raw values is better for dates
+        const worksheet = workbook.Sheets[workbook.SheetNames];
         const data = XLSX.utils.sheet_to_json(worksheet, { raw: true });
 
         if (!data || data.length === 0) {
@@ -373,29 +387,23 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Excel file is empty' });
         }
 
-        // Helper to handle Excel dates (Numbers like 45413)
+        // Helper to handle Excel dates
         const parseExcelDate = (value) => {
             if (!value) return null;
 
-            // Case 1: It's a number (Excel Serial Date)
             if (typeof value === 'number') {
-                // Excel base date is Dec 30, 1899
                 const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-                return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+                return date.toISOString().split('T');
             }
 
-            // Case 2: It's a string
             const strVal = String(value).trim();
-            
-            // Try parsing standard formats
-            if (strVal.match(/^\d{4}-\d{2}-\d{2}$/)) return strVal; // Already YYYY-MM-DD
-            if (strVal.match(/^\d{2}-\d{2}-\d{4}$/)) return strVal.split('-').reverse().join('-'); // DD-MM-YYYY -> YYYY-MM-DD
-            if (strVal.match(/^\d{2}\/\d{2}\/\d{4}$/)) return strVal.split('/').reverse().join('-'); // DD/MM/YYYY -> YYYY-MM-DD
+            if (strVal.match(/^\d{4}-\d{2}-\d{2}$/)) return strVal;
+            if (strVal.match(/^\d{2}-\d{2}-\d{4}$/)) return strVal.split('-').reverse().join('-');
+            if (strVal.match(/^\d{2}\/\d{2}\/\d{4}$/)) return strVal.split('/').reverse().join('-');
 
             return null;
         };
 
-        // Helper to normalize Mode (income -> Income)
         const normalizeMode = (val) => {
             if (!val) return null;
             const lower = String(val).trim().toLowerCase();
@@ -426,25 +434,21 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
             try {
                 const row = normalizeColumnNames(data[i]);
 
-                // 1. FIX AMOUNT
                 const amount = parseFloat(row.amount);
                 if (isNaN(amount) || amount <= 0) {
                     throw new Error(`Invalid amount: "${row.amount}"`);
                 }
 
-                // 2. FIX MODE (Case Insensitive)
                 const mode = normalizeMode(row.mode);
                 if (!mode) {
                     throw new Error(`Invalid mode: "${row.mode}". Use Income, Expense, or Credit Card.`);
                 }
 
-                // 3. FIX CURRENCY (Case Insensitive)
                 let currency = String(row.currency).trim().toUpperCase();
                 if (currency !== 'INR' && currency !== 'SAR') {
                     throw new Error(`Invalid currency: "${currency}". Use INR or SAR.`);
                 }
 
-                // 4. FIX DATE (Handle 45413 and strings)
                 const transDate = parseExcelDate(row.transaction_date);
                 if (!transDate) {
                     throw new Error(`Invalid date: "${row.transaction_date}". Use YYYY-MM-DD or Excel Date format.`);
@@ -457,42 +461,40 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
                     throw new Error('Account Name and Category Name are required.');
                 }
 
-                // --- DATABASE OPERATIONS ---
-
                 // Get/Create Account
-                let [accountResults] = await db.query(
-                    'SELECT id FROM accounts WHERE user_id = ? AND name = ? AND currency = ?',
+                let accountResult = await db.query(
+                    'SELECT id FROM accounts WHERE user_id = $1 AND name = $2 AND currency = $3',
                     [userId, accountName, currency]
                 );
-                let accountId = accountResults.length > 0 ? accountResults[0].id : null;
+                let accountId = accountResult.rows.length > 0 ? accountResult.rows.id : null;
 
                 if (!accountId) {
-                    const [res] = await db.query(
-                        'INSERT INTO accounts (user_id, name, currency) VALUES (?, ?, ?)',
+                    const res = await db.query(
+                        'INSERT INTO accounts (user_id, name, currency) VALUES ($1, $2, $3) RETURNING id',
                         [userId, accountName, currency]
                     );
-                    accountId = res.insertId;
+                    accountId = res.rows.id;
                 }
 
                 // Get/Create Category
-                let [categoryResults] = await db.query(
-                    'SELECT id FROM categories WHERE user_id = ? AND name = ? AND mode = ?',
+                let categoryResult = await db.query(
+                    'SELECT id FROM categories WHERE user_id = $1 AND name = $2 AND mode = $3',
                     [userId, categoryName, mode]
                 );
-                let categoryId = categoryResults.length > 0 ? categoryResults[0].id : null;
+                let categoryId = categoryResult.rows.length > 0 ? categoryResult.rows.id : null;
 
                 if (!categoryId) {
-                    const [res] = await db.query(
-                        'INSERT INTO categories (user_id, name, mode) VALUES (?, ?, ?)',
+                    const res = await db.query(
+                        'INSERT INTO categories (user_id, name, mode) VALUES ($1, $2, $3) RETURNING id',
                         [userId, categoryName, mode]
                     );
-                    categoryId = res.insertId;
+                    categoryId = res.rows.id;
                 }
 
                 // Insert Transaction
                 await db.query(
                     `INSERT INTO transactions (user_id, currency, account_id, mode, category_id, transaction_date, description, amount)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                     [userId, currency, accountId, mode, categoryId, transDate, row.description || '', amount]
                 );
 
@@ -526,18 +528,20 @@ router.get('/accounts', async (req, res) => {
         const userId = req.user.id;
         const { currency } = req.query;
 
-        let query = 'SELECT * FROM accounts WHERE user_id = ?';
+        let query = 'SELECT * FROM accounts WHERE user_id = $1';
         const params = [userId];
+        let paramIndex = 2;
 
         if (currency) {
-            query += ' AND currency = ?';
+            query += ` AND currency = $${paramIndex}`;
             params.push(currency);
+            paramIndex++;
         }
 
         query += ' ORDER BY created_at DESC';
 
-        const [accounts] = await db.query(query, params);
-        res.json({ success: true, accounts });
+        const result = await db.query(query, params);
+        res.json({ success: true, accounts: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -552,15 +556,15 @@ router.post('/accounts', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Name and currency required' });
         }
 
-        const [result] = await db.query(
-            'INSERT INTO accounts (user_id, name, currency) VALUES (?, ?, ?)',
+        const result = await db.query(
+            'INSERT INTO accounts (user_id, name, currency) VALUES ($1, $2, $3) RETURNING id',
             [userId, name, currency]
         );
 
         res.json({
             success: true,
             message: 'Account created successfully',
-            id: result.insertId
+            id: result.rows.id
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -574,7 +578,7 @@ router.put('/accounts/:id', async (req, res) => {
         const { name, currency } = req.body;
 
         await db.query(
-            'UPDATE accounts SET name = ?, currency = ? WHERE id = ? AND user_id = ?',
+            'UPDATE accounts SET name = $1, currency = $2 WHERE id = $3 AND user_id = $4',
             [name, currency, id, userId]
         );
 
@@ -589,12 +593,12 @@ router.delete('/accounts/:id', async (req, res) => {
         const userId = req.user.id;
         const { id } = req.params;
 
-        const [result] = await db.query(
-            'DELETE FROM accounts WHERE id = ? AND user_id = ?',
+        const result = await db.query(
+            'DELETE FROM accounts WHERE id = $1 AND user_id = $2',
             [id, userId]
         );
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Account not found' });
         }
 
@@ -611,18 +615,20 @@ router.get('/categories', async (req, res) => {
         const userId = req.user.id;
         const { mode } = req.query;
 
-        let query = 'SELECT * FROM categories WHERE user_id = ?';
+        let query = 'SELECT * FROM categories WHERE user_id = $1';
         const params = [userId];
+        let paramIndex = 2;
 
         if (mode) {
-            query += ' AND mode = ?';
+            query += ` AND mode = $${paramIndex}`;
             params.push(mode);
+            paramIndex++;
         }
 
         query += ' ORDER BY created_at DESC';
 
-        const [categories] = await db.query(query, params);
-        res.json({ success: true, categories });
+        const result = await db.query(query, params);
+        res.json({ success: true, categories: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -637,15 +643,15 @@ router.post('/categories', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Name and mode required' });
         }
 
-        const [result] = await db.query(
-            'INSERT INTO categories (user_id, name, mode) VALUES (?, ?, ?)',
+        const result = await db.query(
+            'INSERT INTO categories (user_id, name, mode) VALUES ($1, $2, $3) RETURNING id',
             [userId, name, mode]
         );
 
         res.json({
             success: true,
             message: 'Category created successfully',
-            id: result.insertId
+            id: result.rows.id
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -659,7 +665,7 @@ router.put('/categories/:id', async (req, res) => {
         const { name, mode } = req.body;
 
         await db.query(
-            'UPDATE categories SET name = ?, mode = ? WHERE id = ? AND user_id = ?',
+            'UPDATE categories SET name = $1, mode = $2 WHERE id = $3 AND user_id = $4',
             [name, mode, id, userId]
         );
 
@@ -674,12 +680,12 @@ router.delete('/categories/:id', async (req, res) => {
         const userId = req.user.id;
         const { id } = req.params;
 
-        const [result] = await db.query(
-            'DELETE FROM categories WHERE id = ? AND user_id = ?',
+        const result = await db.query(
+            'DELETE FROM categories WHERE id = $1 AND user_id = $2',
             [id, userId]
         );
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Category not found' });
         }
 
@@ -696,53 +702,53 @@ router.get('/stats', async (req, res) => {
         const userId = req.user.id;
 
         // Get INR Income
-        const [inrIncomeResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Income' AND currency = 'INR'`,
+        const inrIncomeResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Income' AND currency = 'INR'`,
             [userId]
         );
 
         // Get INR Expense
-        const [inrExpenseResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Expense' AND currency = 'INR'`,
+        const inrExpenseResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Expense' AND currency = 'INR'`,
             [userId]
         );
 
         // Get INR Credit Card
-        const [inrCreditCardResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Credit Card' AND currency = 'INR'`,
+        const inrCreditCardResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Credit Card' AND currency = 'INR'`,
             [userId]
         );
 
         // Get SAR Income
-        const [sarIncomeResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Income' AND currency = 'SAR'`,
+        const sarIncomeResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Income' AND currency = 'SAR'`,
             [userId]
         );
 
         // Get SAR Expense
-        const [sarExpenseResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Expense' AND currency = 'SAR'`,
+        const sarExpenseResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Expense' AND currency = 'SAR'`,
             [userId]
         );
 
         // Get SAR Credit Card
-        const [sarCreditCardResult] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-             WHERE user_id = ? AND mode = 'Credit Card' AND currency = 'SAR'`,
+        const sarCreditCardResult = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::NUMERIC as total FROM transactions 
+             WHERE user_id = $1 AND mode = 'Credit Card' AND currency = 'SAR'`,
             [userId]
         );
 
-        const inrIncome = parseFloat(inrIncomeResult[0].total) || 0;
-        const inrExpense = parseFloat(inrExpenseResult[0].total) || 0;
-        const inrCreditCard = parseFloat(inrCreditCardResult[0].total) || 0;
-        const sarIncome = parseFloat(sarIncomeResult[0].total) || 0;
-        const sarExpense = parseFloat(sarExpenseResult[0].total) || 0;
-        const sarCreditCard = parseFloat(sarCreditCardResult[0].total) || 0;
+        const inrIncome = parseFloat(inrIncomeResult.rows.total) || 0;
+        const inrExpense = parseFloat(inrExpenseResult.rows.total) || 0;
+        const inrCreditCard = parseFloat(inrCreditCardResult.rows.total) || 0;
+        const sarIncome = parseFloat(sarIncomeResult.rows.total) || 0;
+        const sarExpense = parseFloat(sarExpenseResult.rows.total) || 0;
+        const sarCreditCard = parseFloat(sarCreditCardResult.rows.total) || 0;
 
         res.json({
             success: true,

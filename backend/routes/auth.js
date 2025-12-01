@@ -45,7 +45,8 @@ router.post('/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND is_admin = 1', [email]);
+    // ✅ FIXED: ? → $1
+    const [users] = await db.query('SELECT * FROM users WHERE email = $1 AND is_admin = 1', [email]);
     
     if (users.length === 0) {
       return res.status(401).json({
@@ -54,7 +55,7 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    const admin = users[0];
+    const admin = users;
     const isMatch = await bcrypt.compare(password, admin.password);
     
     if (!isMatch) {
@@ -94,8 +95,8 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check if user exists
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    // ✅ FIXED: ? → $1
+    const [users] = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     
     if (users.length > 0) {
       return res.status(400).json({
@@ -107,9 +108,9 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user (with is_approved = 0)
+    // ✅ FIXED: ? → $1, $2, $3, 0
     await db.query(
-      'INSERT INTO users (name, email, password, is_approved) VALUES (?, ?, ?, 0)',
+      'INSERT INTO users (name, email, password, is_approved) VALUES ($1, $2, $3, 0)',
       [name, email, hashedPassword]
     );
 
@@ -149,8 +150,8 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Get user
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    // ✅ FIXED: ? → $1
+    const [users] = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     
     if (users.length === 0) {
       return res.status(400).json({
@@ -159,7 +160,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = users[0];
+    const user = users;
 
     // Check if approved
     if (!user.is_approved && !user.is_admin) {
@@ -207,8 +208,9 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', authMiddleware, async (req, res) => {
   try {
+    // ✅ FIXED: ? → $1
     const [users] = await db.query(
-      'SELECT id, name, email, created_at FROM users WHERE id = ?',
+      'SELECT id, name, email, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
 
@@ -221,7 +223,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      user: users[0]
+      user: users
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -237,9 +239,9 @@ router.post('/contact', async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
 
-    // Save to database
+    // ✅ FIXED: ? → $1, $2, $3, $4, $5
     await db.query(
-      'INSERT INTO contacts (name, email, phone, subject, message) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO contacts (name, email, phone, subject, message) VALUES ($1, $2, $3, $4, $5)',
       [name, email, phone, subject, message]
     );
 
@@ -335,15 +337,15 @@ router.post('/admin/approve-user/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Get user details before approving
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = ?', [req.params.id]);
+    // ✅ FIXED: ? → $1
+    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Approve user
-    await db.query('UPDATE users SET is_approved = 1, approved_by = ?, approved_at = NOW() WHERE id = ?', [req.user.id, req.params.id]);
+    // ✅ FIXED: ? → $1, $2
+    await db.query('UPDATE users SET is_approved = 1, approved_by = $1, approved_at = NOW() WHERE id = $2', [req.user.id, req.params.id]);
     
     // Send approval email to user
     await sendEmail(
@@ -378,15 +380,15 @@ router.delete('/admin/reject-user/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Get user details before deleting
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = ? AND is_admin = 0', [req.params.id]);
+    // ✅ FIXED: ? → $1
+    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1 AND is_admin = 0', [req.params.id]);
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Delete user
-    await db.query('DELETE FROM users WHERE id = ? AND is_admin = 0', [req.params.id]);
+    // ✅ FIXED: ? → $1
+    await db.query('DELETE FROM users WHERE id = $1 AND is_admin = 0', [req.params.id]);
     
     // Send rejection email to user
     await sendEmail(
@@ -421,15 +423,15 @@ router.post('/admin/revoke-user/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Get user details before revoking
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = ?', [req.params.id]);
+    // ✅ FIXED: ? → $1
+    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Revoke access
-    await db.query('UPDATE users SET is_approved = 0, approved_by = NULL, approved_at = NULL WHERE id = ?', [req.params.id]);
+    // ✅ FIXED: ? → $1
+    await db.query('UPDATE users SET is_approved = 0, approved_by = NULL, approved_at = NULL WHERE id = $1', [req.params.id]);
     
     // Send revocation email to user
     await sendEmail(
@@ -498,14 +500,15 @@ router.post('/change-password', authMiddleware, async (req, res) => {
         
         // ✅ Get current user
         console.log('🔍 Looking up user:', userId);
-        const query = 'SELECT id, email, password FROM users WHERE id = ?';
+        // ✅ FIXED: ? → $1
+        const query = 'SELECT id, email, password FROM users WHERE id = $1';
         
         let user = null;
         try {
             const [rows] = await db.query(query, [userId]);
             
             console.log('📊 Query returned rows.length:', rows.length);
-            console.log('📊 rows[0] type:', typeof rows[0]);
+            console.log('📊 rows type:', typeof rows);
             
             if (!rows || rows.length === 0) {
                 console.log('❌ No user found');
@@ -518,24 +521,24 @@ router.post('/change-password', authMiddleware, async (req, res) => {
             // ✅ FIXED: Get the user data - handle multiple access patterns
             let userData = null;
             
-            // Method 1: Try direct field access first (rows[0].id, rows[0].email, rows[0].password)
-            if (rows[0] && rows[0].id !== undefined && rows[0].email !== undefined && rows[0].password !== undefined) {
-                userData = rows[0];
-                console.log('✅ Using direct field access (rows[0].id)');
+            // Method 1: Try direct field access first (rows.id, rows.email, rows.password)
+            if (rows && rows.id !== undefined && rows.email !== undefined && rows.password !== undefined) {
+                userData = rows;
+                console.log('✅ Using direct field access (rows.id)');
             }
-            // Method 2: If Method 1 fails, try rows[0][0] (nested array)
-            else if (rows[0] && rows[0][0] && rows[0][0].id !== undefined && rows[0][0].email !== undefined && rows[0][0].password !== undefined) {
-                userData = rows[0][0];
-                console.log('✅ Using nested access (rows[0][0])');
+            // Method 2: If Method 1 fails, try rows (nested array)
+            else if (rows && rows && rows.id !== undefined && rows.email !== undefined && rows.password !== undefined) {
+                userData = rows;
+                console.log('✅ Using nested access (rows)');
             }
-            // Method 3: Try indexed access (rows[0][0], rows[0][1], rows[0][2])
-            else if (rows[0] && rows[0][0] !== undefined && rows[0][1] !== undefined && rows[0][2] !== undefined) {
+            // Method 3: Try indexed access (rows, rows, rows)
+            else if (rows && rows !== undefined && rows !== undefined && rows !== undefined) {
                 userData = {
-                    id: rows[0][0],
-                    email: rows[0][1],
-                    password: rows[0][2]
+                    id: rows,
+                    email: rows,
+                    password: rows
                 };
-                console.log('✅ Using indexed access (rows[0][0], rows[0][1], rows[0][2])');
+                console.log('✅ Using indexed access (rows, rows, rows)');
             }
             
             console.log('📊 Extracted user:', {
@@ -546,9 +549,9 @@ router.post('/change-password', authMiddleware, async (req, res) => {
             
             if (!userData || !userData.id || !userData.email || !userData.password) {
                 console.error('❌ Could not extract valid user data');
-                console.error('📊 Full rows[0]:', rows[0]);
-                if (rows[0] && rows[0][0]) {
-                    console.error('📊 rows[0][0]:', rows[0][0]);
+                console.error('📊 Full rows:', rows);
+                if (rows && rows) {
+                    console.error('📊 rows:', rows);
                 }
                 return res.status(500).json({
                     success: false,
@@ -623,7 +626,8 @@ router.post('/change-password', authMiddleware, async (req, res) => {
         
         // ✅ Update password in database
         console.log('💾 Updating password in database...');
-        const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
+        // ✅ FIXED: ? → $1, $2
+        const updateQuery = 'UPDATE users SET password = $1 WHERE id = $2';
         
         try {
             const [updateResult] = await db.query(updateQuery, [hashedPassword, user.id]);
@@ -688,6 +692,5 @@ router.get('/logout', authMiddleware, async (req, res) => {
         });
     }
 });
-
 
 module.exports = router;

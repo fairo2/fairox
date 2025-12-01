@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 async function createAdmin() {
   // Your password (change this to whatever you want)
@@ -10,32 +11,47 @@ async function createAdmin() {
   
   console.log('Password Hash:', hashedPassword);
   
-  // Database connection
-  const connection = await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Vaseemterminal@092025', // Your MySQL password
-    database: 'fairox_db'
+  // ✅ FIXED: PostgreSQL connection using environment variables
+  const pool = new Pool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
   
-  // Delete old admin if exists
-  await connection.execute('DELETE FROM users WHERE email = ?', ['admin@fairox.co.in']);
-  
-  // Insert new admin
-  await connection.execute(
-    'INSERT INTO users (name, email, password, is_approved, is_admin) VALUES (?, ?, ?, ?, ?)',
-    ['Admin User', 'admin@fairox.co.in', hashedPassword, 1, 1]
-  );
-  
-  console.log('✅ Admin user created successfully!');
-  console.log('Email: admin@fairox.co.in');
-  console.log('Password:', password);
-  
-  await connection.end();
-  process.exit(0);
+  try {
+    const connection = await pool.connect();
+    
+    // ✅ FIXED: PostgreSQL parameters ($1, $2, etc.)
+    // Delete old admin if exists
+    await connection.query(
+      'DELETE FROM users WHERE email = $1',
+      ['admin@fairox.co.in']
+    );
+    
+    // Insert new admin
+    await connection.query(
+      'INSERT INTO users (name, email, password, is_approved, is_admin) VALUES ($1, $2, $3, $4, $5)',
+      ['Admin User', 'admin@fairox.co.in', hashedPassword, true, true]
+    );
+    
+    console.log('✅ Admin user created successfully!');
+    console.log('Email: admin@fairox.co.in');
+    console.log('Password:', password);
+    console.log('Password Hash:', hashedPassword);
+    
+    connection.release();
+    await pool.end();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error creating admin user:', error);
+    await pool.end();
+    process.exit(1);
+  }
 }
 
-createAdmin().catch(err => {
-  console.error('Error:', err);
-  process.exit(1);
-});
+createAdmin();

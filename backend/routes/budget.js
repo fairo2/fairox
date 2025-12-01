@@ -23,14 +23,17 @@ router.post('/limits', authMiddleware, async (req, res) => {
             });
         }
         
-        // ✅ Use ON DUPLICATE KEY UPDATE (your existing pattern)
+        // ✅ FIXED: PostgreSQL ON CONFLICT syntax
         const query = `
             INSERT INTO budget_limits 
             (user_id, category_id, currency, monthly_limit, alert_threshold)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-            monthly_limit = VALUES(monthly_limit),
-            alert_threshold = VALUES(alert_threshold)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id, category_id, currency) 
+            DO UPDATE SET 
+                monthly_limit = $4,
+                alert_threshold = $5,
+                updated_at = NOW()
+            RETURNING id
         `;
         
         const [result] = await db.query(query, [
@@ -46,7 +49,7 @@ router.post('/limits', authMiddleware, async (req, res) => {
         res.json({
             success: true,
             message: 'Budget limit set successfully!',
-            id: result.insertId
+            id: result?.id || null
         });
         
     } catch (error) {
@@ -66,6 +69,7 @@ router.get('/status', authMiddleware, async (req, res) => {
     try {
         console.log('📤 GET /api/budget/status - Fetching for user:', req.user.id);
         
+        // ✅ FIXED: PostgreSQL date functions and parameter syntax
         const query = `
             SELECT 
                 bl.id,
@@ -76,16 +80,16 @@ router.get('/status', authMiddleware, async (req, res) => {
                 bl.alert_threshold,
                 c.name as category_name,
                 COALESCE(SUM(t.amount), 0) as current_spending,
-                ROUND((COALESCE(SUM(t.amount), 0) / bl.monthly_limit) * 100, 2) as percentage_used
+                ROUND((COALESCE(SUM(t.amount), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON t.category_id = bl.category_id 
                 AND t.user_id = bl.user_id 
                 AND t.currency = bl.currency
-                AND YEAR(t.transaction_date) = YEAR(CURDATE())
-                AND MONTH(t.transaction_date) = MONTH(CURDATE())
+                AND EXTRACT(YEAR FROM t.transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM t.transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
-            WHERE bl.user_id = ?
+            WHERE bl.user_id = $1
             GROUP BY bl.id, bl.user_id, bl.category_id, bl.currency, bl.monthly_limit, bl.alert_threshold, c.name
             ORDER BY bl.created_at DESC
         `;
@@ -142,7 +146,6 @@ router.get('/status', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
 // DELETE BUDGET LIMIT (DELETE /api/budget/:id)
 // ============================================
@@ -153,13 +156,13 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         
         console.log('🗑️ DELETE /api/budget/:id - Deleting:', id);
         
-        // ✅ Hard delete (if is_active column exists, uncomment the soft delete below)
-        const deleteQuery = `DELETE FROM budget_limits WHERE id = ? AND user_id = ?`;
+        // ✅ FIXED: PostgreSQL parameter syntax
+        const deleteQuery = `DELETE FROM budget_limits WHERE id = $1 AND user_id = $2`;
         
-        // ✅ Uncomment this for soft delete:
-        // const deleteQuery = `UPDATE budget_limits SET is_active = false WHERE id = ? AND user_id = ?`;
+        // ✅ Alternative: Soft delete (uncomment if you have is_active column)
+        // const deleteQuery = `UPDATE budget_limits SET is_active = false WHERE id = $1 AND user_id = $2`;
         
-        const [result] = await db.query(deleteQuery, [id, userId]);
+        const [result] = await db.query(deleteQuery, [$1 = id, $2 = userId]);
         
         if (result.affectedRows === 0) {
             return res.status(404).json({

@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 
-
 // ============================================
 // GET OVERVIEW SUMMARY DATA
 // ============================================
@@ -13,7 +12,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ Get all transactions with account balance info
+        // ✅ FIXED: PostgreSQL parameters ($1, $2, etc.)
         const transactionQuery = `
             SELECT 
                 t.id,
@@ -21,7 +20,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
                 t.mode,
                 t.currency
             FROM transactions t
-            WHERE t.user_id = ?
+            WHERE t.user_id = $1
         `;
         
         const [transactions] = await db.query(transactionQuery, [userId]);
@@ -71,9 +70,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
-// GET CATEGORY BREAKDOWN FOR PIE CHART (FIXED SQL)
+// GET CATEGORY BREAKDOWN FOR PIE CHART (FIXED FOR PostgreSQL)
 // ============================================
 router.get('/category-breakdown', authMiddleware, async (req, res) => {
     try {
@@ -93,21 +91,21 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
             year = new Date().getFullYear();
         }
         
-        // ✅ Get spending by category with month/year filter
+        // ✅ FIXED: PostgreSQL syntax for category breakdown
         const categoryQuery = `
             SELECT 
-                c.name as category_name,
+                COALESCE(c.name, 'Uncategorized') as category_name,
                 t.currency,
                 COALESCE(SUM(t.amount), 0) as total_amount,
                 COUNT(t.id) as transaction_count,
-                GROUP_CONCAT(DISTINCT t.mode) as modes
+                STRING_AGG(DISTINCT t.mode, ', ') as modes
             FROM transactions t
             LEFT JOIN categories c ON t.category_id = c.id
-            WHERE t.user_id = ?
+            WHERE t.user_id = $1
             AND t.mode IN ('Expense', 'Credit Card')
-            AND YEAR(t.transaction_date) = ?
-            AND MONTH(t.transaction_date) = ?
-            GROUP BY c.name, t.currency
+            AND EXTRACT(YEAR FROM t.transaction_date) = $2
+            AND EXTRACT(MONTH FROM t.transaction_date) = $3
+            GROUP BY COALESCE(c.name, 'Uncategorized'), t.currency
             ORDER BY t.currency, total_amount DESC
         `;
         
@@ -152,7 +150,5 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
         });
     }
 });
-
-
 
 module.exports = router;

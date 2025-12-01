@@ -2,7 +2,16 @@ const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        // ✅ NEW: Verify JWT_SECRET is configured
+        if (!process.env.JWT_SECRET) {
+            console.error('❌ FATAL: JWT_SECRET not configured in .env');
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error'
+            });
+        }
+
+        const token = req.headers.authorization?.split(' ');
         
         if (!token) {
             return res.status(401).json({ 
@@ -11,9 +20,10 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
+        // ✅ Verify token with proper error handling
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // ✅ CRITICAL: Extract userId from token
+        // ✅ Extract userId from token
         const userId = decoded.id || decoded.userId || decoded.user_id;
         
         if (!userId) {
@@ -32,25 +42,49 @@ const authMiddleware = (req, res, next) => {
             req.user.is_admin = true;
         }
         
-        console.log('✅ Auth successful - User ID:', userId);
+        console.log('✅ Auth successful - User ID:', userId, 'Admin:', !!decoded.is_admin);
         
         next();
     } catch (error) {
         console.error('❌ Auth error:', error.message);
+        
+        // ✅ NEW: Distinguish between token errors
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Token expired. Please login again.' 
+            });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid token.' 
+            });
+        }
+        
         return res.status(401).json({ 
             success: false, 
-            message: 'Invalid or expired token.' 
+            message: 'Authentication failed.' 
         });
     }
 };
 
 const adminMiddleware = (req, res, next) => {
-    if (!req.user || !req.user.is_admin) {
-        return res.status(403).json({ 
+    // ✅ IMPROVED: Better error checking
+    if (!req.user) {
+        return res.status(401).json({ 
             success: false, 
-            message: 'Access denied. Admin only.' 
+            message: 'Authentication required.' 
         });
     }
+
+    if (!req.user.is_admin) {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Access denied. Admin privileges required.' 
+        });
+    }
+    
+    console.log('✅ Admin access granted to user:', req.user.id);
     next();
 };
 
