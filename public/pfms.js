@@ -9,35 +9,33 @@ const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
 const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
 
 
-// ✅ CRITICAL: Get token FRESH EVERY TIME (not just once on load)
+// ============================================
+// ✅ GET AUTH TOKEN - SIMPLE & CLEAN
+// ============================================
+
 function getAuthToken() {
-    // Try localStorage first
-    let token = localStorage.getItem('authToken');
-    if (token && token.startsWith('eyJ')) return token;
+    const token = localStorage.getItem('token');
     
-    // Try alternate key
-    token = localStorage.getItem('adminToken');
-    if (token && token.startsWith('eyJ')) return token;
+    if (!token) {
+        console.error('❌ No token in localStorage');
+        return null;
+    }
     
-    // Try with token key
-    token = localStorage.getItem('token');
-    if (token && token.startsWith('eyJ')) return token;
+    if (!token.startsWith('eyJ')) {
+        console.error('❌ Invalid token format');
+        return null;
+    }
     
-    // Try sessionStorage
-    token = sessionStorage.getItem('authToken');
-    if (token && token.startsWith('eyJ')) return token;
-    
-    console.error('❌ NO VALID TOKEN FOUND');
-    return null;
+    return token;
 }
 
-// Initialize token (will be refreshed on every API call)
-let authToken = getAuthToken();
 
+// Global variables
 let allTransactions = [];
 let allAccounts = [];
 let allCategories = [];
 let currentPage = 1;
+
 
 // ============================================
 // STATE MANAGEMENT - PRIVACY & CURRENCY
@@ -52,8 +50,8 @@ let statsData = {}; // Store stats data
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ✅ GET FRESH TOKEN ON PAGE LOAD
-    authToken = getAuthToken();
+    // ✅ Check if user is logged in
+    const authToken = getAuthToken();
     
     if (!authToken) {
         alert('Please login first!');
@@ -92,27 +90,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mode').addEventListener('change', loadCategories);
     document.getElementById('transactionForm').addEventListener('submit', addTransaction);
     
-    // ✅ LOAD RECURRING TRANSACTIONS DATA (with delay to ensure allAccounts & allCategories are ready)
+    // ✅ LOAD RECURRING TRANSACTIONS DATA (with delay)
     setTimeout(() => {
         console.log('⏳ Initializing recurring transactions...');
         loadAccountsForRecurring();
         loadCategoriesForRecurring();
         loadRecurringTransactions();
         console.log('✅ Recurring transactions initialized!');
-    }, 500);  // Wait 500ms for main data to load
+    }, 500);
 });
 
+
 // ============================================
-// API HELPER FUNCTION
+// ✅ API HELPER FUNCTION - FIXED VERSION
 // ============================================
 
 async function apiCall(url, options = {}) {
     try {
+        // ✅ Get FRESH token on EVERY API call
+        const token = getAuthToken();
+        
+        if (!token) {
+            console.error('❌ No token available - redirecting to login');
+            showMessage('❌ Please login first', 'error');
+            window.location.href = '/index.html';
+            return null;
+        }
+
         const headers = {
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${token}`,  // ← FRESH token every time!
             'Content-Type': 'application/json',
             ...options.headers
         };
+
+        console.log('🔐 API Call:', url, '| Token:', token.substring(0, 20) + '...');
 
         const response = await fetch(`${API_URL}${url}`, {
             ...options,
@@ -121,18 +132,30 @@ async function apiCall(url, options = {}) {
 
         const data = await response.json();
 
+        // ✅ Handle 401 errors (token expired/invalid)
+        if (response.status === 401) {
+            console.error('❌ Token expired or invalid - redirecting to login');
+            localStorage.clear();
+            window.location.href = '/index.html';
+            return null;
+        }
+
         if (!response.ok) {
+            console.error('❌ API error:', data.message);
             showMessage(`❌ ${data.message}`, 'error');
             return null;
         }
 
+        console.log('✅ API Response received');
         return data;
+
     } catch (error) {
-        console.error('API Error:', error);
+        console.error('❌ API Connection Error:', error);
         showMessage('❌ Connection error', 'error');
         return null;
     }
 }
+
 
 // ============================================
 // UI HELPER FUNCTIONS
