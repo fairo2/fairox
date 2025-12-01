@@ -1,11 +1,13 @@
 // ============================================
-// PFMS FRONTEND JAVASCRIPT
+// PFMS FRONTEND JAVASCRIPT - COMPLETE UPDATED
 // ============================================
+
 
 const API_URL = 'https://api.fairox.co.in/api/pfms';
 const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
 const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
 const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
+
 
 // ✅ Get auth token - SIMPLE
 function getAuthToken() {
@@ -14,12 +16,14 @@ function getAuthToken() {
     return token;
 }
 
+
 let allTransactions = [];
 let allAccounts = [];
 let allCategories = [];
 let currentPage = 1;
-let privacyMode = true;
+let privacyMode = localStorage.getItem('pfmsPrivacyMode') === 'true'; // Default: hidden
 let statsData = {};
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const authToken = getAuthToken();
@@ -29,30 +33,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const savedPrivacy = localStorage.getItem('pfmsPrivacyMode');
-    if (savedPrivacy !== null) {
-        privacyMode = savedPrivacy === 'true';
-    }
-    
-    const btn = document.getElementById('privacyToggleBtn');
-    if (btn) {
-        if (privacyMode) {
-            btn.innerHTML = '🔒 Show';
-            btn.style.background = '#FF6B6B';
-        } else {
-            btn.innerHTML = '👁️ Hide';
-            btn.style.background = '#4CAF50';
-        }
-        btn.addEventListener('click', togglePrivacyMode);
-    }
+    // Initialize privacy mode
+    initPrivacyMode();
 
+    // Set today's date in transaction form
     document.getElementById('transactionDate').valueAsDate = new Date();
+    
+    // Load initial data
     loadInitialData();
     
+    // Event listeners
     document.getElementById('currency').addEventListener('change', loadAccounts);
     document.getElementById('mode').addEventListener('change', loadCategories);
     document.getElementById('transactionForm').addEventListener('submit', addTransaction);
     
+    // Load recurring transactions
     setTimeout(() => {
         console.log('⏳ Initializing recurring transactions...');
         loadAccountsForRecurring();
@@ -60,7 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRecurringTransactions();
         console.log('✅ Recurring transactions initialized!');
     }, 500);
+
+    // Load theme
+    if (localStorage.getItem('pfmsTheme') === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
 });
+
 
 // ✅ API CALL - FIXED (Get fresh token EVERY time)
 async function apiCall(url, options = {}) {
@@ -115,6 +116,7 @@ async function apiCall(url, options = {}) {
 // UI HELPER FUNCTIONS
 // ============================================
 
+
 function showMessage(message, type = 'success') {
     const msgEl = document.getElementById('message');
     msgEl.textContent = message;
@@ -122,17 +124,21 @@ function showMessage(message, type = 'success') {
     setTimeout(() => msgEl.classList.remove('active'), 3000);
 }
 
+
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
 }
+
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
 
+
 // ============================================
 // DATA LOADING FUNCTIONS
 // ============================================
+
 
 async function loadInitialData() {
     await loadStats();
@@ -141,9 +147,11 @@ async function loadInitialData() {
     await loadTransactions();
 }
 
+
 // ============================================
 // UPDATED: Load Stats with Currency Separation
 // ============================================
+
 
 async function loadStats() {
     try {
@@ -161,81 +169,139 @@ async function loadStats() {
 
 
 // ============================================
+// FIXED: Toggle Privacy Mode Function
+// ============================================
+
+function togglePrivacy() {
+    try {
+        privacyMode = !privacyMode;
+        
+        // Update button
+        const btn = document.getElementById('privacyToggleBtn');
+        if (privacyMode) {
+            btn.textContent = '🔒 Hide';
+            btn.style.background = '#FF6B6B';
+        } else {
+            btn.textContent = '👁️ Show';
+            btn.style.background = '#4CAF50';
+        }
+        
+        // Save preference
+        localStorage.setItem('pfmsPrivacyMode', privacyMode);
+        
+        // Toggle visibility of all private elements
+        document.querySelectorAll('[data-private]').forEach(el => {
+            el.style.display = privacyMode ? 'block' : 'none';
+        });
+        
+        // Update stats display
+        updateStatsDisplay();
+        
+        console.log('✅ Privacy mode:', privacyMode ? 'VISIBLE' : 'HIDDEN');
+    } catch (error) {
+        console.error('❌ Privacy toggle error:', error);
+        showMessage('❌ Privacy toggle failed: ' + error.message, 'error');
+    }
+}
+
+
+// ============================================
+// NEW: Initialize Privacy Mode on Page Load
+// ============================================
+
+function initPrivacyMode() {
+    try {
+        const btn = document.getElementById('privacyToggleBtn');
+        if (!btn) return;
+        
+        // Set initial button state and card visibility
+        if (privacyMode) {
+            // VISIBLE MODE (default)
+            btn.textContent = '🔒 Hide';
+            btn.style.background = '#FF6B6B';
+            document.querySelectorAll('[data-private]').forEach(el => {
+                el.style.display = 'block';
+            });
+        } else {
+            // HIDDEN MODE
+            btn.textContent = '👁️ Show';
+            btn.style.background = '#4CAF50';
+            document.querySelectorAll('[data-private]').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+        
+        console.log('✅ Privacy mode initialized:', privacyMode ? 'VISIBLE' : 'HIDDEN');
+    } catch (error) {
+        console.error('❌ Privacy initialization error:', error);
+    }
+}
+
+
+// ============================================
 // NEW: Update Display Based on Privacy Mode
 // ============================================
 
 function updateStatsDisplay() {
-    if (privacyMode) {
-        // HIDDEN MODE - Show "Click to reveal"
-        document.getElementById('totalIncomeINR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalExpenseINR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalCreditCardINR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalBalanceINR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        
-        document.getElementById('totalIncomeSAR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalExpenseSAR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalCreditCardSAR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-        document.getElementById('totalBalanceSAR').innerHTML = '<div style="text-align: center; padding: 20px;">🔒 Click to reveal</div>';
-    } else {
-        // VISIBLE MODE - Show actual values
-        
-        // Calculate INR totals
-        let inrIncome = 0, inrExpense = 0, inrCreditCard = 0;
-        if (statsData.inr) {
-            inrIncome = statsData.inr.income || 0;
-            inrExpense = statsData.inr.expense || 0;
-            inrCreditCard = statsData.inr.creditCard || 0;
+    try {
+        if (privacyMode) {
+            // VISIBLE MODE - Show actual values
+            
+            // Calculate INR totals
+            let inrIncome = 0, inrExpense = 0, inrCreditCard = 0;
+            if (statsData.inr) {
+                inrIncome = statsData.inr.income || 0;
+                inrExpense = statsData.inr.expense || 0;
+                inrCreditCard = statsData.inr.creditCard || 0;
+            }
+            
+            // Calculate SAR totals
+            let sarIncome = 0, sarExpense = 0, sarCreditCard = 0;
+            if (statsData.sar) {
+                sarIncome = statsData.sar.income || 0;
+                sarExpense = statsData.sar.expense || 0;
+                sarCreditCard = statsData.sar.creditCard || 0;
+            }
+            
+            // INR Cards - Show values
+            document.getElementById('totalIncomeINR').textContent = '₹' + inrIncome.toFixed(2);
+            document.getElementById('totalExpenseINR').textContent = '₹' + inrExpense.toFixed(2);
+            document.getElementById('totalCreditCardINR').textContent = '₹' + inrCreditCard.toFixed(2);
+            document.getElementById('totalBalanceINR').textContent = '₹' + (inrIncome - inrExpense).toFixed(2);
+            
+            // SAR Cards - Show values
+            document.getElementById('totalIncomeSAR').textContent = '﷼' + sarIncome.toFixed(2);
+            document.getElementById('totalExpenseSAR').textContent = '﷼' + sarExpense.toFixed(2);
+            document.getElementById('totalCreditCardSAR').textContent = '﷼' + sarCreditCard.toFixed(2);
+            document.getElementById('totalBalanceSAR').textContent = '﷼' + (sarIncome - sarExpense).toFixed(2);
+            
+        } else {
+            // HIDDEN MODE - Show locked message
+            
+            const lockedHTML = '<div style="text-align: center; padding: 20px; font-size: 14px; color: #999;">🔒 Click Show to reveal</div>';
+            
+            document.getElementById('totalIncomeINR').innerHTML = lockedHTML;
+            document.getElementById('totalExpenseINR').innerHTML = lockedHTML;
+            document.getElementById('totalCreditCardINR').innerHTML = lockedHTML;
+            document.getElementById('totalBalanceINR').innerHTML = lockedHTML;
+            
+            document.getElementById('totalIncomeSAR').innerHTML = lockedHTML;
+            document.getElementById('totalExpenseSAR').innerHTML = lockedHTML;
+            document.getElementById('totalCreditCardSAR').innerHTML = lockedHTML;
+            document.getElementById('totalBalanceSAR').innerHTML = lockedHTML;
         }
         
-        // Calculate SAR totals
-        let sarIncome = 0, sarExpense = 0, sarCreditCard = 0;
-        if (statsData.sar) {
-            sarIncome = statsData.sar.income || 0;
-            sarExpense = statsData.sar.expense || 0;
-            sarCreditCard = statsData.sar.creditCard || 0;
-        }
-        
-        // INR Cards
-        document.getElementById('totalIncomeINR').textContent = '₹' + inrIncome.toFixed(2);
-        document.getElementById('totalExpenseINR').textContent = '₹' + inrExpense.toFixed(2);
-        document.getElementById('totalCreditCardINR').textContent = '₹' + inrCreditCard.toFixed(2);
-        document.getElementById('totalBalanceINR').textContent = '₹' + (inrIncome - inrExpense).toFixed(2);
-        
-        // SAR Cards
-        document.getElementById('totalIncomeSAR').textContent = '﷼' + sarIncome.toFixed(2);
-        document.getElementById('totalExpenseSAR').textContent = '﷼' + sarExpense.toFixed(2);
-        document.getElementById('totalCreditCardSAR').textContent = '﷼' + sarCreditCard.toFixed(2);
-        document.getElementById('totalBalanceSAR').textContent = '﷼' + (sarIncome - sarExpense).toFixed(2);
+        console.log('✅ Stats display updated');
+    } catch (error) {
+        console.error('❌ Error updating stats display:', error);
     }
 }
 
-// ============================================
-// NEW: Toggle Privacy Mode
-// ============================================
-
-function togglePrivacyMode() {
-    privacyMode = !privacyMode;
-    
-    // Update button
-    const btn = document.getElementById('privacyToggleBtn');
-    if (privacyMode) {
-        btn.innerHTML = '🔒 Show';
-        btn.style.background = '#FF6B6B';
-    } else {
-        btn.innerHTML = '👁️ Hide';
-        btn.style.background = '#4CAF50';
-    }
-    
-    // Save preference
-    localStorage.setItem('pfmsPrivacyMode', privacyMode);
-    
-    // Update display
-    updateStatsDisplay();
-}
 
 // ============================================
 // ACCOUNTS & CATEGORIES LOADING
 // ============================================
+
 
 async function loadAccounts() {
     const currency = document.getElementById('currency').value;
@@ -260,6 +326,7 @@ async function loadAccounts() {
     }
 }
 
+
 async function loadCategories() {
     const mode = document.getElementById('mode').value;
     let url = '/categories';
@@ -282,6 +349,7 @@ async function loadCategories() {
         updateCategoriesTable();
     }
 }
+
 
 async function loadTransactions(page = 1) {
     const currency = document.getElementById('filterCurrency').value;
@@ -307,6 +375,7 @@ async function loadTransactions(page = 1) {
     }
 }
 
+
 function displayTransactions() {
     const tbody = document.getElementById('transactionsBody');
     
@@ -331,6 +400,7 @@ function displayTransactions() {
         </tr>
     `).join('');
 }
+
 
 function displayPagination(pagination) {
     let html = `
@@ -364,6 +434,7 @@ function displayPagination(pagination) {
     container.innerHTML = html;
 }
 
+
 function updateAccountsTable() {
     const tbody = document.getElementById('accountsTableBody');
     if (!tbody) return;
@@ -384,6 +455,7 @@ function updateAccountsTable() {
         </tr>
     `).join('');
 }
+
 
 function updateCategoriesTable() {
     const tbody = document.getElementById('categoriesTableBody');
@@ -406,9 +478,11 @@ function updateCategoriesTable() {
     `).join('');
 }
 
+
 // ============================================
 // TRANSACTION FUNCTIONS
 // ============================================
+
 
 async function addTransaction(e) {
     e.preventDefault();
@@ -448,6 +522,7 @@ async function addTransaction(e) {
     }
 }
 
+
 async function deleteTransaction(id) {
     if (!confirm('Delete this transaction?')) return;
 
@@ -459,10 +534,11 @@ async function deleteTransaction(id) {
     }
 }
 
+
 // ============================================
-// FIX: EDIT TRANSACTION - CORRECTED VERSION
-// Replace the editTransaction function in pfms.js
+// EDIT TRANSACTION - CORRECTED VERSION
 // ============================================
+
 
 function editTransaction(id) {
     const t = allTransactions.find(x => x.id === id);
@@ -569,6 +645,7 @@ function editTransaction(id) {
     openModal('editTransactionModal');
 }
 
+
 // Load accounts for edit modal
 async function loadEditAccounts(currency, selectedId) {
     try {
@@ -590,6 +667,7 @@ async function loadEditAccounts(currency, selectedId) {
         console.error('Error loading accounts:', error);
     }
 }
+
 
 // Load categories for edit modal
 async function loadEditCategories(mode, selectedId) {
@@ -613,6 +691,7 @@ async function loadEditCategories(mode, selectedId) {
     }
 }
 
+
 // Update currency and reload accounts in edit modal
 function onEditCurrencyChange() {
     const currency = document.getElementById('editCurrency').value;
@@ -621,6 +700,7 @@ function onEditCurrencyChange() {
     }
 }
 
+
 // Update mode and reload categories in edit modal
 function onEditModeChange() {
     const mode = document.getElementById('editMode').value;
@@ -628,6 +708,7 @@ function onEditModeChange() {
         loadEditCategories(mode, null);
     }
 }
+
 
 // Save edited transaction
 async function saveEditTransaction(e) {
@@ -675,15 +756,18 @@ async function saveEditTransaction(e) {
     }
 }
 
+
 // Cancel edit
 function cancelEditTransaction() {
     closeModal('editTransactionModal');
     document.getElementById('editTransactionForm').reset();
 }
 
+
 // ============================================
 // ACCOUNT FUNCTIONS
 // ============================================
+
 
 async function addAccount() {
     const name = prompt('Account Name:');
@@ -706,6 +790,7 @@ async function addAccount() {
     }
 }
 
+
 async function editAccount(id) {
     const account = allAccounts.find(a => a.id === id);
     if (!account) return;
@@ -724,6 +809,7 @@ async function editAccount(id) {
     }
 }
 
+
 async function deleteAccount(id) {
     if (!confirm('Delete this account?')) return;
 
@@ -734,9 +820,11 @@ async function deleteAccount(id) {
     }
 }
 
+
 // ============================================
 // CATEGORY FUNCTIONS
 // ============================================
+
 
 async function addCategory() {
     const name = prompt('Category Name:');
@@ -759,6 +847,7 @@ async function addCategory() {
     }
 }
 
+
 async function editCategory(id) {
     const category = allCategories.find(c => c.id === id);
     if (!category) return;
@@ -777,6 +866,7 @@ async function editCategory(id) {
     }
 }
 
+
 async function deleteCategory(id) {
     if (!confirm('Delete this category?')) return;
 
@@ -787,237 +877,369 @@ async function deleteCategory(id) {
     }
 }
 
+
 // ============================================
-// EXCEL IMPORT FUNCTIONS
+// EXCEL IMPORT/EXPORT FUNCTIONS
 // ============================================
 
-async function handleImportFile() {
-    const file = document.getElementById('importFile').files[0];
-    if (!file) {
-        showMessage('❌ Please select a file', 'error');
-        return;
-    }
 
-    // Show loading state
-    showMessage('📤 Uploading file... Please wait', 'success');
-    
-    const formData = new FormData();
-    formData.append('file', file);
-
+async function exportToExcel() {
     try {
-        // First, get preview
-        const previewFormData = new FormData();
-        previewFormData.append('file', file);
-        
-        const previewResponse = await fetch(`${API_URL}/transactions/import-preview`, {
-            method: 'POST',
+        const exportType = document.getElementById('exportType')?.value || 'excel';
+        const endpoint = `/api/export/${exportType}`;
+        console.log('📥 Exporting from:', endpoint);
+        showMessage('⏳ Exporting data...', 'info');
+
+        const response = await fetch(endpoint, {
             headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: previewFormData
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
         });
 
-        const previewData = await previewResponse.json();
+        if (!response.ok) {
+            throw new Error('Export failed: ' + response.statusText);
+        }
 
-        if (!previewData.success) {
-            showMessage(`❌ ${previewData.message}`, 'error');
+        // Parse file name from Content-Disposition
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = 'PFMS_Export.xlsx';
+        if (contentDisposition) {
+            const fileNameMatch = contentDisposition.match(/filename="(.+?)"/);
+            if (fileNameMatch) fileName = fileNameMatch[1];
+        }
+
+        // Download file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+
+        showMessage('✅ Export successful: ' + fileName, 'success');
+        console.log('✅ Downloaded:', fileName);
+    } catch (error) {
+        console.error('❌ Export error:', error);
+        showMessage('❌ Export failed: ' + error.message, 'error');
+    }
+}
+
+
+async function downloadTemplate() {
+    try {
+        console.log('📥 Downloading template...');
+        showMessage('⏳ Generating template...', 'info');
+
+        const workbook = XLSX.utils.book_new();
+        
+        // Template sheet with headers
+        const templateData = [
+            ['Date', 'Account', 'Category', 'Description', 'Amount', 'Currency', 'Mode'],
+            ['2025-01-15', 'HDFC', 'Salary', 'Monthly Salary', '50000', 'INR', 'Income'],
+            ['2025-01-16', 'Cash', 'Groceries', 'Supermarket', '2500', 'INR', 'Expense'],
+            ['2025-01-17', 'ADCB', 'Bills', 'Electricity', '500', 'SAR', 'Expense']
+        ];
+
+        const templateSheet = XLSX.utils.aoa_to_sheet(templateData);
+        templateSheet['!cols'] = [
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 20 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 15 }
+        ];
+
+        XLSX.utils.book_append_sheet(workbook, templateSheet, 'Template');
+        XLSX.writeFile(workbook, 'PFMS_Import_Template.xlsx');
+
+        showMessage('✅ Template downloaded successfully!', 'success');
+        console.log('✅ Template downloaded');
+    } catch (error) {
+        console.error('❌ Template download error:', error);
+        showMessage('❌ Template download failed: ' + error.message, 'error');
+    }
+}
+
+
+async function handleImportFile() {
+    try {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) return;
+
+        console.log('📥 Processing import file:', file.name);
+        showMessage('⏳ Processing file...', 'info');
+
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        console.log('📊 Parsed rows:', jsonData.length);
+
+        if (jsonData.length === 0) {
+            showMessage('❌ No data found in file', 'error');
             return;
         }
 
-        // Show preview modal
-        displayImportPreview(previewData);
-    } catch (err) {
-        console.error('Preview error:', err);
-        showMessage('❌ Failed to read file. Ensure it\'s a valid Excel file.', 'error');
-    }
-}
+        // Validate and import
+        let successCount = 0;
+        let errorCount = 0;
 
-function displayImportPreview(previewData) {
-    // Create preview modal if it doesn't exist
-    let modal = document.getElementById('importPreviewModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'importPreviewModal';
-        modal.className = 'modal';
-        document.body.appendChild(modal);
-    }
+        for (const row of jsonData) {
+            try {
+                const transaction = {
+                    account: row.Account,
+                    category: row.Category,
+                    description: row.Description || '',
+                    amount: parseFloat(row.Amount),
+                    currency: row.Currency || 'INR',
+                    mode: row.Mode,
+                    date: row.Date
+                };
 
-    const html = `
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('importPreviewModal')">&times;</span>
-            <h2>📊 Import Preview</h2>
-            
-            <div style="margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px;">
-                <p><strong>Total Rows:</strong> ${previewData.totalRows}</p>
-                <p><strong>Columns Found:</strong> ${previewData.columns.join(', ')}</p>
-            </div>
+                // Validate required fields
+                if (!transaction.account || !transaction.category || !transaction.amount) {
+                    errorCount++;
+                    continue;
+                }
 
-            <h3>Sample Data (First 10 rows):</h3>
-            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            ${previewData.columns.map(col => `<th>${col}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${previewData.preview.map(row => `
-                            <tr>
-                                ${previewData.columns.map(col => `<td>${row[col] || '-'}</td>`).join('')}
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
+                // Call API to save
+                const result = await apiCall('/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify(transaction)
+                });
 
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn btn--primary" onclick="confirmImport('${previewData.totalRows}')" style="flex: 1;">
-                    ✅ Confirm & Import
-                </button>
-                <button class="btn btn--secondary" onclick="closeModal('importPreviewModal')" style="flex: 1;">
-                    ❌ Cancel
-                </button>
-            </div>
-        </div>
-    `;
-
-    modal.innerHTML = html;
-    openModal('importPreviewModal');
-}
-
-async function confirmImport(totalRows) {
-    const file = document.getElementById('importFile').files[0];
-    if (!file) return;
-
-    closeModal('importPreviewModal');
-    showMessage(`📤 Importing ${totalRows} rows... This may take a moment`, 'success');
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        const response = await fetch(`${API_URL}/transactions/import`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showImportResults(data.results);
-            setTimeout(() => {
-                loadTransactions();
-                loadStats();
-                loadAccounts();
-                loadCategories();
-            }, 1500);
-        } else {
-            showMessage(`❌ ${data.message}`, 'error');
+                if (result && result.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            } catch (error) {
+                console.error('❌ Row error:', error);
+                errorCount++;
+            }
         }
-    } catch (err) {
-        console.error('Import error:', err);
-        showMessage('❌ Import failed. Check console for details.', 'error');
+
+        // Show results
+        showMessage(`✅ Import complete: ${successCount} success, ${errorCount} errors`, 'success');
+        console.log(`✅ Import results: ${successCount} success, ${errorCount} failed`);
+
+        // Reload transactions
+        await loadTransactions(1);
+
+        // Reset file input
+        document.getElementById('importFile').value = '';
+
+    } catch (error) {
+        console.error('❌ Import error:', error);
+        showMessage('❌ Import failed: ' + error.message, 'error');
+    }
+}
+
+
+// ============================================
+// RECURRING TRANSACTIONS FUNCTIONS
+// ============================================
+
+
+async function loadAccountsForRecurring() {
+    const data = await apiCall('/accounts');
+    if (data && data.success) {
+        const select = document.getElementById('recurringAccount');
+        if (select) {
+            select.innerHTML = '<option value="">Select Account</option>';
+            data.accounts.forEach(a => {
+                const option = document.createElement('option');
+                option.value = a.id;
+                option.textContent = `${a.name} (${a.currency})`;
+                select.appendChild(option);
+            });
+        }
+    }
+}
+
+
+async function loadCategoriesForRecurring() {
+    const data = await apiCall('/categories');
+    if (data && data.success) {
+        const select = document.getElementById('recurringCategory');
+        if (select) {
+            select.innerHTML = '<option value="">Select Category</option>';
+            data.categories.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = c.name;
+                select.appendChild(option);
+            });
+        }
+    }
+}
+
+
+async function loadRecurringTransactions() {
+    const data = await apiCall('/recurring');
+    if (data && data.success) {
+        const container = document.getElementById('recurringTransactionsContainer');
+        if (container) {
+            if (data.recurring.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No recurring transactions yet</p>';
+            } else {
+                container.innerHTML = data.recurring.map(r => `
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${r.description}</strong> - ${r.amount} ${r.currency} (${r.frequency})
+                            <br><small style="color: #666;">Next: ${new Date(r.next_date).toLocaleDateString()}</small>
+                        </div>
+                        <button class="btn-icon btn-danger" onclick="deleteRecurringTransaction(${r.id})">✕</button>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+}
+
+
+async function createRecurringTransaction(e) {
+    e.preventDefault();
+
+    const accountId = document.getElementById('recurringAccount').value;
+    const categoryId = document.getElementById('recurringCategory').value;
+    const description = document.getElementById('recurringDescription').value;
+    const amount = document.getElementById('recurringAmount').value;
+    const mode = document.getElementById('recurringMode').value;
+    const currency = document.getElementById('recurringCurrency').value;
+    const frequency = document.getElementById('recurringFrequency').value;
+    const startDate = document.getElementById('recurringStartDate').value;
+    const endDate = document.getElementById('recurringEndDate').value;
+
+    if (!accountId || !categoryId || !amount || !startDate) {
+        showMessage('❌ Please fill all required fields', 'error');
+        return;
     }
 
-    // Reset file input
-    document.getElementById('importFile').value = '';
+    const data = await apiCall('/recurring', {
+        method: 'POST',
+        body: JSON.stringify({
+            account_id: parseInt(accountId),
+            category_id: parseInt(categoryId),
+            description,
+            amount: parseFloat(amount),
+            mode,
+            currency,
+            frequency,
+            start_date: startDate,
+            end_date: endDate || null
+        })
+    });
+
+    if (data && data.success) {
+        showMessage('✅ Recurring transaction created!', 'success');
+        document.getElementById('recurringForm').reset();
+        await loadRecurringTransactions();
+    }
 }
 
-function showImportResults(results) {
-    let modal = document.getElementById('importResultsModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'importResultsModal';
-        modal.className = 'modal';
-        document.body.appendChild(modal);
+
+async function deleteRecurringTransaction(id) {
+    if (!confirm('Delete this recurring transaction?')) return;
+
+    const data = await apiCall(`/recurring/${id}`, { method: 'DELETE' });
+    if (data && data.success) {
+        showMessage('✅ Recurring transaction deleted!', 'success');
+        await loadRecurringTransactions();
+    }
+}
+
+
+// ============================================
+// BUDGET FUNCTIONS
+// ============================================
+
+
+async function setBudgetLimit() {
+    const categoryId = document.getElementById('budgetCategory').value;
+    const currency = document.getElementById('budgetCurrency').value;
+    const limit = document.getElementById('budgetLimit').value;
+    const threshold = document.getElementById('budgetThreshold').value;
+
+    if (!categoryId || !currency || !limit) {
+        showMessage('❌ Please fill all required fields', 'error');
+        return;
     }
 
-    const errorsList = results.errors
-        .slice(0, 20) // Show first 20 errors
-        .map(err => `<li style="color: #f44336; margin: 5px 0;">❌ ${err}</li>`)
-        .join('');
+    const data = await apiCall('/budget', {
+        method: 'POST',
+        body: JSON.stringify({
+            category_id: parseInt(categoryId),
+            currency,
+            limit: parseFloat(limit),
+            threshold: parseFloat(threshold)
+        })
+    });
 
-    const hasMoreErrors = results.errors.length > 20;
-
-    const html = `
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('importResultsModal')">&times;</span>
-            <h2>📊 Import Results</h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-                <div style="padding: 15px; background: #e8f5e9; border-radius: 5px; border-left: 4px solid #4CAF50;">
-                    <div style="font-size: 2rem; font-weight: bold; color: #4CAF50;">✅ ${results.success}</div>
-                    <div style="color: #666; font-size: 0.9rem;">Transactions Imported</div>
-                </div>
-                <div style="padding: 15px; background: #ffebee; border-radius: 5px; border-left: 4px solid #f44336;">
-                    <div style="font-size: 2rem; font-weight: bold; color: #f44336;">❌ ${results.failed}</div>
-                    <div style="color: #666; font-size: 0.9rem;">Rows Failed</div>
-                </div>
-            </div>
-
-            ${results.errors.length > 0 ? `
-                <h3>Errors Found:</h3>
-                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; max-height: 250px; overflow-y: auto; border-left: 4px solid #ff9800;">
-                    <ul style="margin: 0; padding-left: 20px;">
-                        ${errorsList}
-                        ${hasMoreErrors ? `<li style="color: #666; margin-top: 10px; font-style: italic;">... and ${results.errors.length - 20} more errors</li>` : ''}
-                    </ul>
-                </div>
-            ` : ''}
-
-            <div style="margin-top: 20px;">
-                <button class="btn btn--primary" onclick="closeModal('importResultsModal')" style="width: 100%;">
-                    ✅ Done
-                </button>
-            </div>
-        </div>
-    `;
-
-    modal.innerHTML = html;
-    openModal('importResultsModal');
+    if (data && data.success) {
+        showMessage('✅ Budget limit set!', 'success');
+        document.getElementById('budgetForm').reset();
+        await loadBudgetStatus();
+    }
 }
 
-// Add button to download template
-function downloadTemplate() {
-    window.location.href = `${API_URL}/transactions/template`;
+
+async function loadBudgetStatus() {
+    const data = await apiCall('/budget/status');
+    if (data && data.success) {
+        const container = document.getElementById('budgetStatusContainer');
+        if (container) {
+            container.innerHTML = data.status.map(b => `
+                <div style="padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${b.exceeded ? '#f44336' : '#4CAF50'};">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <strong>${b.category_name}</strong>
+                        <span style="color: ${b.exceeded ? '#f44336' : '#666'};">${b.spent} / ${b.limit} ${b.currency}</span>
+                    </div>
+                    <div style="background: #ddd; height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="background: ${b.percentage > b.threshold ? '#f44336' : '#4CAF50'}; width: ${Math.min(b.percentage, 100)}%; height: 100%;"></div>
+                    </div>
+                    <small style="color: #666;">${b.percentage.toFixed(1)}% of budget</small>
+                </div>
+            `).join('');
+        }
+    }
 }
+
 
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
 
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     localStorage.setItem('pfmsTheme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
 }
 
-function exportToExcel() {
-    const data = allTransactions.map(t => ({
-        Date: new Date(t.transaction_date).toLocaleDateString(),
-        Account: t.account_name,
-        Category: t.category_name,
-        Description: t.description,
-        Amount: t.amount,
-        Currency: t.currency,
-        Mode: t.mode
-    }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
-    XLSX.writeFile(wb, 'transactions.xlsx');
+function updateAmountLabel() {
+    const currency = document.getElementById('currency').value;
+    const label = document.getElementById('currencySymbol');
+    if (label) {
+        label.textContent = currency === 'SAR' ? '(﷼)' : '(₹)';
+    }
 }
+
 
 function applyFilters() {
     loadTransactions(1);
 }
 
-// Load theme on startup
-if (localStorage.getItem('pfmsTheme') === 'dark') {
-    document.body.classList.add('dark-mode');
+
+function handleMonthChange() {
+    console.log('Month changed');
+    // Implement month filter change logic
 }
 
 // ============================================
