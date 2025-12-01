@@ -136,7 +136,7 @@ app.get('/logout', (req, res) => {
 
 cron.schedule('0 0 * * *', () => {
   console.log('Auto-generating recurring transactions...');
-  fetch('https://fairox-backend.onrender.com/api/recurring/process/auto-generate', { method: 'POST' })
+  fetch('https://api.fairox.co.in/api/recurring/process/auto-generate', { method: 'POST' })
     .catch(err => console.error('Cron auto-generate error:', err.message));
 });
 

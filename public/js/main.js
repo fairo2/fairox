@@ -1,7 +1,7 @@
 // ⚠️ CONFIGURATION - UPDATE THIS URL
 // For local: http://localhost:5000/api
 // For production: https://fairox.co.in/api
-const API_URL = 'https://fairox-backend.onrender.com/api';
+const API_URL = 'https://api.fairox.co.in/api';
 
 // Check authentication status on load
 window.addEventListener('DOMContentLoaded', () => {

@@ -471,7 +471,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://fairox-backend.onrender.com/api';
+        const API_URL = 'https://api.fairox.co.in/api';
         let currentToken = null;
 
         // Login
@@ -1034,7 +1034,7 @@ async function submitChangePassword(event) {
         
         console.log('✅ Using token:', token.substring(0, 50) + '...');
         
-        const response = await fetch('https://fairox-backend.onrender.com/api/auth/change-password', {
+        const response = await fetch('https://api.fairox.co.in/api/auth/change-password', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
