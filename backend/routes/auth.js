@@ -1,19 +1,36 @@
 ﻿// ============================================
 // COMPLETE AUTH ROUTES - PRODUCTION READY
 // File: routes/auth.js
-// Database: PostgreSQL with proper debugging
+// Database: PostgreSQL (exports pool directly)
 // ============================================
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/db');
-const { authMiddleware } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
+
+// ✅ FIXED: Import pool directly (NOT destructured)
+// Your config/db.js exports: module.exports = pool;
+const pool = require('../config/db');
 
 const router = express.Router();
 
-console.log('\n✅ Auth routes loaded');
+// ✅ Verify database connection on startup
+try {
+  if (!pool || typeof pool.query !== 'function') {
+    console.error('❌ FATAL: Database pool not properly initialized');
+    process.exit(1);
+  }
+  console.log('✅ Database pool connected\n');
+} catch (error) {
+  console.error('❌ Database error:', error.message);
+  process.exit(1);
+}
+
+// ✅ Import auth middleware
+const { authMiddleware } = require('../middleware/auth');
+
+console.log('✅ Auth routes loaded');
 
 // ============================================
 // EMAIL CONFIGURATION
