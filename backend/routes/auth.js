@@ -1,13 +1,22 @@
-﻿const express = require('express');
+﻿// ============================================
+// COMPLETE AUTH ROUTES - PRODUCTION READY
+// File: routes/auth.js
+// Database: PostgreSQL (with proper boolean handling)
+// ============================================
+
+const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+const { pool } = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
-// Helper function to create email transporter
+// ============================================
+// EMAIL CONFIGURATION
+// ============================================
+
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -20,18 +29,15 @@ function createTransporter() {
   });
 }
 
-// Helper function to send email
 async function sendEmail(to, subject, html) {
   try {
     const transporter = createTransporter();
-    
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: to,
       subject: subject,
       html: html
     });
-    
     console.log(`✅ Email sent to ${to}: ${subject}`);
     return true;
   } catch (error) {
@@ -40,65 +46,116 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-// Admin login
+// ============================================
+// ADMIN LOGIN
+// ============================================
+
 router.post('/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ FIXED: ? → $1
-    const [users] = await db.query('SELECT * FROM users WHERE email = $1 AND is_admin = 1', [email]);
-    
-    if (users.length === 0) {
-      return res.status(401).json({
+    console.log('🔍 Admin login attempt:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({
         success: false,
-        message: 'Not authorized as admin'
+        message: 'Email and password required'
       });
     }
 
-    const admin = users;
-    const isMatch = await bcrypt.compare(password, admin.password);
-    
-    if (!isMatch) {
+    // ✅ FIX: Use true (boolean) not 1 (integer)
+    const result = await pool.query(
+      'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
+      [email, true]
+    );
+
+    const users = result.rows;
+
+    if (!users || users.length === 0) {
+      console.log('❌ No admin found with email:', email);
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid admin credentials'
       });
     }
 
+    const admin = users[0];
+    console.log('✅ Admin found:', admin.email);
+
+    // Check if approved
+    if (!admin.is_approved) {
+      return res.status(401).json({
+        success: false,
+        message: 'Admin account not approved yet'
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin credentials'
+      });
+    }
+
+    // Generate token
     const token = jwt.sign(
-      { id: admin.id, email: admin.email, is_admin: true },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      {
+        id: admin.id,
+        email: admin.email,
+        is_admin: true
+      },
+      process.env.JWT_SECRET || 'your_secret_key',
+      { expiresIn: '24h' }
     );
 
     res.json({
       success: true,
-      token,
-      user: {
+      message: 'Admin login successful',
+      token: token,
+      admin: {
         id: admin.id,
         name: admin.name,
         email: admin.email,
         is_admin: true
       }
     });
+
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('❌ Admin login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error: ' + error.message
     });
   }
 });
 
-// Register
+// ============================================
+// USER REGISTRATION
+// ============================================
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // ✅ FIXED: ? → $1
-    const [users] = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    
-    if (users.length > 0) {
+    console.log('📝 Registration attempt:', email);
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows && existingUser.rows.length > 0) {
       return res.status(400).json({
         success: false,
         message: 'User already exists'
@@ -108,15 +165,17 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ FIXED: ? → $1, $2, $3, 0
-    await db.query(
-      'INSERT INTO users (name, email, password, is_approved) VALUES ($1, $2, $3, 0)',
-      [name, email, hashedPassword]
+    // ✅ FIX: Use false (boolean) not 0 (integer)
+    await pool.query(
+      'INSERT INTO users (name, email, password, is_approved, is_admin) VALUES ($1, $2, $3, $4, $5)',
+      [name, email, hashedPassword, false, false]
     );
 
-    // Send admin notification email
+    console.log('✅ User registered:', email);
+
+    // Send admin notification
     await sendEmail(
-      'support@fairox.co.in',
+      process.env.EMAIL_FROM,
       '🔔 New User Registration - Approval Required',
       `
         <h2>New User Registration</h2>
@@ -136,33 +195,51 @@ router.post('/register', async (req, res) => {
       success: true,
       message: 'Registration successful! Your account is pending admin approval. You will be notified via email once approved.'
     });
+
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('❌ Registration error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error: ' + error.message
     });
   }
 });
 
-// Login
+// ============================================
+// USER LOGIN
+// ============================================
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ FIXED: ? → $1
-    const [users] = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    
-    if (users.length === 0) {
+    console.log('🔐 Login attempt:', email);
+
+    if (!email || !password) {
       return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Get user
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    const users = result.rows;
+
+    if (!users || users.length === 0) {
+      return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    const user = users;
+    const user = users[0];
 
-    // Check if approved
+    // Check if approved (allow if admin or approved)
     if (!user.is_approved && !user.is_admin) {
       return res.status(403).json({
         success: false,
@@ -170,84 +247,110 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    
-    if (!isMatch) {
-      return res.status(400).json({
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    // Create token
+    // Generate token
     const token = jwt.sign(
-      { id: user.id, email: user.email, is_admin: user.is_admin || false },
-      process.env.JWT_SECRET,
+      {
+        id: user.id,
+        email: user.email,
+        is_admin: user.is_admin || false
+      },
+      process.env.JWT_SECRET || 'your_secret_key',
       { expiresIn: '7d' }
     );
 
+    console.log('✅ Login successful:', email);
+
     res.json({
       success: true,
-      token,
+      token: token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email
       }
     });
+
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error: ' + error.message
     });
   }
 });
 
-// Get current user
+// ============================================
+// GET CURRENT USER
+// ============================================
+
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    // ✅ FIXED: ? → $1
-    const [users] = await db.query(
-      'SELECT id, name, email, created_at FROM users WHERE id = $1',
+    const result = await pool.query(
+      'SELECT id, name, email, is_admin, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
 
-    if (users.length === 0) {
+    const users = result.rows;
+
+    if (!users || users.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    const user = users[0];
+
     res.json({
       success: true,
-      user: users
+      user: user
     });
+
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('❌ Get user error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error: ' + error.message
     });
   }
 });
 
-// Contact form
+// ============================================
+// CONTACT FORM
+// ============================================
+
 router.post('/contact', async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
 
-    // ✅ FIXED: ? → $1, $2, $3, $4, $5
-    await db.query(
+    console.log('📧 Contact form submission from:', email);
+
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'All required fields must be filled'
+      });
+    }
+
+    // Save to database
+    await pool.query(
       'INSERT INTO contacts (name, email, phone, subject, message) VALUES ($1, $2, $3, $4, $5)',
-      [name, email, phone, subject, message]
+      [name, email, phone || null, subject, message]
     );
 
-    // Send email notification
+    // Send email to admin
     await sendEmail(
-      'support@fairox.co.in',
+      process.env.EMAIL_FROM,
       `📧 New Contact Form: ${subject}`,
       `
         <h2>New Contact Form Submission</h2>
@@ -264,12 +367,15 @@ router.post('/contact', async (req, res) => {
       `
     );
 
+    console.log('✅ Contact form saved');
+
     res.json({
       success: true,
       message: 'Thank you for contacting us! We will get back to you soon.'
     });
+
   } catch (error) {
-    console.error('Contact error:', error);
+    console.error('❌ Contact error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to send message'
@@ -277,77 +383,100 @@ router.post('/contact', async (req, res) => {
   }
 });
 
-// Admin routes
+// ============================================
+// ADMIN ROUTES
+// ============================================
+
+// Get admin stats
 router.get('/admin/stats', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
 
   try {
-    const [[pending]] = await db.query('SELECT COUNT(*) as count FROM users WHERE is_approved = 0 AND is_admin = 0');
-    const [[approved]] = await db.query('SELECT COUNT(*) as count FROM users WHERE is_approved = 1 AND is_admin = 0');
-    const [[total]] = await db.query('SELECT COUNT(*) as count FROM users WHERE is_admin = 0');
-    const [[contacts]] = await db.query('SELECT COUNT(*) as count FROM contacts');
+    const pending = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_approved = $1 AND is_admin = $2', [false, false]);
+    const approved = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_approved = $1 AND is_admin = $2', [true, false]);
+    const total = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = $1', [false]);
+    const contacts = await pool.query('SELECT COUNT(*) as count FROM contacts');
 
     res.json({
       success: true,
       stats: {
-        pending: pending.count,
-        approved: approved.count,
-        total: total.count,
-        contacts: contacts.count
+        pending: parseInt(pending.rows[0].count),
+        approved: parseInt(approved.rows[0].count),
+        total: parseInt(total.rows[0].count),
+        contacts: parseInt(contacts.rows[0].count)
       }
     });
+
   } catch (error) {
-    console.error('Stats error:', error);
+    console.error('❌ Stats error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
+// Get pending users
 router.get('/admin/pending-users', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    const [users] = await db.query('SELECT id, name, email, created_at FROM users WHERE is_approved = 0 AND is_admin = 0 ORDER BY created_at DESC');
-    res.json({ success: true, users });
+    const result = await pool.query(
+      'SELECT id, name, email, created_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY created_at DESC',
+      [false, false]
+    );
+
+    res.json({ success: true, users: result.rows });
+
   } catch (error) {
+    console.error('❌ Pending users error:', error);
     res.status(500).json({ success: false });
   }
 });
 
+// Get approved users
 router.get('/admin/approved-users', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    const [users] = await db.query('SELECT id, name, email, approved_at FROM users WHERE is_approved = 1 AND is_admin = 0 ORDER BY approved_at DESC');
-    res.json({ success: true, users });
+    const result = await pool.query(
+      'SELECT id, name, email, approved_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY approved_at DESC',
+      [true, false]
+    );
+
+    res.json({ success: true, users: result.rows });
+
   } catch (error) {
+    console.error('❌ Approved users error:', error);
     res.status(500).json({ success: false });
   }
 });
 
-// ✅ APPROVE USER - WITH EMAIL NOTIFICATION
+// Approve user
 router.post('/admin/approve-user/:id', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    // ✅ FIXED: ? → $1
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
-    
-    if (!user) {
+    const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
+
+    if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // ✅ FIXED: ? → $1, $2
-    await db.query('UPDATE users SET is_approved = 1, approved_by = $1, approved_at = NOW() WHERE id = $2', [req.user.id, req.params.id]);
-    
-    // Send approval email to user
+    const user = result.rows[0];
+
+    // Update approval
+    await pool.query(
+      'UPDATE users SET is_approved = $1, approved_by = $2, approved_at = NOW() WHERE id = $3',
+      [true, req.user.id, req.params.id]
+    );
+
+    // Send approval email
     await sendEmail(
       user.email,
       '✅ Your Fairox Account Has Been Approved!',
@@ -359,38 +488,42 @@ router.post('/admin/approve-user/:id', authMiddleware, async (req, res) => {
           <li><strong>📧 Your Email:</strong> ${user.email}</li>
           <li><strong>✅ Status:</strong> APPROVED</li>
         </ul>
-        <p><a href="https://fairox.co.in/login" style="background-color: #2a8f8e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Login Now →</a></p>
+        <p><a href="https://fairox.co.in" style="background-color: #2a8f8e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Login Now →</a></p>
         <hr>
         <p>If you have any questions, feel free to contact us at <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
-        <p><em>This is an automated message from Fairox Management System</em><br>© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
       `
     );
-    
+
+    console.log('✅ User approved:', user.email);
+
     res.json({ success: true, message: 'User approved and notified via email' });
+
   } catch (error) {
-    console.error('Approve user error:', error);
+    console.error('❌ Approve user error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// ❌ REJECT USER - WITH EMAIL NOTIFICATION
+// Reject user
 router.delete('/admin/reject-user/:id', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    // ✅ FIXED: ? → $1
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1 AND is_admin = 0', [req.params.id]);
-    
-    if (!user) {
+    const result = await pool.query('SELECT name, email FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
+
+    if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // ✅ FIXED: ? → $1
-    await db.query('DELETE FROM users WHERE id = $1 AND is_admin = 0', [req.params.id]);
-    
-    // Send rejection email to user
+    const user = result.rows[0];
+
+    // Delete user
+    await pool.query('DELETE FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
+
+    // Send rejection email
     await sendEmail(
       user.email,
       '❌ Fairox Account Registration - Update',
@@ -402,38 +535,44 @@ router.delete('/admin/reject-user/:id', authMiddleware, async (req, res) => {
           <li><strong>📧 Email:</strong> ${user.email}</li>
           <li><strong>Status:</strong> NOT APPROVED</li>
         </ul>
-        <p>This decision may be due to various reasons including incomplete information or verification requirements.</p>
         <p>If you believe this is an error or would like to discuss this further, please contact us at: <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
         <hr>
-        <p><em>This is an automated message from Fairox Management System</em><br>© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
       `
     );
-    
+
+    console.log('✅ User rejected:', user.email);
+
     res.json({ success: true, message: 'User rejected and notified via email' });
+
   } catch (error) {
-    console.error('Reject user error:', error);
+    console.error('❌ Reject user error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// ⚠️ REVOKE USER - WITH EMAIL NOTIFICATION
+// Revoke user access
 router.post('/admin/revoke-user/:id', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    // ✅ FIXED: ? → $1
-    const [[user]] = await db.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
-    
-    if (!user) {
+    const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
+
+    if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // ✅ FIXED: ? → $1
-    await db.query('UPDATE users SET is_approved = 0, approved_by = NULL, approved_at = NULL WHERE id = $1', [req.params.id]);
-    
-    // Send revocation email to user
+    const user = result.rows[0];
+
+    // Revoke approval
+    await pool.query(
+      'UPDATE users SET is_approved = $1, approved_by = NULL, approved_at = NULL WHERE id = $2',
+      [false, req.params.id]
+    );
+
+    // Send revocation email
     await sendEmail(
       user.email,
       '⚠️ Fairox Account Access Revoked',
@@ -448,225 +587,103 @@ router.post('/admin/revoke-user/:id', authMiddleware, async (req, res) => {
         <p>You will not be able to login until your account is re-approved by an administrator.</p>
         <p>If you have any questions or concerns regarding this action, please contact our support team: <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
         <hr>
-        <p><em>This is an automated message from Fairox Management System</em><br>© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
       `
     );
-    
+
+    console.log('✅ User access revoked:', user.email);
+
     res.json({ success: true, message: 'User access revoked and notified via email' });
+
   } catch (error) {
-    console.error('Revoke user error:', error);
+    console.error('❌ Revoke user error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
+// Get contacts
 router.get('/admin/contacts', authMiddleware, async (req, res) => {
   if (!req.user.is_admin) {
     return res.status(403).json({ success: false });
   }
 
   try {
-    const [contacts] = await db.query('SELECT * FROM contacts ORDER BY created_at DESC');
-    res.json({ success: true, contacts });
+    const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
+    res.json({ success: true, contacts: result.rows });
+
   } catch (error) {
+    console.error('❌ Contacts error:', error);
     res.status(500).json({ success: false });
   }
 });
 
 // ============================================
-// CHANGE PASSWORD - FINAL WORKING VERSION
+// CHANGE PASSWORD
 // ============================================
 
 router.post('/change-password', authMiddleware, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const userId = req.user.id;
-        
-        console.log('🔐 POST /api/auth/change-password - User:', userId);
-        
-        // ✅ Validate input
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'Current password and new password are required'
-            });
-        }
-        
-        if (currentPassword === newPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'New password must be different from current password'
-            });
-        }
-        
-        // ✅ Get current user
-        console.log('🔍 Looking up user:', userId);
-        // ✅ FIXED: ? → $1
-        const query = 'SELECT id, email, password FROM users WHERE id = $1';
-        
-        let user = null;
-        try {
-            const [rows] = await db.query(query, [userId]);
-            
-            console.log('📊 Query returned rows.length:', rows.length);
-            console.log('📊 rows type:', typeof rows);
-            
-            if (!rows || rows.length === 0) {
-                console.log('❌ No user found');
-                return res.status(401).json({
-                    success: false,
-                    message: 'User not found'
-                });
-            }
-            
-            // ✅ FIXED: Get the user data - handle multiple access patterns
-            let userData = null;
-            
-            // Method 1: Try direct field access first (rows.id, rows.email, rows.password)
-            if (rows && rows.id !== undefined && rows.email !== undefined && rows.password !== undefined) {
-                userData = rows;
-                console.log('✅ Using direct field access (rows.id)');
-            }
-            // Method 2: If Method 1 fails, try rows (nested array)
-            else if (rows && rows && rows.id !== undefined && rows.email !== undefined && rows.password !== undefined) {
-                userData = rows;
-                console.log('✅ Using nested access (rows)');
-            }
-            // Method 3: Try indexed access (rows, rows, rows)
-            else if (rows && rows !== undefined && rows !== undefined && rows !== undefined) {
-                userData = {
-                    id: rows,
-                    email: rows,
-                    password: rows
-                };
-                console.log('✅ Using indexed access (rows, rows, rows)');
-            }
-            
-            console.log('📊 Extracted user:', {
-                id: userData ? userData.id : 'N/A',
-                email: userData ? userData.email : 'N/A',
-                hasPassword: userData ? !!userData.password : false
-            });
-            
-            if (!userData || !userData.id || !userData.email || !userData.password) {
-                console.error('❌ Could not extract valid user data');
-                console.error('📊 Full rows:', rows);
-                if (rows && rows) {
-                    console.error('📊 rows:', rows);
-                }
-                return res.status(500).json({
-                    success: false,
-                    message: 'Could not extract user data from database'
-                });
-            }
-            
-            user = userData;
-            console.log('✅ User loaded:', user.email);
-            
-        } catch (queryError) {
-            console.error('❌ Database query error:', queryError.message);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching user',
-                error: queryError.message
-            });
-        }
-        
-        // ✅ Verify current password
-        console.log('🔐 Verifying current password...');
-        let isPasswordValid = false;
-        
-        try {
-            isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-            console.log('✅ Password verification completed');
-            console.log('📊 Password matches:', isPasswordValid);
-        } catch (bcryptError) {
-            console.error('❌ bcrypt.compare error:', bcryptError.message);
-            return res.status(500).json({
-                success: false,
-                message: 'Error verifying password',
-                error: bcryptError.message
-            });
-        }
-        
-        if (!isPasswordValid) {
-            console.log('❌ Current password incorrect');
-            return res.status(401).json({
-                success: false,
-                message: 'Current password is incorrect'
-            });
-        }
-        
-        console.log('✅ Current password verified');
-        
-        // ✅ Hash new password
-        console.log('🔐 Hashing new password...');
-        let hashedPassword = null;
-        
-        try {
-            hashedPassword = await bcrypt.hash(newPassword, 10);
-            console.log('✅ New password hashed successfully');
-        } catch (hashError) {
-            console.error('❌ bcrypt.hash error:', hashError.message);
-            return res.status(500).json({
-                success: false,
-                message: 'Error hashing password',
-                error: hashError.message
-            });
-        }
-        
-        if (!hashedPassword) {
-            console.error('❌ Hash is empty');
-            return res.status(500).json({
-                success: false,
-                message: 'Error creating password hash'
-            });
-        }
-        
-        console.log('✅ New hash created');
-        
-        // ✅ Update password in database
-        console.log('💾 Updating password in database...');
-        // ✅ FIXED: ? → $1, $2
-        const updateQuery = 'UPDATE users SET password = $1 WHERE id = $2';
-        
-        try {
-            const [updateResult] = await db.query(updateQuery, [hashedPassword, user.id]);
-            
-            console.log('✅ Update query executed');
-            console.log('📊 Rows affected:', updateResult.affectedRows);
-            
-            if (updateResult.affectedRows === 0) {
-                console.error('❌ No rows updated');
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to update password'
-                });
-            }
-        } catch (updateError) {
-            console.error('❌ Update error:', updateError.message);
-            return res.status(500).json({
-                success: false,
-                message: 'Error updating password',
-                error: updateError.message
-            });
-        }
-        
-        console.log('✅ Password updated successfully');
-        console.log('✅ Password change complete for user:', user.email);
-        
-        res.json({
-            success: true,
-            message: 'Password changed successfully'
-        });
-        
-    } catch (error) {
-        console.error('❌ Unexpected error:', error.message);
-        res.status(500).json({
-            success: false,
-            message: 'Error changing password',
-            error: error.message
-        });
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    console.log('🔐 Password change request - User:', userId);
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
     }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // Get user
+    const result = await pool.query('SELECT id, email, password FROM users WHERE id = $1', [userId]);
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, user.id]);
+
+    console.log('✅ Password changed successfully for user:', user.email);
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password'
+    });
+  }
 });
 
 // ============================================
@@ -674,23 +691,21 @@ router.post('/change-password', authMiddleware, async (req, res) => {
 // ============================================
 
 router.get('/logout', authMiddleware, async (req, res) => {
-    try {
-        console.log('🔐 Logout request - User:', req.user.id);
-        
-        // ✅ Logout is successful - token is just cleared on frontend
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
-        
-    } catch (error) {
-        console.error('❌ Logout error:', error.message);
-        res.status(500).json({
-            success: false,
-            message: 'Error during logout',
-            error: error.message
-        });
-    }
+  try {
+    console.log('🔐 Logout request - User:', req.user.id);
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during logout'
+    });
+  }
 });
 
 module.exports = router;
