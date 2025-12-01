@@ -734,3 +734,5 @@ router.get('/logout', authMiddleware, async (req, res) => {
     });
   }
 });
+
+module.exports = router;

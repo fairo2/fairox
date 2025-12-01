@@ -1,5 +1,6 @@
 // ============================================
-// UPDATED SERVER.JS - Render-ready (PostgreSQL)
+// UPDATED SERVER.JS - COMPLETE & FIXED
+// Render-ready with PostgreSQL
 // ============================================
 
 const express = require('express');
@@ -7,31 +8,51 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const cron = require('node-cron');
+
+// Load environment variables
+dotenv.config();
+
+// ============================================
+// DEBUG - Check environment
+// ============================================
+
+console.log('=====================================');
+console.log('📧 EMAIL CONFIGURATION CHECK:');
+console.log('=====================================');
+console.log('EMAIL_HOST:', process.env.EMAIL_HOST || '❌ NOT SET');
+console.log('EMAIL_PORT:', process.env.EMAIL_PORT || '❌ NOT SET');
+console.log('EMAIL_USER:', process.env.EMAIL_USER || '❌ NOT SET');
+console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '✅ SET' : '❌ NOT SET');
+console.log('EMAIL_FROM:', process.env.EMAIL_FROM || '❌ NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ NOT SET');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ SET' : '❌ NOT SET');
+console.log('=====================================\n');
+
+// ============================================
+// INITIALIZE EXPRESS APP
+// ============================================
+
+const app = express();
+
+// ============================================
+// IMPORT ROUTES (CORRECT WAY)
+// ============================================
+
+// ✅ Import route ROUTER objects (not middleware)
+const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const pfmsRoutes = require('./routes/pfms-routes');
 const recurringRoutes = require('./routes/recurringTransactions');
 const budgetRoutes = require('./routes/budget');
 const exportRouter = require('./routes/export');
 const overviewRouter = require('./routes/overview');
-const cron = require('node-cron');
 
-dotenv.config();
+// ✅ Import database for connection checks
+const db = require('./config/db');
 
-// 🐛 DEBUG - Check if .env is loading
-console.log('=====================================');
-console.log('📧 EMAIL CONFIGURATION CHECK:');
-console.log('=====================================');
-console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
-console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '***PASSWORD SET***' : '❌ NOT SET');
-console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
-console.log('=====================================\n');
-
-const authRoutes = require('./routes/auth');
-const db = require('./config/db'); // PostgreSQL pool/client with .query()
-
-const app = express();
+// ✅ Import auth middleware (only for protected routes)
+const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
 // ============================================
 // MIDDLEWARE
@@ -41,7 +62,7 @@ const app = express();
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://fairox.co.in',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -49,36 +70,38 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+console.log('✅ Middleware initialized\n');
+
 // ============================================
-// AUTHENTICATION MIDDLEWARE
+// JWT TOKEN EXTRACTION (for optional auth)
 // ============================================
 
-// Extract and verify JWT token for protected routes
+// Attach user from token if present (doesn't require auth)
 const attachUserFromToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (token) {
-    try {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
       req.user = decoded;
-    } catch (error) {
-      console.log('Token verification failed:', error.message);
+      req.user.id = decoded.id || decoded.userId;
     }
+  } catch (error) {
+    // Token invalid or expired - continue without auth
   }
   next();
 };
 
-// Apply auth middleware to all requests
 app.use(attachUserFromToken);
 
 // ============================================
-// STATIC FILES SERVING
+// STATIC FILES
 // ============================================
 
-// Serve static files from parent public folder
+// Serve static files from public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Explicit routes for HTML files
+// Explicit HTML routes
 app.get('/index.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -91,15 +114,22 @@ app.get('/pfms.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/pfms.html'));
 });
 
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
 // Root redirect
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // ============================================
-// API ROUTES
+// API ROUTES - CORRECT USAGE
 // ============================================
 
+console.log('🔗 Registering routes...');
+
+// ✅ CORRECT: Pass route ROUTER (not middleware)
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/pfms', pfmsRoutes);
@@ -108,14 +138,15 @@ app.use('/api/budget', budgetRoutes);
 app.use('/api/export', exportRouter);
 app.use('/api/overview', overviewRouter);
 
+console.log('✅ All routes registered\n');
+
 // ============================================
-// LOGOUT - Direct /logout endpoint
+// DIRECT LOGOUT ENDPOINT
 // ============================================
 
 app.get('/logout', (req, res) => {
   try {
     console.log('🔐 Logout request - User:', req.user?.id || 'anonymous');
-
     res.json({
       success: true,
       message: 'Logged out successfully'
@@ -124,7 +155,42 @@ app.get('/logout', (req, res) => {
     console.error('❌ Logout error:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Error during logout',
+      message: 'Error during logout'
+    });
+  }
+});
+
+// ============================================
+// HEALTH CHECK ENDPOINT
+// ============================================
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// ============================================
+// DATABASE CONNECTION CHECK
+// ============================================
+
+app.get('/api/db-check', async (req, res) => {
+  try {
+    const result = await db.query('SELECT NOW()');
+    res.json({
+      success: true,
+      message: 'Database connected',
+      timestamp: result.rows[0].now
+    });
+  } catch (error) {
+    console.error('❌ Database check error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
       error: error.message
     });
   }
@@ -135,44 +201,12 @@ app.get('/logout', (req, res) => {
 // ============================================
 
 cron.schedule('0 0 * * *', () => {
-  console.log('Auto-generating recurring transactions...');
-  fetch('https://api.fairox.co.in/api/recurring/process/auto-generate', { method: 'POST' })
-    .catch(err => console.error('Cron auto-generate error:', err.message));
-});
-
-// ============================================
-// HEALTH CHECK
-// ============================================
-
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-// ============================================
-// DATABASE CONNECTION CHECK (PostgreSQL)
-// ============================================
-
-app.get('/api/db-check', async (req, res) => {
-  try {
-    await db.query('SELECT 1');
-    res.json({
-      success: true,
-      message: 'Database connected',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Database check error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Database connection failed',
-      error: error.message
-    });
-  }
+  console.log('⏰ Running cron job: Auto-generating recurring transactions...');
+  const apiUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
+  fetch(`${apiUrl}/api/recurring/process/auto-generate`, { method: 'POST' })
+    .then(res => res.json())
+    .then(data => console.log('✅ Cron job completed:', data))
+    .catch(err => console.error('❌ Cron job error:', err.message));
 });
 
 // ============================================
@@ -180,81 +214,120 @@ app.get('/api/db-check', async (req, res) => {
 // ============================================
 
 app.use((req, res) => {
+  // Try to serve HTML files
   if (req.path.endsWith('.html')) {
     const filePath = path.join(__dirname, '../public', req.path);
-    res.sendFile(filePath, (err) => {
-      if (err) {
-        res.status(404).json({
-          success: false,
-          message: 'File not found',
-          path: req.path
-        });
-      }
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      message: 'Route not found',
-      path: req.path,
-      method: req.method
+    return res.sendFile(filePath, (err) => {
+      res.status(404).json({
+        success: false,
+        message: 'File not found',
+        path: req.path
+      });
     });
   }
-});
 
-// ============================================
-// ERROR HANDLING MIDDLEWARE
-// ============================================
-
-app.use((err, req, res, next) => {
-  console.error('🔴 Error:', err);
-  res.status(err.status || 500).json({
+  // API 404
+  res.status(404).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    message: 'Route not found',
+    path: req.path,
+    method: req.method,
+    availableRoutes: [
+      'GET /api/health',
+      'GET /api/db-check',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
+      'POST /api/auth/admin-login',
+      'GET /api/auth/test',
+      'GET /logout'
+    ]
   });
 });
 
 // ============================================
-// SERVER START (Render: bind 0.0.0.0 and PORT)
+// GLOBAL ERROR HANDLER
 // ============================================
 
-const PORT = process.env.PORT || 10000;  // Render default port
+app.use((err, req, res, next) => {
+  console.error('🔴 Global error handler:', err);
+  console.error('   Message:', err.message);
+  console.error('   Stack:', err.stack);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// ============================================
+// SERVER STARTUP
+// ============================================
+
+const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
 
-app.listen(PORT, HOST, async () => {
-  console.log('\n╔════════════════════════════════════════╗');
-  console.log('║  🚀 FAIROX BACKEND SERVER              ║');
-  console.log('╠════════════════════════════════════════╣');
-  console.log(`║  ✅ Server running on port ${PORT.toString().padEnd(26)}║`);
-  console.log(`║  📡 API URL: http://${HOST}:${PORT}/api${' '.repeat(18)}║`);
-  console.log(`║  🏥 Health: http://${HOST}:${PORT}/api/health${' '.repeat(12)}║`);
-  console.log('║  📄 Static files: public/               ║');
-  console.log('║  ───────────────────────────────────────║');
-  console.log('║  Routes:                                ║');
-  console.log('║  • http://localhost:5000/index.html     ║');
-  console.log('║  • http://localhost:5000/admin.html     ║');
-  console.log('║  • http://localhost:5000/pfms.html      ║');
-  console.log('║  • http://localhost:5000/dashboard.html ║');
-  console.log('║  • http://localhost:5000/logout         ║');
-  console.log('╚════════════════════════════════════════╝\n');
+const server = app.listen(PORT, HOST, async () => {
+  console.log('\n╔════════════════════════════════════════════════╗');
+  console.log('║  🚀 FAIROX BACKEND SERVER - PRODUCTION READY   ║');
+  console.log('╠════════════════════════════════════════════════╣');
+  console.log(`║  ✅ Server listening on ${HOST}:${PORT}${' '.repeat(23 - PORT.toString().length)}║`);
+  console.log(`║  🌐 API URL: http://localhost:${PORT}/api${' '.repeat(18)}║`);
+  console.log(`║  💚 Health: http://localhost:${PORT}/api/health${' '.repeat(13)}║`);
+  console.log('║  ───────────────────────────────────────────────║');
+  console.log('║  Routes:                                        ║');
+  console.log('║  • POST   /api/auth/login                       ║');
+  console.log('║  • POST   /api/auth/register                    ║');
+  console.log('║  • POST   /api/auth/admin-login                 ║');
+  console.log('║  • GET    /api/auth/test                        ║');
+  console.log('║  • GET    /logout                               ║');
+  console.log('║  • GET    /api/health                           ║');
+  console.log('║  • GET    /api/db-check                         ║');
+  console.log('╚════════════════════════════════════════════════╝\n');
 
-  // PostgreSQL connection test
+  // Test database connection
   try {
-    await db.query('SELECT 1');
-    console.log('✅ Database connected successfully\n');
+    const result = await db.query('SELECT NOW()');
+    console.log('✅ Database: PostgreSQL connected');
+    console.log('   Server time:', result.rows[0].now, '\n');
   } catch (error) {
-    console.log('⚠️  Database connection error:', error.message);
-    console.log('   Please check your PostgreSQL configuration\n');
+    console.error('⚠️  Database connection error:', error.message);
+    console.error('   Make sure PostgreSQL is running and DATABASE_URL is set\n');
   }
 });
 
-// Handle server errors
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+// ============================================
+// ERROR HANDLERS
+// ============================================
+
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🔴 Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('🔴 Unhandled Rejection at:', promise);
+  console.error('   Reason:', reason);
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('🔴 Uncaught Exception:', error);
+  console.error('🔴 Uncaught Exception:', error.message);
+  console.error('   Stack:', error.stack);
   process.exit(1);
 });
 
