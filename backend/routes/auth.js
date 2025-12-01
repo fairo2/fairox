@@ -1,7 +1,7 @@
 ﻿// ============================================
 // COMPLETE AUTH ROUTES - PRODUCTION READY
 // File: routes/auth.js
-// Database: PostgreSQL (with proper boolean handling)
+// Database: PostgreSQL with proper debugging
 // ============================================
 
 const express = require('express');
@@ -12,6 +12,8 @@ const { authMiddleware } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 
 const router = express.Router();
+
+console.log('\n✅ Auth routes loaded');
 
 // ============================================
 // EMAIL CONFIGURATION
@@ -47,6 +49,18 @@ async function sendEmail(to, subject, html) {
 }
 
 // ============================================
+// TEST ROUTE
+// ============================================
+
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth routes working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ============================================
 // ADMIN LOGIN
 // ============================================
 
@@ -54,25 +68,32 @@ router.post('/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('🔍 Admin login attempt:', email);
+    console.log('\n' + '='.repeat(60));
+    console.log('🔍 ADMIN LOGIN');
+    console.log('='.repeat(60));
+    console.log('Email:', email);
+    console.log('Password received:', !!password);
 
+    // Validation
     if (!email || !password) {
+      console.log('❌ Missing email or password');
       return res.status(400).json({
         success: false,
         message: 'Email and password required'
       });
     }
 
-    // ✅ FIX: Use true (boolean) not 1 (integer)
+    console.log('\n[STEP 1] Database query...');
     const result = await pool.query(
       'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
       [email, true]
     );
 
     const users = result.rows;
+    console.log('Rows found:', users.length);
 
     if (!users || users.length === 0) {
-      console.log('❌ No admin found with email:', email);
+      console.log('❌ No admin found');
       return res.status(401).json({
         success: false,
         message: 'Invalid admin credentials'
@@ -81,8 +102,9 @@ router.post('/admin-login', async (req, res) => {
 
     const admin = users[0];
     console.log('✅ Admin found:', admin.email);
+    console.log('is_approved:', admin.is_approved);
 
-    // Check if approved
+    // Check approval
     if (!admin.is_approved) {
       return res.status(401).json({
         success: false,
@@ -90,8 +112,9 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    // Verify password
+    console.log('\n[STEP 2] Password verification...');
     const isPasswordValid = await bcrypt.compare(password, admin.password);
+    console.log('Password match:', isPasswordValid);
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -100,7 +123,7 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    // Generate token
+    console.log('\n[STEP 3] Generating token...');
     const token = jwt.sign(
       {
         id: admin.id,
@@ -110,6 +133,9 @@ router.post('/admin-login', async (req, res) => {
       process.env.JWT_SECRET || 'your_secret_key',
       { expiresIn: '24h' }
     );
+    console.log('✅ Token generated');
+
+    console.log('✅ LOGIN SUCCESSFUL\n');
 
     res.json({
       success: true,
@@ -124,7 +150,8 @@ router.post('/admin-login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Admin login error:', error);
+    console.error('\n❌ Admin login error:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error: ' + error.message
@@ -140,7 +167,7 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    console.log('📝 Registration attempt:', email);
+    console.log('\n📝 Registration attempt:', email);
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -165,7 +192,7 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ FIX: Use false (boolean) not 0 (integer)
+    // Insert user
     await pool.query(
       'INSERT INTO users (name, email, password, is_approved, is_admin) VALUES ($1, $2, $3, $4, $5)',
       [name, email, hashedPassword, false, false]
@@ -213,7 +240,7 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('🔐 Login attempt:', email);
+    console.log('\n🔐 Login attempt:', email);
 
     if (!email || !password) {
       return res.status(400).json({
@@ -707,5 +734,3 @@ router.get('/logout', authMiddleware, async (req, res) => {
     });
   }
 });
-
-module.exports = router;
