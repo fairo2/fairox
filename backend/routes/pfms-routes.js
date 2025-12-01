@@ -1,8 +1,8 @@
 // ============================================
-// ✅ COMPLETE TRANSACTIONS.JS - PRODUCTION READY
+// ✅ COMPLETE TRANSACTIONS.JS - FULLY UPDATED
 // File: src/backend/routes/transactions.js
 // Database: PostgreSQL
-// Fixed: Dec 1, 2025
+// Updated: Dec 1, 2025 - Excel Import Fixed
 // ============================================
 
 const express = require('express');
@@ -13,7 +13,6 @@ const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
-
 
 // ============================================
 // ✅ PUBLIC ROUTES (NO AUTHENTICATION)
@@ -77,7 +76,6 @@ router.get('/transactions/template', (req, res) => {
     }
 });
 
-
 // ============================================
 // 🔒 AUTH MIDDLEWARE (Applied to all routes below)
 // ============================================
@@ -140,7 +138,6 @@ const authMiddleware = (req, res, next) => {
 // Apply auth middleware to all routes below
 router.use(authMiddleware);
 
-
 // Configure multer for file uploads
 const upload = multer({
     dest: 'uploads/',
@@ -155,7 +152,6 @@ const upload = multer({
         }
     }
 });
-
 
 // ============================================
 // ✅ PROTECTED ROUTES (WITH AUTHENTICATION)
@@ -224,7 +220,6 @@ router.get('/transactions', async (req, res) => {
         const countQuery = query.replace('SELECT t.*, a.name as account_name, c.name as category_name', 'SELECT COUNT(*) as total');
         const countResult = await db.query(countQuery, params);
         
-        // ✅ FIXED: Extract rows array from result
         const countRow = countResult.rows[0];
         const total = parseInt(countRow.total);
         const pages = Math.ceil(total / limit);
@@ -235,8 +230,6 @@ router.get('/transactions', async (req, res) => {
         params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
         const result = await db.query(query, params);
-        
-        // ✅ FIXED: Extract rows array from result
         const transactions = result.rows;
 
         res.json({
@@ -254,7 +247,6 @@ router.get('/transactions', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.post('/transactions', async (req, res) => {
     try {
@@ -287,7 +279,6 @@ router.post('/transactions', async (req, res) => {
             [userId, currency, account_id, mode, category_id, transaction_date, description, parsedAmount]
         );
 
-        // ✅ FIXED: Extract rows array from result
         const transaction = result.rows[0];
 
         res.json({
@@ -300,7 +291,6 @@ router.post('/transactions', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.put('/transactions/:id', async (req, res) => {
     try {
@@ -337,7 +327,6 @@ router.put('/transactions/:id', async (req, res) => {
     }
 });
 
-
 router.delete('/transactions/:id', async (req, res) => {
     try {
         const userId = req.user.id;
@@ -348,7 +337,6 @@ router.delete('/transactions/:id', async (req, res) => {
             [id, userId]
         );
 
-        // ✅ FIXED: Check rowCount (PostgreSQL) instead of affectedRows (MySQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Transaction not found' });
         }
@@ -359,7 +347,6 @@ router.delete('/transactions/:id', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // IMPORT ENDPOINTS
 
@@ -397,7 +384,7 @@ router.post('/transactions/import-preview', upload.single('file'), async (req, r
     }
 });
 
-
+// ✅ FULLY UPDATED: Import endpoint with better date parsing
 router.post('/transactions/import', upload.single('file'), async (req, res) => {
     try {
         const userId = req.user.id;
@@ -415,21 +402,84 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Excel file is empty' });
         }
 
-        // Helper to handle Excel dates
+        // ✅ IMPROVED: Better date parsing with multiple formats support
         const parseExcelDate = (value) => {
             if (!value) return null;
 
+            // Handle Excel numeric dates
             if (typeof value === 'number') {
                 const date = new Date(Math.round((value - 25569) * 86400 * 1000));
                 return date.toISOString().split('T')[0];
             }
 
             const strVal = String(value).trim();
-            if (strVal.match(/^\d{4}-\d{2}-\d{2}$/)) return strVal;
-            if (strVal.match(/^\d{2}-\d{2}-\d{4}$/)) return strVal.split('-').reverse().join('-');
-            if (strVal.match(/^\d{2}\/\d{2}\/\d{4}$/)) return strVal.split('/').reverse().join('-');
 
+            // Already in YYYY-MM-DD format
+            if (strVal.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return strVal;
+            }
+
+            // DD-MM-YYYY format
+            if (strVal.match(/^\d{2}-\d{2}-\d{4}$/)) {
+                const parts = strVal.split('-');
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            // DD/MM/YYYY format
+            if (strVal.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                const parts = strVal.split('/');
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            // ✅ MM/DD/YYYY format (Your Excel file format!)
+            if (strVal.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+                const parts = strVal.split('/');
+                const month = String(parts[0]).padStart(2, '0');
+                const day = String(parts[1]).padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+
+            console.warn(`⚠️ Could not parse date: ${strVal}`);
             return null;
+        };
+
+        // ✅ IMPROVED: More robust column name detection
+        const normalizeColumnNames = (obj) => {
+            const normalized = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const lowerKey = key.toLowerCase().trim();
+
+                // Account column - exact match first, then contains
+                if (lowerKey === 'account_name' || lowerKey === 'account') {
+                    normalized.account_name = value;
+                }
+                // Category column - exact match first, then contains
+                else if (lowerKey === 'category_name' || lowerKey === 'category') {
+                    normalized.category_name = value;
+                }
+                // Mode column - mode or type
+                else if (lowerKey === 'mode' || lowerKey === 'type' || lowerKey === 'transaction type') {
+                    normalized.mode = value;
+                }
+                // Currency column
+                else if (lowerKey === 'currency' || lowerKey === 'curr') {
+                    normalized.currency = value;
+                }
+                // Amount column
+                else if (lowerKey === 'amount' || lowerKey === 'amt' || lowerKey === 'value') {
+                    normalized.amount = value;
+                }
+                // Transaction Date column - exact match
+                else if (lowerKey === 'transaction_date' || lowerKey === 'date' || lowerKey === 'transaction date') {
+                    normalized.transaction_date = value;
+                }
+                // Description column
+                else if (lowerKey === 'description' || lowerKey === 'desc' || lowerKey === 'note' || lowerKey === 'remarks') {
+                    normalized.description = value;
+                }
+            }
+            return normalized;
         };
 
         const normalizeMode = (val) => {
@@ -441,47 +491,48 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
             return null;
         };
 
-        const normalizeColumnNames = (obj) => {
-            const normalized = {};
-            for (const [key, value] of Object.entries(obj)) {
-                const lowerKey = key.toLowerCase().trim();
-                if (lowerKey.includes('account')) normalized.account_name = value;
-                else if (lowerKey.includes('category')) normalized.category_name = value;
-                else if (lowerKey === 'mode' || lowerKey.includes('type')) normalized.mode = value;
-                else if (lowerKey.includes('currency') || lowerKey === 'curr') normalized.currency = value;
-                else if (lowerKey === 'amount' || lowerKey.includes('amt')) normalized.amount = value;
-                else if (lowerKey.includes('date')) normalized.transaction_date = value;
-                else if (lowerKey.includes('desc') || lowerKey.includes('note')) normalized.description = value;
-            }
-            return normalized;
-        };
-
         const results = { success: 0, failed: 0, errors: [] };
 
         for (let i = 0; i < data.length; i++) {
             try {
                 const row = normalizeColumnNames(data[i]);
 
+                // ✅ DEBUG: Log what we're processing
+                console.log(`📋 Processing Row ${i + 2}:`, {
+                    account_name: row.account_name,
+                    category_name: row.category_name,
+                    mode: row.mode,
+                    currency: row.currency,
+                    amount: row.amount,
+                    transaction_date: row.transaction_date,
+                    description: row.description
+                });
+
+                // Validate amount
                 const amount = parseFloat(row.amount);
                 if (isNaN(amount) || amount <= 0) {
-                    throw new Error(`Invalid amount: "${row.amount}"`);
+                    throw new Error(`Invalid amount: "${row.amount}". Must be a number > 0.`);
                 }
 
+                // Validate mode
                 const mode = normalizeMode(row.mode);
                 if (!mode) {
-                    throw new Error(`Invalid mode: "${row.mode}". Use Income, Expense, or Credit Card.`);
+                    throw new Error(`Invalid mode: "${row.mode}". Use: Income, Expense, or Credit Card.`);
                 }
 
+                // Validate currency
                 let currency = String(row.currency).trim().toUpperCase();
                 if (currency !== 'INR' && currency !== 'SAR') {
                     throw new Error(`Invalid currency: "${currency}". Use INR or SAR.`);
                 }
 
+                // Validate and parse date
                 const transDate = parseExcelDate(row.transaction_date);
                 if (!transDate) {
-                    throw new Error(`Invalid date: "${row.transaction_date}". Use YYYY-MM-DD or Excel Date format.`);
+                    throw new Error(`Invalid date: "${row.transaction_date}". Use MM/DD/YYYY, DD/MM/YYYY, or YYYY-MM-DD.`);
                 }
 
+                // Validate account and category names
                 const accountName = String(row.account_name).trim();
                 const categoryName = String(row.category_name).trim();
 
@@ -489,39 +540,37 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
                     throw new Error('Account Name and Category Name are required.');
                 }
 
-                // Get/Create Account
+                // Get or Create Account
                 let accountResult = await db.query(
                     'SELECT id FROM accounts WHERE user_id = $1 AND name = $2 AND currency = $3',
                     [userId, accountName, currency]
                 );
-                
-                // ✅ FIXED: Extract rows array from result
+
                 let accountId = accountResult.rows.length > 0 ? accountResult.rows[0].id : null;
 
                 if (!accountId) {
+                    console.log(`✅ Creating new account: ${accountName} (${currency})`);
                     const res = await db.query(
                         'INSERT INTO accounts (user_id, name, currency) VALUES ($1, $2, $3) RETURNING id',
                         [userId, accountName, currency]
                     );
-                    // ✅ FIXED: Extract rows array from result
                     accountId = res.rows[0].id;
                 }
 
-                // Get/Create Category
+                // Get or Create Category
                 let categoryResult = await db.query(
                     'SELECT id FROM categories WHERE user_id = $1 AND name = $2 AND mode = $3',
                     [userId, categoryName, mode]
                 );
-                
-                // ✅ FIXED: Extract rows array from result
+
                 let categoryId = categoryResult.rows.length > 0 ? categoryResult.rows[0].id : null;
 
                 if (!categoryId) {
+                    console.log(`✅ Creating new category: ${categoryName} (${mode})`);
                     const res = await db.query(
                         'INSERT INTO categories (user_id, name, mode) VALUES ($1, $2, $3) RETURNING id',
                         [userId, categoryName, mode]
                     );
-                    // ✅ FIXED: Extract rows array from result
                     categoryId = res.rows[0].id;
                 }
 
@@ -533,28 +582,35 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
                 );
 
                 results.success++;
+                console.log(`✅ Row ${i + 2} imported successfully`);
 
             } catch (error) {
                 results.failed++;
-                results.errors.push(`Row ${i + 2}: ${error.message}`);
+                const errorMsg = `Row ${i + 2}: ${error.message}`;
+                results.errors.push(errorMsg);
+                console.error(`❌ ${errorMsg}`);
             }
         }
 
-        fs.unlinkSync(req.file.path);
+        // Clean up uploaded file
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
 
         res.json({
             success: true,
-            message: `Processed ${data.length} rows. Success: ${results.success}, Failed: ${results.failed}`,
+            message: `✅ Processed ${data.length} rows. Success: ${results.success}, Failed: ${results.failed}`,
             results
         });
 
     } catch (error) {
         console.error('❌ Import error:', error.message);
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // ACCOUNTS ENDPOINTS
 
@@ -576,8 +632,6 @@ router.get('/accounts', async (req, res) => {
         query += ' ORDER BY created_at DESC';
 
         const result = await db.query(query, params);
-        
-        // ✅ FIXED: Extract rows array from result
         const accounts = result.rows;
 
         res.json({ success: true, accounts: accounts });
@@ -586,7 +640,6 @@ router.get('/accounts', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.post('/accounts', async (req, res) => {
     try {
@@ -602,7 +655,6 @@ router.post('/accounts', async (req, res) => {
             [userId, name, currency]
         );
 
-        // ✅ FIXED: Extract rows array from result
         const account = result.rows[0];
 
         res.json({
@@ -615,7 +667,6 @@ router.post('/accounts', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.put('/accounts/:id', async (req, res) => {
     try {
@@ -635,7 +686,6 @@ router.put('/accounts/:id', async (req, res) => {
     }
 });
 
-
 router.delete('/accounts/:id', async (req, res) => {
     try {
         const userId = req.user.id;
@@ -646,7 +696,6 @@ router.delete('/accounts/:id', async (req, res) => {
             [id, userId]
         );
 
-        // ✅ FIXED: Check rowCount (PostgreSQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Account not found' });
         }
@@ -657,7 +706,6 @@ router.delete('/accounts/:id', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // CATEGORIES ENDPOINTS
 
@@ -679,8 +727,6 @@ router.get('/categories', async (req, res) => {
         query += ' ORDER BY created_at DESC';
 
         const result = await db.query(query, params);
-        
-        // ✅ FIXED: Extract rows array from result
         const categories = result.rows;
 
         res.json({ success: true, categories: categories });
@@ -689,7 +735,6 @@ router.get('/categories', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.post('/categories', async (req, res) => {
     try {
@@ -705,7 +750,6 @@ router.post('/categories', async (req, res) => {
             [userId, name, mode]
         );
 
-        // ✅ FIXED: Extract rows array from result
         const category = result.rows[0];
 
         res.json({
@@ -718,7 +762,6 @@ router.post('/categories', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 router.put('/categories/:id', async (req, res) => {
     try {
@@ -738,7 +781,6 @@ router.put('/categories/:id', async (req, res) => {
     }
 });
 
-
 router.delete('/categories/:id', async (req, res) => {
     try {
         const userId = req.user.id;
@@ -749,7 +791,6 @@ router.delete('/categories/:id', async (req, res) => {
             [id, userId]
         );
 
-        // ✅ FIXED: Check rowCount (PostgreSQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Category not found' });
         }
@@ -760,7 +801,6 @@ router.delete('/categories/:id', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // STATISTICS ENDPOINTS
 
@@ -810,7 +850,6 @@ router.get('/stats', async (req, res) => {
             [userId]
         );
 
-        // ✅ FIXED: Extract rows array from results
         const inrIncome = parseFloat(inrIncomeResult.rows[0].total) || 0;
         const inrExpense = parseFloat(inrExpenseResult.rows[0].total) || 0;
         const inrCreditCard = parseFloat(inrCreditCardResult.rows[0].total) || 0;
@@ -840,6 +879,5 @@ router.get('/stats', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 module.exports = router;
