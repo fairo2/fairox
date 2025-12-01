@@ -1,13 +1,11 @@
 // ============================================
-// PFMS FRONTEND JAVASCRIPT - COMPLETE UPDATED
+// PFMS FRONTEND JAVASCRIPT - COMPLETE FIXED
 // ============================================
-
 
 const API_URL = 'https://api.fairox.co.in/api/pfms';
 const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
 const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
 const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
-
 
 // ✅ Get auth token - SIMPLE
 function getAuthToken() {
@@ -16,14 +14,12 @@ function getAuthToken() {
     return token;
 }
 
-
 let allTransactions = [];
 let allAccounts = [];
 let allCategories = [];
 let currentPage = 1;
-let privacyMode = localStorage.getItem('pfmsPrivacyMode') === 'true'; // Default: hidden
+let privacyMode = localStorage.getItem('pfmsPrivacyMode') === 'true';
 let statsData = {};
-
 
 document.addEventListener('DOMContentLoaded', () => {
     const authToken = getAuthToken();
@@ -33,21 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Initialize privacy mode
     initPrivacyMode();
-
-    // Set today's date in transaction form
     document.getElementById('transactionDate').valueAsDate = new Date();
-    
-    // Load initial data
     loadInitialData();
     
-    // Event listeners
-    document.getElementById('currency').addEventListener('change', loadAccounts);
+    document.getElementById('currency').addEventListener('change', () => {
+        loadAccounts();
+        updateAmountLabel();
+    });
     document.getElementById('mode').addEventListener('change', loadCategories);
     document.getElementById('transactionForm').addEventListener('submit', addTransaction);
     
-    // Load recurring transactions
     setTimeout(() => {
         console.log('⏳ Initializing recurring transactions...');
         loadAccountsForRecurring();
@@ -56,14 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Recurring transactions initialized!');
     }, 500);
 
-    // Load theme
     if (localStorage.getItem('pfmsTheme') === 'dark') {
         document.body.classList.add('dark-mode');
     }
 });
 
-
-// ✅ API CALL - FIXED (Get fresh token EVERY time)
+// ✅ API CALL - FIXED
 async function apiCall(url, options = {}) {
     try {
         const token = getAuthToken();
@@ -111,11 +101,9 @@ async function apiCall(url, options = {}) {
     }
 }
 
-
 // ============================================
 // UI HELPER FUNCTIONS
 // ============================================
-
 
 function showMessage(message, type = 'success') {
     const msgEl = document.getElementById('message');
@@ -124,21 +112,17 @@ function showMessage(message, type = 'success') {
     setTimeout(() => msgEl.classList.remove('active'), 3000);
 }
 
-
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
 }
-
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
 
-
 // ============================================
 // DATA LOADING FUNCTIONS
 // ============================================
-
 
 async function loadInitialData() {
     await loadStats();
@@ -147,17 +131,9 @@ async function loadInitialData() {
     await loadTransactions();
 }
 
-
-// ============================================
-// UPDATED: Load Stats with Currency Separation
-// ============================================
-
-
 async function loadStats() {
     try {
-        // Get stats WITHOUT currency filter (all data)
         const data = await apiCall('/stats');
-        
         if (data && data.success) {
             statsData = data.summary;
             updateStatsDisplay();
@@ -167,16 +143,14 @@ async function loadStats() {
     }
 }
 
-
 // ============================================
-// FIXED: Toggle Privacy Mode Function
+// PRIVACY MODE - FIXED
 // ============================================
 
 function togglePrivacy() {
     try {
         privacyMode = !privacyMode;
         
-        // Update button
         const btn = document.getElementById('privacyToggleBtn');
         if (privacyMode) {
             btn.textContent = '🔒 Hide';
@@ -186,17 +160,13 @@ function togglePrivacy() {
             btn.style.background = '#4CAF50';
         }
         
-        // Save preference
         localStorage.setItem('pfmsPrivacyMode', privacyMode);
         
-        // Toggle visibility of all private elements
         document.querySelectorAll('[data-private]').forEach(el => {
             el.style.display = privacyMode ? 'block' : 'none';
         });
         
-        // Update stats display
         updateStatsDisplay();
-        
         console.log('✅ Privacy mode:', privacyMode ? 'VISIBLE' : 'HIDDEN');
     } catch (error) {
         console.error('❌ Privacy toggle error:', error);
@@ -204,26 +174,18 @@ function togglePrivacy() {
     }
 }
 
-
-// ============================================
-// NEW: Initialize Privacy Mode on Page Load
-// ============================================
-
 function initPrivacyMode() {
     try {
         const btn = document.getElementById('privacyToggleBtn');
         if (!btn) return;
         
-        // Set initial button state and card visibility
         if (privacyMode) {
-            // VISIBLE MODE (default)
             btn.textContent = '🔒 Hide';
             btn.style.background = '#FF6B6B';
             document.querySelectorAll('[data-private]').forEach(el => {
                 el.style.display = 'block';
             });
         } else {
-            // HIDDEN MODE
             btn.textContent = '👁️ Show';
             btn.style.background = '#4CAF50';
             document.querySelectorAll('[data-private]').forEach(el => {
@@ -237,17 +199,9 @@ function initPrivacyMode() {
     }
 }
 
-
-// ============================================
-// NEW: Update Display Based on Privacy Mode
-// ============================================
-
 function updateStatsDisplay() {
     try {
         if (privacyMode) {
-            // VISIBLE MODE - Show actual values
-            
-            // Calculate INR totals
             let inrIncome = 0, inrExpense = 0, inrCreditCard = 0;
             if (statsData.inr) {
                 inrIncome = statsData.inr.income || 0;
@@ -255,7 +209,6 @@ function updateStatsDisplay() {
                 inrCreditCard = statsData.inr.creditCard || 0;
             }
             
-            // Calculate SAR totals
             let sarIncome = 0, sarExpense = 0, sarCreditCard = 0;
             if (statsData.sar) {
                 sarIncome = statsData.sar.income || 0;
@@ -263,21 +216,17 @@ function updateStatsDisplay() {
                 sarCreditCard = statsData.sar.creditCard || 0;
             }
             
-            // INR Cards - Show values
             document.getElementById('totalIncomeINR').textContent = '₹' + inrIncome.toFixed(2);
             document.getElementById('totalExpenseINR').textContent = '₹' + inrExpense.toFixed(2);
             document.getElementById('totalCreditCardINR').textContent = '₹' + inrCreditCard.toFixed(2);
             document.getElementById('totalBalanceINR').textContent = '₹' + (inrIncome - inrExpense).toFixed(2);
             
-            // SAR Cards - Show values
             document.getElementById('totalIncomeSAR').textContent = '﷼' + sarIncome.toFixed(2);
             document.getElementById('totalExpenseSAR').textContent = '﷼' + sarExpense.toFixed(2);
             document.getElementById('totalCreditCardSAR').textContent = '﷼' + sarCreditCard.toFixed(2);
             document.getElementById('totalBalanceSAR').textContent = '﷼' + (sarIncome - sarExpense).toFixed(2);
             
         } else {
-            // HIDDEN MODE - Show locked message
-            
             const lockedHTML = '<div style="text-align: center; padding: 20px; font-size: 14px; color: #999;">🔒 Click Show to reveal</div>';
             
             document.getElementById('totalIncomeINR').innerHTML = lockedHTML;
@@ -297,11 +246,9 @@ function updateStatsDisplay() {
     }
 }
 
-
 // ============================================
 // ACCOUNTS & CATEGORIES LOADING
 // ============================================
-
 
 async function loadAccounts() {
     const currency = document.getElementById('currency').value;
@@ -321,11 +268,9 @@ async function loadAccounts() {
             select.appendChild(option);
         });
 
-        // Update account table
         updateAccountsTable();
     }
 }
-
 
 async function loadCategories() {
     const mode = document.getElementById('mode').value;
@@ -345,11 +290,9 @@ async function loadCategories() {
             select.appendChild(option);
         });
 
-        // Update category table
         updateCategoriesTable();
     }
 }
-
 
 async function loadTransactions(page = 1) {
     const currency = document.getElementById('filterCurrency').value;
@@ -375,7 +318,6 @@ async function loadTransactions(page = 1) {
     }
 }
 
-
 function displayTransactions() {
     const tbody = document.getElementById('transactionsBody');
     
@@ -400,7 +342,6 @@ function displayTransactions() {
         </tr>
     `).join('');
 }
-
 
 function displayPagination(pagination) {
     let html = `
@@ -434,7 +375,6 @@ function displayPagination(pagination) {
     container.innerHTML = html;
 }
 
-
 function updateAccountsTable() {
     const tbody = document.getElementById('accountsTableBody');
     if (!tbody) return;
@@ -455,7 +395,6 @@ function updateAccountsTable() {
         </tr>
     `).join('');
 }
-
 
 function updateCategoriesTable() {
     const tbody = document.getElementById('categoriesTableBody');
@@ -478,11 +417,9 @@ function updateCategoriesTable() {
     `).join('');
 }
 
-
 // ============================================
 // TRANSACTION FUNCTIONS
 // ============================================
-
 
 async function addTransaction(e) {
     e.preventDefault();
@@ -522,7 +459,6 @@ async function addTransaction(e) {
     }
 }
 
-
 async function deleteTransaction(id) {
     if (!confirm('Delete this transaction?')) return;
 
@@ -534,12 +470,6 @@ async function deleteTransaction(id) {
     }
 }
 
-
-// ============================================
-// EDIT TRANSACTION - CORRECTED VERSION
-// ============================================
-
-
 function editTransaction(id) {
     const t = allTransactions.find(x => x.id === id);
     if (!t) {
@@ -547,7 +477,6 @@ function editTransaction(id) {
         return;
     }
 
-    // Create modal if it doesn't exist
     let modal = document.getElementById('editTransactionModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -629,7 +558,6 @@ function editTransaction(id) {
         document.body.appendChild(modal);
     }
 
-    // Now fill in the data
     document.getElementById('editTransactionId').value = t.id;
     document.getElementById('editCurrency').value = t.currency;
     document.getElementById('editMode').value = t.mode;
@@ -637,16 +565,12 @@ function editTransaction(id) {
     document.getElementById('editDescription').value = t.description || '';
     document.getElementById('editAmount').value = t.amount;
 
-    // Load dropdowns
     loadEditAccounts(t.currency, t.account_id);
     loadEditCategories(t.mode, t.category_id);
 
-    // Show modal
     openModal('editTransactionModal');
 }
 
-
-// Load accounts for edit modal
 async function loadEditAccounts(currency, selectedId) {
     try {
         const data = await apiCall(`/accounts?currency=${currency}`);
@@ -668,8 +592,6 @@ async function loadEditAccounts(currency, selectedId) {
     }
 }
 
-
-// Load categories for edit modal
 async function loadEditCategories(mode, selectedId) {
     try {
         const data = await apiCall(`/categories?mode=${mode}`);
@@ -691,8 +613,6 @@ async function loadEditCategories(mode, selectedId) {
     }
 }
 
-
-// Update currency and reload accounts in edit modal
 function onEditCurrencyChange() {
     const currency = document.getElementById('editCurrency').value;
     if (currency) {
@@ -700,8 +620,6 @@ function onEditCurrencyChange() {
     }
 }
 
-
-// Update mode and reload categories in edit modal
 function onEditModeChange() {
     const mode = document.getElementById('editMode').value;
     if (mode) {
@@ -709,8 +627,6 @@ function onEditModeChange() {
     }
 }
 
-
-// Save edited transaction
 async function saveEditTransaction(e) {
     e.preventDefault();
 
@@ -756,18 +672,14 @@ async function saveEditTransaction(e) {
     }
 }
 
-
-// Cancel edit
 function cancelEditTransaction() {
     closeModal('editTransactionModal');
     document.getElementById('editTransactionForm').reset();
 }
 
-
 // ============================================
 // ACCOUNT FUNCTIONS
 // ============================================
-
 
 async function addAccount() {
     const name = prompt('Account Name:');
@@ -790,7 +702,6 @@ async function addAccount() {
     }
 }
 
-
 async function editAccount(id) {
     const account = allAccounts.find(a => a.id === id);
     if (!account) return;
@@ -809,7 +720,6 @@ async function editAccount(id) {
     }
 }
 
-
 async function deleteAccount(id) {
     if (!confirm('Delete this account?')) return;
 
@@ -820,11 +730,9 @@ async function deleteAccount(id) {
     }
 }
 
-
 // ============================================
 // CATEGORY FUNCTIONS
 // ============================================
-
 
 async function addCategory() {
     const name = prompt('Category Name:');
@@ -847,7 +755,6 @@ async function addCategory() {
     }
 }
 
-
 async function editCategory(id) {
     const category = allCategories.find(c => c.id === id);
     if (!category) return;
@@ -866,7 +773,6 @@ async function editCategory(id) {
     }
 }
 
-
 async function deleteCategory(id) {
     if (!confirm('Delete this category?')) return;
 
@@ -877,11 +783,9 @@ async function deleteCategory(id) {
     }
 }
 
-
 // ============================================
-// EXCEL IMPORT/EXPORT FUNCTIONS
+// EXCEL IMPORT/EXPORT - FIXED authToken
 // ============================================
-
 
 async function exportToExcel() {
     try {
@@ -890,9 +794,10 @@ async function exportToExcel() {
         console.log('📥 Exporting from:', endpoint);
         showMessage('⏳ Exporting data...', 'info');
 
+        const token = getAuthToken();
         const response = await fetch(endpoint, {
             headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
+                'Authorization': `Bearer ${token}`
             }
         });
 
@@ -900,7 +805,6 @@ async function exportToExcel() {
             throw new Error('Export failed: ' + response.statusText);
         }
 
-        // Parse file name from Content-Disposition
         const contentDisposition = response.headers.get('Content-Disposition');
         let fileName = 'PFMS_Export.xlsx';
         if (contentDisposition) {
@@ -908,7 +812,6 @@ async function exportToExcel() {
             if (fileNameMatch) fileName = fileNameMatch[1];
         }
 
-        // Download file
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -927,15 +830,13 @@ async function exportToExcel() {
     }
 }
 
-
-async function downloadTemplate() {
+function downloadTemplate() {
     try {
         console.log('📥 Downloading template...');
         showMessage('⏳ Generating template...', 'info');
 
         const workbook = XLSX.utils.book_new();
         
-        // Template sheet with headers
         const templateData = [
             ['Date', 'Account', 'Category', 'Description', 'Amount', 'Currency', 'Mode'],
             ['2025-01-15', 'HDFC', 'Salary', 'Monthly Salary', '50000', 'INR', 'Income'],
@@ -965,87 +866,209 @@ async function downloadTemplate() {
     }
 }
 
-
+// ✅ FIXED: handleImportFile - Use getAuthToken()
 async function handleImportFile() {
     try {
         const file = document.getElementById('importFile').files[0];
-        if (!file) return;
-
-        console.log('📥 Processing import file:', file.name);
-        showMessage('⏳ Processing file...', 'info');
-
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        console.log('📊 Parsed rows:', jsonData.length);
-
-        if (jsonData.length === 0) {
-            showMessage('❌ No data found in file', 'error');
+        if (!file) {
+            showMessage('❌ Please select a file', 'error');
             return;
         }
 
-        // Validate and import
-        let successCount = 0;
-        let errorCount = 0;
+        showMessage('📤 Uploading file... Please wait', 'success');
+        
+        const formData = new FormData();
+        formData.append('file', file);
 
-        for (const row of jsonData) {
-            try {
-                const transaction = {
-                    account: row.Account,
-                    category: row.Category,
-                    description: row.Description || '',
-                    amount: parseFloat(row.Amount),
-                    currency: row.Currency || 'INR',
-                    mode: row.Mode,
-                    date: row.Date
-                };
-
-                // Validate required fields
-                if (!transaction.account || !transaction.category || !transaction.amount) {
-                    errorCount++;
-                    continue;
-                }
-
-                // Call API to save
-                const result = await apiCall('/transactions', {
-                    method: 'POST',
-                    body: JSON.stringify(transaction)
-                });
-
-                if (result && result.success) {
-                    successCount++;
-                } else {
-                    errorCount++;
-                }
-            } catch (error) {
-                console.error('❌ Row error:', error);
-                errorCount++;
-            }
+        const token = getAuthToken(); // ✅ FIXED: Use getAuthToken()
+        if (!token) {
+            showMessage('❌ Not authenticated', 'error');
+            return;
         }
 
-        // Show results
-        showMessage(`✅ Import complete: ${successCount} success, ${errorCount} errors`, 'success');
-        console.log(`✅ Import results: ${successCount} success, ${errorCount} failed`);
+        try {
+            const previewResponse = await fetch(`${API_URL}/transactions/import-preview`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}` // ✅ FIXED
+                },
+                body: formData
+            });
 
-        // Reload transactions
-        await loadTransactions(1);
+            const previewData = await previewResponse.json();
 
-        // Reset file input
-        document.getElementById('importFile').value = '';
+            if (!previewData.success) {
+                showMessage(`❌ ${previewData.message}`, 'error');
+                return;
+            }
 
+            displayImportPreview(previewData);
+        } catch (err) {
+            console.error('Preview error:', err);
+            showMessage('❌ Failed to read file. Ensure it\'s a valid Excel file.', 'error');
+        }
     } catch (error) {
         console.error('❌ Import error:', error);
         showMessage('❌ Import failed: ' + error.message, 'error');
     }
 }
 
+function displayImportPreview(previewData) {
+    let modal = document.getElementById('importPreviewModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'importPreviewModal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    const html = `
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('importPreviewModal')">&times;</span>
+            <h2>📊 Import Preview</h2>
+            
+            <div style="margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px;">
+                <p><strong>Total Rows:</strong> ${previewData.totalRows}</p>
+                <p><strong>Columns Found:</strong> ${previewData.columns.join(', ')}</p>
+            </div>
+
+            <h3>Sample Data (First 10 rows):</h3>
+            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            ${previewData.columns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${previewData.preview.map(row => `
+                            <tr>
+                                ${previewData.columns.map(col => `<td>${row[col] || '-'}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn--primary" onclick="confirmImport('${previewData.totalRows}')" style="flex: 1;">
+                    ✅ Confirm & Import
+                </button>
+                <button class="btn btn--secondary" onclick="closeModal('importPreviewModal')" style="flex: 1;">
+                    ❌ Cancel
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.innerHTML = html;
+    openModal('importPreviewModal');
+}
+
+// ✅ FIXED: confirmImport - Use getAuthToken()
+async function confirmImport(totalRows) {
+    const file = document.getElementById('importFile').files[0];
+    if (!file) return;
+
+    closeModal('importPreviewModal');
+    showMessage(`📤 Importing ${totalRows} rows... This may take a moment`, 'success');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = getAuthToken(); // ✅ FIXED: Use getAuthToken()
+    if (!token) {
+        showMessage('❌ Not authenticated', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/transactions/import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}` // ✅ FIXED
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showImportResults(data.results);
+            setTimeout(() => {
+                loadTransactions();
+                loadStats();
+                loadAccounts();
+                loadCategories();
+            }, 1500);
+        } else {
+            showMessage(`❌ ${data.message}`, 'error');
+        }
+    } catch (err) {
+        console.error('Import error:', err);
+        showMessage('❌ Import failed. Check console for details.', 'error');
+    }
+
+    document.getElementById('importFile').value = '';
+}
+
+function showImportResults(results) {
+    let modal = document.getElementById('importResultsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'importResultsModal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    const errorsList = results.errors
+        .slice(0, 20)
+        .map(err => `<li style="color: #f44336; margin: 5px 0;">❌ ${err}</li>`)
+        .join('');
+
+    const hasMoreErrors = results.errors.length > 20;
+
+    const html = `
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('importResultsModal')">&times;</span>
+            <h2>📊 Import Results</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                <div style="padding: 15px; background: #e8f5e9; border-radius: 5px; border-left: 4px solid #4CAF50;">
+                    <div style="font-size: 2rem; font-weight: bold; color: #4CAF50;">✅ ${results.success}</div>
+                    <div style="color: #666; font-size: 0.9rem;">Transactions Imported</div>
+                </div>
+                <div style="padding: 15px; background: #ffebee; border-radius: 5px; border-left: 4px solid #f44336;">
+                    <div style="font-size: 2rem; font-weight: bold; color: #f44336;">❌ ${results.failed}</div>
+                    <div style="color: #666; font-size: 0.9rem;">Rows Failed</div>
+                </div>
+            </div>
+
+            ${results.errors.length > 0 ? `
+                <h3>Errors Found:</h3>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; max-height: 250px; overflow-y: auto; border-left: 4px solid #ff9800;">
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${errorsList}
+                        ${hasMoreErrors ? `<li style="color: #666; margin-top: 10px; font-style: italic;">... and ${results.errors.length - 20} more errors</li>` : ''}
+                    </ul>
+                </div>
+            ` : ''}
+
+            <div style="margin-top: 20px;">
+                <button class="btn btn--primary" onclick="closeModal('importResultsModal')" style="width: 100%;">
+                    ✅ Done
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.innerHTML = html;
+    openModal('importResultsModal');
+}
 
 // ============================================
 // RECURRING TRANSACTIONS FUNCTIONS
 // ============================================
-
 
 async function loadAccountsForRecurring() {
     const data = await apiCall('/accounts');
@@ -1063,7 +1086,6 @@ async function loadAccountsForRecurring() {
     }
 }
 
-
 async function loadCategoriesForRecurring() {
     const data = await apiCall('/categories');
     if (data && data.success) {
@@ -1079,7 +1101,6 @@ async function loadCategoriesForRecurring() {
         }
     }
 }
-
 
 async function loadRecurringTransactions() {
     const data = await apiCall('/recurring');
@@ -1102,7 +1123,6 @@ async function loadRecurringTransactions() {
         }
     }
 }
-
 
 async function createRecurringTransaction(e) {
     e.preventDefault();
@@ -1144,7 +1164,6 @@ async function createRecurringTransaction(e) {
     }
 }
 
-
 async function deleteRecurringTransaction(id) {
     if (!confirm('Delete this recurring transaction?')) return;
 
@@ -1155,11 +1174,9 @@ async function deleteRecurringTransaction(id) {
     }
 }
 
-
 // ============================================
 // BUDGET FUNCTIONS
 // ============================================
-
 
 async function setBudgetLimit() {
     const categoryId = document.getElementById('budgetCategory').value;
@@ -1189,7 +1206,6 @@ async function setBudgetLimit() {
     }
 }
 
-
 async function loadBudgetStatus() {
     const data = await apiCall('/budget/status');
     if (data && data.success) {
@@ -1211,18 +1227,11 @@ async function loadBudgetStatus() {
     }
 }
 
-
 // ============================================
-// UTILITY FUNCTIONS
+// ✅ MISSING FUNCTIONS - NOW ADDED
 // ============================================
 
-
-function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('pfmsTheme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-}
-
-
+// FIX: updateAmountLabel() - ✅ Added
 function updateAmountLabel() {
     const currency = document.getElementById('currency').value;
     const label = document.getElementById('currencySymbol');
@@ -1231,15 +1240,25 @@ function updateAmountLabel() {
     }
 }
 
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('pfmsTheme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+}
 
 function applyFilters() {
     loadTransactions(1);
 }
 
-
 function handleMonthChange() {
     console.log('Month changed');
-    // Implement month filter change logic
+}
+
+function handleCurrencyChange() {
+    console.log('Currency changed');
 }
 
 // ============================================
