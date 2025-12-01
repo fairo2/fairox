@@ -1,11 +1,21 @@
+// ============================================
+// ✅ COMPLETE OVERVIEW.JS - PRODUCTION READY
+// File: src/backend/routes/overview.js
+// Database: PostgreSQL
+// Fixed: Dec 1, 2025
+// ============================================
+
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 
+console.log('✅ Overview routes loaded');
+
 // ============================================
 // GET OVERVIEW SUMMARY DATA
 // ============================================
+
 router.get('/summary', authMiddleware, async (req, res) => {
     try {
         console.log('📊 GET /api/overview/summary - User:', req.user.id);
@@ -23,7 +33,12 @@ router.get('/summary', authMiddleware, async (req, res) => {
             WHERE t.user_id = $1
         `;
         
-        const [transactions] = await db.query(transactionQuery, [userId]);
+        const result = await db.query(transactionQuery, [userId]);
+        
+        // ✅ FIXED: Extract rows array from result object
+        const transactions = result.rows;
+        
+        console.log('   Transactions fetched:', transactions.length);
         
         // ✅ Calculate totals by currency
         const summaryByCurrency = {};
@@ -61,7 +76,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error fetching overview summary:', error);
+        console.error('❌ Error fetching overview summary:', error.message);
         res.status(500).json({
             success: false,
             message: 'Error fetching overview summary',
@@ -70,9 +85,11 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 });
 
+
 // ============================================
-// GET CATEGORY BREAKDOWN FOR PIE CHART (FIXED FOR PostgreSQL)
+// GET CATEGORY BREAKDOWN FOR PIE CHART
 // ============================================
+
 router.get('/category-breakdown', authMiddleware, async (req, res) => {
     try {
         console.log('📊 GET /api/overview/category-breakdown - User:', req.user.id);
@@ -109,13 +126,28 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
             ORDER BY t.currency, total_amount DESC
         `;
         
-        const [categoryData] = await db.query(categoryQuery, [userId, year, month]);
+        const result = await db.query(categoryQuery, [userId, year, month]);
+        
+        // ✅ FIXED: Extract rows array from PostgreSQL result object
+        const categoryData = result.rows;
         
         console.log('📊 Raw category data fetched:', categoryData.length, 'records');
+        
+        if (!categoryData || categoryData.length === 0) {
+            console.log('⚠️ No category data found for this month');
+            return res.json({
+                success: true,
+                month: month,
+                year: year,
+                allCurrencies: {},
+                categories: []
+            });
+        }
         
         // ✅ GROUP BY CURRENCY for frontend
         const allCurrencies = {};
         
+        // ✅ FIXED: Iterate over rows array properly
         categoryData.forEach(item => {
             const currency = item.currency || 'INR';
             
@@ -142,7 +174,8 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error fetching overview category breakdown:', error);
+        console.error('❌ Error fetching overview category breakdown:', error.message);
+        console.error('Stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Error fetching overview category breakdown',
@@ -150,5 +183,275 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
         });
     }
 });
+
+
+// ============================================
+// GET MONTHLY TREND DATA
+// ============================================
+
+router.get('/monthly-trend', authMiddleware, async (req, res) => {
+    try {
+        console.log('📊 GET /api/overview/monthly-trend - User:', req.user.id);
+        
+        const userId = req.user.id;
+        const year = parseInt(req.query.year) || new Date().getFullYear();
+        
+        // ✅ FIXED: PostgreSQL syntax for monthly trend
+        const trendQuery = `
+            SELECT 
+                EXTRACT(MONTH FROM t.transaction_date) as month,
+                t.currency,
+                SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END) as total_income,
+                SUM(CASE WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount ELSE 0 END) as total_expense,
+                COUNT(t.id) as transaction_count
+            FROM transactions t
+            WHERE t.user_id = $1
+            AND EXTRACT(YEAR FROM t.transaction_date) = $2
+            GROUP BY EXTRACT(MONTH FROM t.transaction_date), t.currency
+            ORDER BY EXTRACT(MONTH FROM t.transaction_date), t.currency
+        `;
+        
+        const result = await db.query(trendQuery, [userId, year]);
+        
+        // ✅ FIXED: Extract rows array
+        const trendData = result.rows;
+        
+        console.log('📊 Monthly trend data fetched:', trendData.length, 'records');
+        
+        res.json({
+            success: true,
+            year: year,
+            data: trendData
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching monthly trend:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching monthly trend',
+            error: error.message
+        });
+    }
+});
+
+
+// ============================================
+// GET TOP EXPENSES
+// ============================================
+
+router.get('/top-expenses', authMiddleware, async (req, res) => {
+    try {
+        console.log('📊 GET /api/overview/top-expenses - User:', req.user.id);
+        
+        const userId = req.user.id;
+        const limit = parseInt(req.query.limit) || 10;
+        const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+        const year = parseInt(req.query.year) || new Date().getFullYear();
+        
+        // ✅ FIXED: PostgreSQL syntax for top expenses
+        const expenseQuery = `
+            SELECT 
+                t.id,
+                t.description,
+                t.amount,
+                t.currency,
+                c.name as category_name,
+                t.mode,
+                t.transaction_date,
+                COUNT(*) OVER() as total_count
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1
+            AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+            AND EXTRACT(YEAR FROM t.transaction_date) = $2
+            AND EXTRACT(MONTH FROM t.transaction_date) = $3
+            ORDER BY t.amount DESC
+            LIMIT $4
+        `;
+        
+        const result = await db.query(expenseQuery, [userId, year, month, limit]);
+        
+        // ✅ FIXED: Extract rows array
+        const expenses = result.rows;
+        
+        console.log('📊 Top expenses fetched:', expenses.length, 'records');
+        
+        res.json({
+            success: true,
+            month: month,
+            year: year,
+            expenses: expenses
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching top expenses:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching top expenses',
+            error: error.message
+        });
+    }
+});
+
+
+// ============================================
+// GET SPENDING BY MODE
+// ============================================
+
+router.get('/spending-by-mode', authMiddleware, async (req, res) => {
+    try {
+        console.log('📊 GET /api/overview/spending-by-mode - User:', req.user.id);
+        
+        const userId = req.user.id;
+        const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+        const year = parseInt(req.query.year) || new Date().getFullYear();
+        
+        // ✅ FIXED: PostgreSQL syntax for spending by mode
+        const modeQuery = `
+            SELECT 
+                t.mode,
+                t.currency,
+                COUNT(t.id) as transaction_count,
+                SUM(t.amount) as total_amount,
+                AVG(t.amount) as average_amount
+            FROM transactions t
+            WHERE t.user_id = $1
+            AND EXTRACT(YEAR FROM t.transaction_date) = $2
+            AND EXTRACT(MONTH FROM t.transaction_date) = $3
+            GROUP BY t.mode, t.currency
+            ORDER BY total_amount DESC
+        `;
+        
+        const result = await db.query(modeQuery, [userId, year, month]);
+        
+        // ✅ FIXED: Extract rows array
+        const modeData = result.rows;
+        
+        console.log('📊 Spending by mode fetched:', modeData.length, 'records');
+        
+        res.json({
+            success: true,
+            month: month,
+            year: year,
+            data: modeData
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching spending by mode:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching spending by mode',
+            error: error.message
+        });
+    }
+});
+
+
+// ============================================
+// GET OVERVIEW DASHBOARD DATA (ALL IN ONE)
+// ============================================
+
+router.get('/dashboard', authMiddleware, async (req, res) => {
+    try {
+        console.log('📊 GET /api/overview/dashboard - User:', req.user.id);
+        
+        const userId = req.user.id;
+        const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+        const year = parseInt(req.query.year) || new Date().getFullYear();
+        
+        // Execute all queries in parallel
+        const [
+            summaryResult,
+            categoryResult,
+            trendResult,
+            expenseResult,
+            modeResult
+        ] = await Promise.all([
+            // Summary
+            db.query(
+                `SELECT t.amount, t.mode, t.currency 
+                 FROM transactions t 
+                 WHERE t.user_id = $1`,
+                [userId]
+            ),
+            
+            // Category breakdown
+            db.query(
+                `SELECT COALESCE(c.name, 'Uncategorized') as category_name, t.currency,
+                        COALESCE(SUM(t.amount), 0) as total_amount, COUNT(t.id) as transaction_count
+                 FROM transactions t
+                 LEFT JOIN categories c ON t.category_id = c.id
+                 WHERE t.user_id = $1 AND t.mode IN ('Expense', 'Credit Card')
+                 AND EXTRACT(YEAR FROM t.transaction_date) = $2
+                 AND EXTRACT(MONTH FROM t.transaction_date) = $3
+                 GROUP BY COALESCE(c.name, 'Uncategorized'), t.currency`,
+                [userId, year, month]
+            ),
+            
+            // Monthly trend
+            db.query(
+                `SELECT EXTRACT(MONTH FROM t.transaction_date) as month, t.currency,
+                        SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END) as total_income,
+                        SUM(CASE WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                            THEN t.amount ELSE 0 END) as total_expense
+                 FROM transactions t
+                 WHERE t.user_id = $1 AND EXTRACT(YEAR FROM t.transaction_date) = $2
+                 GROUP BY EXTRACT(MONTH FROM t.transaction_date), t.currency`,
+                [userId, year]
+            ),
+            
+            // Top expenses
+            db.query(
+                `SELECT t.id, t.description, t.amount, t.currency, c.name as category_name, t.mode
+                 FROM transactions t
+                 LEFT JOIN categories c ON t.category_id = c.id
+                 WHERE t.user_id = $1 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+                 AND EXTRACT(YEAR FROM t.transaction_date) = $2
+                 AND EXTRACT(MONTH FROM t.transaction_date) = $3
+                 ORDER BY t.amount DESC LIMIT 10`,
+                [userId, year, month]
+            ),
+            
+            // Spending by mode
+            db.query(
+                `SELECT t.mode, t.currency, COUNT(t.id) as transaction_count, SUM(t.amount) as total_amount
+                 FROM transactions t
+                 WHERE t.user_id = $1 AND EXTRACT(YEAR FROM t.transaction_date) = $2
+                 AND EXTRACT(MONTH FROM t.transaction_date) = $3
+                 GROUP BY t.mode, t.currency`,
+                [userId, year, month]
+            )
+        ]);
+        
+        // ✅ FIXED: Extract rows from all results
+        const summaryData = summaryResult.rows;
+        const categoryData = categoryResult.rows;
+        const trendData = trendResult.rows;
+        const topExpenses = expenseResult.rows;
+        const modeData = modeResult.rows;
+        
+        console.log('✅ Dashboard data compiled');
+        
+        res.json({
+            success: true,
+            month: month,
+            year: year,
+            summary: summaryData,
+            categories: categoryData,
+            trend: trendData,
+            topExpenses: topExpenses,
+            spendingByMode: modeData
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching dashboard:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching dashboard',
+            error: error.message
+        });
+    }
+});
+
 
 module.exports = router;

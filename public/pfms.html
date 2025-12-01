@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
-    <!-- Chart.js Library for Overview -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <link rel="stylesheet" href="pfms.css">
 </head>
 <body>
@@ -17,96 +15,108 @@
         <h1>💰 Personal Finance Management System</h1>
         <div class="header-controls">
             <button onclick="toggleTheme()" aria-label="Toggle dark/light theme">🌙 Theme</button>
-            <button onclick="exportToExcel()" style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-    📊 Export
-</button>
+            
+            <!-- ✅ FIXED: Export with type selector -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="exportType" 
+                        style="padding: 8px 12px; border-radius: 6px; background: #2a2a2a; border: 1px solid #00d9ff; color: #00d9ff; cursor: pointer; font-weight: 500; font-size: 13px;">
+                    <option value="excel">📊 Full Export</option>
+                    <option value="transactions">📋 Transactions</option>
+                    <option value="budgets">💰 Budgets</option>
+                </select>
+                <button onclick="exportToExcel()" 
+                        style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    📊 Export
+                </button>
+            </div>
+            
             <button onclick="location.href='/admin.html'">← Back</button>
         </div>
     </div>
-
 
     <div class="pfms-container">
         <!-- Messages -->
         <div id="message" class="message"></div>
 
-        <!-- PRIVACY TOGGLE BUTTON -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: rgba(255, 107, 107, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 107, 0.3);">
-    <h3 style="margin: 0; color: #FF6B6B;">📊 Summary & Privacy</h3>
-    <button id="privacyToggleBtn" class="btn" style="background: #FF6B6B; color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none;">
-        🔒 Show
-    </button>
-</div>
-
-<!-- SUMMARY CARDS -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
-    
-    <!-- ============ INR SECTION (4 CARDS) ============ -->
-    <div style="background: linear-gradient(135deg, rgba(33, 128, 141, 0.15) 0%, rgba(33, 128, 141, 0.05) 100%); border: 2px solid rgba(33, 128, 141, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">📈</span>
-            <div style="color: #2180A1; font-weight: 600; font-size: 14px;">INR - Income</div>
+        <!-- ✅ FIXED: Privacy Toggle with Functionality -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: rgba(255, 107, 107, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 107, 0.3);">
+            <h3 style="margin: 0; color: #FF6B6B;">📊 Summary & Privacy</h3>
+            <button id="privacyToggleBtn" 
+                    onclick="togglePrivacy()" 
+                    style="background: #FF6B6B; color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; transition: all 0.3s ease;">
+                🔒 Hide
+            </button>
         </div>
-        <div id="totalIncomeINR" style="font-size: 28px; font-weight: bold; color: #2180A1;">₹0.00</div>
-    </div>
 
-    <div style="background: linear-gradient(135deg, rgba(230, 129, 97, 0.15) 0%, rgba(230, 129, 97, 0.05) 100%); border: 2px solid rgba(230, 129, 97, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">📉</span>
-            <div style="color: #E68161; font-weight: 600; font-size: 14px;">INR - Expense</div>
+        <!-- ✅ FIXED: Summary Cards with data-private attribute -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            
+            <!-- ============ INR SECTION (4 CARDS) ============ -->
+            <div data-private style="background: linear-gradient(135deg, rgba(33, 128, 141, 0.15) 0%, rgba(33, 128, 141, 0.05) 100%); border: 2px solid rgba(33, 128, 141, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">📈</span>
+                    <div style="color: #2180A1; font-weight: 600; font-size: 14px;">INR - Income</div>
+                </div>
+                <div id="totalIncomeINR" style="font-size: 28px; font-weight: bold; color: #2180A1;">₹0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(230, 129, 97, 0.15) 0%, rgba(230, 129, 97, 0.05) 100%); border: 2px solid rgba(230, 129, 97, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">📉</span>
+                    <div style="color: #E68161; font-weight: 600; font-size: 14px;">INR - Expense</div>
+                </div>
+                <div id="totalExpenseINR" style="font-size: 28px; font-weight: bold; color: #E68161;">₹0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">⚖️</span>
+                    <div style="color: #4CAF50; font-weight: 600; font-size: 14px;">INR - Balance</div>
+                </div>
+                <div id="totalBalanceINR" style="font-size: 28px; font-weight: bold; color: #4CAF50;">₹0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">💳</span>
+                    <div style="color: #2196F3; font-weight: 600; font-size: 14px;">INR - Credit Card</div>
+                </div>
+                <div id="totalCreditCardINR" style="font-size: 28px; font-weight: bold; color: #2196F3;">₹0.00</div>
+            </div>
+
+            <!-- ============ SAR SECTION (4 CARDS) ============ -->
+            <div data-private style="background: linear-gradient(135deg, rgba(33, 128, 141, 0.15) 0%, rgba(33, 128, 141, 0.05) 100%); border: 2px solid rgba(33, 128, 141, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">📈</span>
+                    <div style="color: #2180A1; font-weight: 600; font-size: 14px;">SAR - Income</div>
+                </div>
+                <div id="totalIncomeSAR" style="font-size: 28px; font-weight: bold; color: #2180A1;">﷼0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(230, 129, 97, 0.15) 0%, rgba(230, 129, 97, 0.05) 100%); border: 2px solid rgba(230, 129, 97, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">📉</span>
+                    <div style="color: #E68161; font-weight: 600; font-size: 14px;">SAR - Expense</div>
+                </div>
+                <div id="totalExpenseSAR" style="font-size: 28px; font-weight: bold; color: #E68161;">﷼0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">⚖️</span>
+                    <div style="color: #4CAF50; font-weight: 600; font-size: 14px;">SAR - Balance</div>
+                </div>
+                <div id="totalBalanceSAR" style="font-size: 28px; font-weight: bold; color: #4CAF50;">﷼0.00</div>
+            </div>
+
+            <div data-private style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">💳</span>
+                    <div style="color: #2196F3; font-weight: 600; font-size: 14px;">SAR - Credit Card</div>
+                </div>
+                <div id="totalCreditCardSAR" style="font-size: 28px; font-weight: bold; color: #2196F3;">﷼0.00</div>
+            </div>
         </div>
-        <div id="totalExpenseINR" style="font-size: 28px; font-weight: bold; color: #E68161;">₹0.00</div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">⚖️</span>
-            <div style="color: #4CAF50; font-weight: 600; font-size: 14px;">INR - Balance</div>
-        </div>
-        <div id="totalBalanceINR" style="font-size: 28px; font-weight: bold; color: #4CAF50;">₹0.00</div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">💳</span>
-            <div style="color: #2196F3; font-weight: 600; font-size: 14px;">INR - Credit Card</div>
-        </div>
-        <div id="totalCreditCardINR" style="font-size: 28px; font-weight: bold; color: #2196F3;">₹0.00</div>
-    </div>
-
-    <!-- ============ SAR SECTION (4 CARDS) ============ -->
-    <div style="background: linear-gradient(135deg, rgba(33, 128, 141, 0.15) 0%, rgba(33, 128, 141, 0.05) 100%); border: 2px solid rgba(33, 128, 141, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">📈</span>
-            <div style="color: #2180A1; font-weight: 600; font-size: 14px;">SAR - Income</div>
-        </div>
-        <div id="totalIncomeSAR" style="font-size: 28px; font-weight: bold; color: #2180A1;">﷼0.00</div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, rgba(230, 129, 97, 0.15) 0%, rgba(230, 129, 97, 0.05) 100%); border: 2px solid rgba(230, 129, 97, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">📉</span>
-            <div style="color: #E68161; font-weight: 600; font-size: 14px;">SAR - Expense</div>
-        </div>
-        <div id="totalExpenseSAR" style="font-size: 28px; font-weight: bold; color: #E68161;">﷼0.00</div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">⚖️</span>
-            <div style="color: #4CAF50; font-weight: 600; font-size: 14px;">SAR - Balance</div>
-        </div>
-        <div id="totalBalanceSAR" style="font-size: 28px; font-weight: bold; color: #4CAF50;">﷼0.00</div>
-    </div>
-
-    <div style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span style="font-size: 24px;">💳</span>
-            <div style="color: #2196F3; font-weight: 600; font-size: 14px;">SAR - Credit Card</div>
-        </div>
-        <div id="totalCreditCardSAR" style="font-size: 28px; font-weight: bold; color: #2196F3;">﷼0.00</div>
-    </div>
-
-</div>
 
         <!-- Transaction Entry Form -->
         <div class="section">
@@ -115,7 +125,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="currency">Currency *</label>
-                        <select id="currency" required>
+                        <select id="currency" required onchange="updateAmountLabel()">
                             <option value="">Select Currency</option>
                             <option value="INR">INR (₹)</option>
                             <option value="SAR">SAR (﷼)</option>
@@ -156,7 +166,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="amount">Amount * (₹)</label>
+                        <label for="amount">Amount * <span id="currencySymbol">(₹)</span></label>
                         <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required>
                     </div>
 
@@ -165,6 +175,9 @@
                         <input type="text" id="description" placeholder="Optional note">
                     </div>
                 </div>
+
+                <!-- ✅ FIXED: Error message container -->
+                <div id="transactionFormError" style="display: none; background: #FF6B6B; color: white; padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 14px;"></div>
 
                 <button type="submit" class="btn btn--lg btn--primary" style="width: 100%; margin-top: 20px;">
                     💾 Save Transaction
@@ -251,6 +264,9 @@
                 </select>
             </div>
 
+            <!-- ✅ FIXED: Error message container -->
+            <div id="accountFormError" style="display: none; background: #FF6B6B; color: white; padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 14px;"></div>
+
             <button class="btn btn--primary" onclick="addAccount()" style="width: 100%; margin-top: 15px;">➕ Add Account</button>
 
             <h3 style="margin-top: 30px; margin-bottom: 15px;">📋 Your Accounts</h3>
@@ -293,6 +309,9 @@
                 </select>
             </div>
 
+            <!-- ✅ FIXED: Error message container -->
+            <div id="categoryFormError" style="display: none; background: #FF6B6B; color: white; padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 14px;"></div>
+
             <button class="btn btn--primary" onclick="addCategory()" style="width: 100%; margin-top: 15px;">➕ Add Category</button>
 
             <h3 style="margin-top: 30px; margin-bottom: 15px;">📋 Your Categories</h3>
@@ -316,252 +335,222 @@
     </div>
 
     <!-- RECURRING TRANSACTIONS SECTION -->
-<!-- RECURRING TRANSACTIONS SECTION -->
-<div class="form-section" style="margin-top: 30px;">
-    <h3>📋 Recurring Transactions</h3>
-    
-    <form id="recurringForm" onsubmit="createRecurringTransaction(event)" style="display: grid; gap: 15px;">
+    <div class="form-section" style="margin-top: 30px;">
+        <h3>📋 Recurring Transactions</h3>
         
-        <!-- Account Select -->
-        <div class="form-group">
-            <label for="recurringAccount">Account *</label>
-            <select id="recurringAccount" class="form-control" required>
-                <option value="">Select Account</option>
-            </select>
-        </div>
-        
-        <!-- Category Select -->
-        <div class="form-group">
-            <label for="recurringCategory">Category *</label>
-            <select id="recurringCategory" class="form-control" required>
-                <option value="">Select Category</option>
-            </select>
-        </div>
-        
-        <!-- Description -->
-        <div class="form-group">
-            <label for="recurringDescription">Description</label>
-            <input type="text" id="recurringDescription" class="form-control" placeholder="e.g., Monthly Salary">
-        </div>
-        
-        <!-- Amount -->
-        <div class="form-group">
-            <label for="recurringAmount">Amount *</label>
-            <input type="number" id="recurringAmount" class="form-control" placeholder="0.00" step="0.01" required>
-        </div>
-        
-        <!-- Mode -->
-        <div class="form-group">
-            <label for="recurringMode">Mode</label>
-            <select id="recurringMode" class="form-control">
-                <option value="Income">Income</option>
-                <option value="Expense">Expense</option>
-            </select>
-        </div>
-        
-        <!-- Currency -->
-        <div class="form-group">
-            <label for="recurringCurrency">Currency</label>
-            <select id="recurringCurrency" class="form-control">
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-            </select>
-        </div>
-        
-        <!-- Frequency -->
-        <div class="form-group">
-            <label for="recurringFrequency">Frequency</label>
-            <select id="recurringFrequency" class="form-control">
-                <option value="Daily">Daily</option>
-                <option value="Weekly">Weekly</option>
-                <option value="Bi-weekly">Bi-weekly</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Quarterly">Quarterly</option>
-                <option value="Semi-annual">Semi-annual</option>
-                <option value="Annual">Annual</option>
-            </select>
-        </div>
-        
-        <!-- Start Date -->
-        <div class="form-group">
-            <label for="recurringStartDate">Start Date *</label>
-            <input type="date" id="recurringStartDate" class="form-control" required>
-        </div>
-        
-        <!-- End Date (Optional) -->
-        <div class="form-group">
-            <label for="recurringEndDate">End Date (Optional)</label>
-            <input type="date" id="recurringEndDate" class="form-control">
-        </div>
-        
-        <!-- Submit Button -->
-        <button type="submit" class="btn" style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 12px 20px;">
-            + Create Recurring Transaction
-        </button>
-    </form>
-    
-    <!-- Display Recurring Transactions -->
-    <div id="recurringTransactionsContainer" style="margin-top: 20px;"></div>
-</div>
-
-<!-- BUDGET MANAGEMENT SECTION -->
-<div class="form-section" style="margin-top: 30px;">
-    <h3>🎯 Budget Management & Alerts</h3>
-    
-    <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-        <h4 style="margin-top: 0; color: #00d9ff;">📊 Set Budget Limit</h4>
-        
-        <form id="budgetForm" onsubmit="setBudgetLimit(); return false;" style="display: grid; gap: 15px;">
+        <form id="recurringForm" onsubmit="createRecurringTransaction(event)" style="display: grid; gap: 15px;">
             
-            <!-- Category Select -->
             <div class="form-group">
-                <label for="budgetCategory" style="color: #aaa; font-weight: 500;">Category</label>
-                <select id="budgetCategory" class="form-control" required>
+                <label for="recurringAccount">Account *</label>
+                <select id="recurringAccount" class="form-control" required>
+                    <option value="">Select Account</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="recurringCategory">Category *</label>
+                <select id="recurringCategory" class="form-control" required>
                     <option value="">Select Category</option>
                 </select>
             </div>
             
-            <!-- Currency Select -->
             <div class="form-group">
-                <label for="budgetCurrency" style="color: #aaa; font-weight: 500;">Currency</label>
-                <select id="budgetCurrency" class="form-control" required>
+                <label for="recurringDescription">Description</label>
+                <input type="text" id="recurringDescription" class="form-control" placeholder="e.g., Monthly Salary">
+            </div>
+            
+            <div class="form-group">
+                <label for="recurringAmount">Amount *</label>
+                <input type="number" id="recurringAmount" class="form-control" placeholder="0.00" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="recurringMode">Mode</label>
+                <select id="recurringMode" class="form-control">
+                    <option value="Income">Income</option>
+                    <option value="Expense">Expense</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="recurringCurrency">Currency</label>
+                <select id="recurringCurrency" class="form-control">
                     <option value="INR">INR (₹)</option>
                     <option value="SAR">SAR (﷼)</option>
                 </select>
             </div>
             
-            <!-- Monthly Budget Limit -->
             <div class="form-group">
-                <label for="budgetLimit" style="color: #aaa; font-weight: 500;">Monthly Budget Limit</label>
-                <input type="number" id="budgetLimit" class="form-control" placeholder="₹ 50,000" step="0.01" required>
+                <label for="recurringFrequency">Frequency</label>
+                <select id="recurringFrequency" class="form-control">
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Bi-weekly">Bi-weekly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Semi-annual">Semi-annual</option>
+                    <option value="Annual">Annual</option>
+                </select>
             </div>
             
-            <!-- Alert Threshold -->
             <div class="form-group">
-                <label for="budgetThreshold" style="color: #aaa; font-weight: 500;">Alert Threshold (%)</label>
-                <input type="number" id="budgetThreshold" class="form-control" placeholder="80" min="0" max="100" value="80" required>
+                <label for="recurringStartDate">Start Date *</label>
+                <input type="date" id="recurringStartDate" class="form-control" required>
             </div>
             
-            <button type="submit" class="btn" style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 12px 20px; border: none; cursor: pointer;">
-                💾 Set Budget Limit
+            <div class="form-group">
+                <label for="recurringEndDate">End Date (Optional)</label>
+                <input type="date" id="recurringEndDate" class="form-control">
+            </div>
+
+            <!-- ✅ FIXED: Error message container -->
+            <div id="recurringFormError" style="display: none; background: #FF6B6B; color: white; padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 14px;"></div>
+            
+            <button type="submit" class="btn" style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 12px 20px;">
+                + Create Recurring Transaction
             </button>
         </form>
-    </div>
-    
-    <!-- Budget Alerts -->
-    <div style="margin-bottom: 30px;">
-        <h4 style="color: #ffa726; margin-bottom: 15px;">⚠️ Budget Alerts</h4>
-        <div id="budgetAlertsContainer" style="background: #1a1a1a; padding: 20px; border-radius: 8px;">
-            <p style="color: #999; text-align: center;">Loading alerts...</p>
-        </div>
-    </div>
-    
-    <!-- Budget Status -->
-    <div>
-        <h4 style="color: #66bb6a; margin-bottom: 15px;">📈 Budget Status</h4>
-        <div id="budgetStatusContainer" style="background: #1a1a1a; padding: 20px; border-radius: 8px;">
-            <p style="color: #999; text-align: center;">Loading budget status...</p>
-        </div>
-    </div>
-</div>
-
-<!-- ============================================
-     OVERVIEW SECTION - ENHANCED WITH DETAILS
-     ============================================ -->
-<div style="margin-bottom: 40px;">
-    <div style="display: flex; align-items: center; gap: 15px; margin: 30px 0 20px 0;">
-        <h2 style="color: #00d9ff; margin: 0; font-size: 24px;">📊 Overview</h2>
-        <div style="flex: 1; height: 1px; background: #333;"></div>
-    </div>
-    
-    <!-- Enhanced Spending Section -->
-    <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
         
-                        <!-- Title, Month Display & Filters -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="color: #00d9ff; margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px;">
-                📈 Spending by Category
-                <span id="monthYearDisplay" style="font-size: 14px; color: #aaa; font-weight: normal;">Loading...</span>
-            </h3>
+        <div id="recurringTransactionsContainer" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- BUDGET MANAGEMENT SECTION -->
+    <div class="form-section" style="margin-top: 30px;">
+        <h3>🎯 Budget Management & Alerts</h3>
+        
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+            <h4 style="margin-top: 0; color: #00d9ff;">📊 Set Budget Limit</h4>
             
-            <!-- Month Filter Dropdown -->
-            <select id="overviewMonthFilter" style="background: #2a2a2a; border: 1px solid #00d9ff; color: #00d9ff; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;" onchange="handleMonthChange()">
-                <option value="">Select Month</option>
-            </select>
-            
-            <!-- Currency Filter Dropdown -->
-            <select id="overviewCurrencyFilter" style="background: #2a2a2a; border: 1px solid #00d9ff; color: #00d9ff; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;" onchange="handleCurrencyChange()">
-                <option value="">Select Currency</option>
-                <option value="INR">INR (₹)</option>
-                <option value="SAR">SAR (﷼)</option>
-            </select>
+            <form id="budgetForm" onsubmit="setBudgetLimit(); return false;" style="display: grid; gap: 15px;">
+                
+                <div class="form-group">
+                    <label for="budgetCategory" style="color: #aaa; font-weight: 500;">Category</label>
+                    <select id="budgetCategory" class="form-control" required>
+                        <option value="">Select Category</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="budgetCurrency" style="color: #aaa; font-weight: 500;">Currency</label>
+                    <select id="budgetCurrency" class="form-control" required>
+                        <option value="INR">INR (₹)</option>
+                        <option value="SAR">SAR (﷼)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="budgetLimit" style="color: #aaa; font-weight: 500;">Monthly Budget Limit</label>
+                    <input type="number" id="budgetLimit" class="form-control" placeholder="₹ 50,000" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="budgetThreshold" style="color: #aaa; font-weight: 500;">Alert Threshold (%)</label>
+                    <input type="number" id="budgetThreshold" class="form-control" placeholder="80" min="0" max="100" value="80" required>
+                </div>
+
+                <!-- ✅ FIXED: Error message container -->
+                <div id="budgetFormError" style="display: none; background: #FF6B6B; color: white; padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 14px;"></div>
+                
+                <button type="submit" class="btn" style="background: linear-gradient(45deg, #00d9ff, #e94560); color: white; padding: 12px 20px; border: none; cursor: pointer;">
+                    💾 Set Budget Limit
+                </button>
+            </form>
         </div>
+        
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #ffa726; margin-bottom: 15px;">⚠️ Budget Alerts</h4>
+            <div id="budgetAlertsContainer" style="background: #1a1a1a; padding: 20px; border-radius: 8px;">
+                <p style="color: #999; text-align: center;">Loading alerts...</p>
+            </div>
+        </div>
+        
+        <div>
+            <h4 style="color: #66bb6a; margin-bottom: 15px;">📈 Budget Status</h4>
+            <div id="budgetStatusContainer" style="background: #1a1a1a; padding: 20px; border-radius: 8px;">
+                <p style="color: #999; text-align: center;">Loading budget status...</p>
+            </div>
+        </div>
+    </div>
 
-
-
-        <!-- Chart + Table Container (2 Column Grid) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <!-- OVERVIEW SECTION -->
+    <div style="margin-bottom: 40px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin: 30px 0 20px 0;">
+            <h2 style="color: #00d9ff; margin: 0; font-size: 24px;">📊 Overview</h2>
+            <div style="flex: 1; height: 1px; background: #333;"></div>
+        </div>
+        
+        <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
             
-                        <!-- LEFT: Pie Chart -->
-            <div style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <div id="overviewCategoryChartContainer" style="position: relative; width: 100%; height: 100%; min-height: 300px; max-height: 400px; display: flex; align-items: center; justify-content: center;">
-                    <p style="color: #999; text-align: center;">Loading chart...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #00d9ff; margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px;">
+                    📈 Spending by Category
+                    <span id="monthYearDisplay" style="font-size: 14px; color: #aaa; font-weight: normal;">Loading...</span>
+                </h3>
+                
+                <select id="overviewMonthFilter" style="background: #2a2a2a; border: 1px solid #00d9ff; color: #00d9ff; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;" onchange="handleMonthChange()">
+                    <option value="">Select Month</option>
+                </select>
+                
+                <select id="overviewCurrencyFilter" style="background: #2a2a2a; border: 1px solid #00d9ff; color: #00d9ff; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;" onchange="handleCurrencyChange()">
+                    <option value="">Select Currency</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="SAR">SAR (﷼)</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                
+                <div style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div id="overviewCategoryChartContainer" style="position: relative; width: 100%; height: 100%; min-height: 300px; max-height: 400px; display: flex; align-items: center; justify-content: center;">
+                        <p style="color: #999; text-align: center;">Loading chart...</p>
+                    </div>
+                </div>
+
+                <div style="overflow-y: auto; max-height: 380px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead style="position: sticky; top: 0; background: #2a2a2a; border-bottom: 2px solid #00d9ff;">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; color: #00d9ff; font-weight: 600;">Category</th>
+                                <th style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 600;">Amount</th>
+                                <th style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 600;">%</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryDetailsTable">
+                            <tr>
+                                <td colspan="3" style="padding: 15px; text-align: center; color: #999;">Loading categories...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+                
+                <div style="background: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196F3; padding: 12px; border-radius: 6px;">
+                    <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Total Spending</p>
+                    <h4 id="totalSpendingAmount" style="margin: 0; color: #2196F3; font-size: 18px;">₹0.00</h4>
+                </div>
 
-            <!-- RIGHT: Category Details Table -->
-            <div style="overflow-y: auto; max-height: 380px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                    <thead style="position: sticky; top: 0; background: #2a2a2a; border-bottom: 2px solid #00d9ff;">
-                        <tr>
-                            <th style="padding: 10px; text-align: left; color: #00d9ff; font-weight: 600;">Category</th>
-                            <th style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 600;">Amount</th>
-                            <th style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 600;">%</th>
-                        </tr>
-                    </thead>
-                    <tbody id="categoryDetailsTable">
-                        <tr>
-                            <td colspan="3" style="padding: 15px; text-align: center; color: #999;">Loading categories...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div style="background: rgba(255, 107, 107, 0.1); border-left: 3px solid #FF6B6B; padding: 12px; border-radius: 6px;">
+                    <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Top Category</p>
+                    <h4 id="topCategoryName" style="margin: 0; color: #FF6B6B; font-size: 18px;">--</h4>
+                </div>
+
+                <div style="background: rgba(102, 187, 106, 0.1); border-left: 3px solid #66BB6A; padding: 12px; border-radius: 6px;">
+                    <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Categories</p>
+                    <h4 id="totalCategoriesCount" style="margin: 0; color: #66BB6A; font-size: 18px;">0</h4>
+                </div>
+
+                <div style="background: rgba(255, 165, 0, 0.1); border-left: 3px solid #FFA500; padding: 12px; border-radius: 6px;">
+                    <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Transactions</p>
+                    <h4 id="totalTransactionsCount" style="margin: 0; color: #FFA500; font-size: 18px;">0</h4>
+                </div>
             </div>
-        </div>
-
-        <!-- Summary Statistics -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
-            
-            <div style="background: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196F3; padding: 12px; border-radius: 6px;">
-                <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Total Spending</p>
-                <h4 id="totalSpendingAmount" style="margin: 0; color: #2196F3; font-size: 18px;">₹0.00</h4>
-            </div>
-
-            <div style="background: rgba(255, 107, 107, 0.1); border-left: 3px solid #FF6B6B; padding: 12px; border-radius: 6px;">
-                <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Top Category</p>
-                <h4 id="topCategoryName" style="margin: 0; color: #FF6B6B; font-size: 18px;">--</h4>
-            </div>
-
-            <div style="background: rgba(102, 187, 106, 0.1); border-left: 3px solid #66BB6A; padding: 12px; border-radius: 6px;">
-                <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Categories</p>
-                <h4 id="totalCategoriesCount" style="margin: 0; color: #66BB6A; font-size: 18px;">0</h4>
-            </div>
-
-            <div style="background: rgba(255, 165, 0, 0.1); border-left: 3px solid #FFA500; padding: 12px; border-radius: 6px;">
-                <p style="margin: 0 0 5px 0; color: #aaa; font-size: 12px; text-transform: uppercase;">Transactions</p>
-                <h4 id="totalTransactionsCount" style="margin: 0; color: #FFA500; font-size: 18px;">0</h4>
-            </div>
-
         </div>
     </div>
 
-</div>
-
-<!-- Separator Line -->
-<hr style="border: none; border-top: 1px solid #333; margin: 30px 0;">
-
+    <hr style="border: none; border-top: 1px solid #333; margin: 30px 0;">
 
     <script src="pfms.js"></script>
 </body>
 </html>
-

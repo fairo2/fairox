@@ -1,3 +1,10 @@
+// ============================================
+// ✅ COMPLETE TRANSACTIONS.JS - PRODUCTION READY
+// File: src/backend/routes/transactions.js
+// Database: PostgreSQL
+// Fixed: Dec 1, 2025
+// ============================================
+
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
@@ -6,6 +13,7 @@ const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
+
 
 // ============================================
 // ✅ PUBLIC ROUTES (NO AUTHENTICATION)
@@ -64,10 +72,11 @@ router.get('/transactions/template', (req, res) => {
         const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
         res.send(buf);
     } catch (error) {
-        console.error('Template generation error:', error);
+        console.error('❌ Template generation error:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // ============================================
 // 🔒 AUTH MIDDLEWARE (Applied to all routes below)
@@ -83,7 +92,7 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        const token = req.headers.authorization?.split(' ');
+        const token = req.headers.authorization?.split(' ')[1];
         
         if (!token) {
             return res.status(401).json({ 
@@ -131,6 +140,7 @@ const authMiddleware = (req, res, next) => {
 // Apply auth middleware to all routes below
 router.use(authMiddleware);
 
+
 // Configure multer for file uploads
 const upload = multer({
     dest: 'uploads/',
@@ -145,6 +155,7 @@ const upload = multer({
         }
     }
 });
+
 
 // ============================================
 // ✅ PROTECTED ROUTES (WITH AUTHENTICATION)
@@ -212,7 +223,10 @@ router.get('/transactions', async (req, res) => {
         // Get count
         const countQuery = query.replace('SELECT t.*, a.name as account_name, c.name as category_name', 'SELECT COUNT(*) as total');
         const countResult = await db.query(countQuery, params);
-        const total = parseInt(countResult.rows.total);
+        
+        // ✅ FIXED: Extract rows array from result
+        const countRow = countResult.rows[0];
+        const total = parseInt(countRow.total);
         const pages = Math.ceil(total / limit);
 
         // Add sorting and pagination
@@ -221,10 +235,13 @@ router.get('/transactions', async (req, res) => {
         params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
         const result = await db.query(query, params);
+        
+        // ✅ FIXED: Extract rows array from result
+        const transactions = result.rows;
 
         res.json({
             success: true,
-            transactions: result.rows,
+            transactions: transactions,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -233,10 +250,11 @@ router.get('/transactions', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching transactions:', error);
+        console.error('❌ Error fetching transactions:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.post('/transactions', async (req, res) => {
     try {
@@ -269,16 +287,20 @@ router.post('/transactions', async (req, res) => {
             [userId, currency, account_id, mode, category_id, transaction_date, description, parsedAmount]
         );
 
+        // ✅ FIXED: Extract rows array from result
+        const transaction = result.rows[0];
+
         res.json({
             success: true,
             message: 'Transaction created successfully',
-            id: result.rows.id
+            id: transaction?.id || null
         });
     } catch (error) {
-        console.error('Error creating transaction:', error);
+        console.error('❌ Error creating transaction:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.put('/transactions/:id', async (req, res) => {
     try {
@@ -310,9 +332,11 @@ router.put('/transactions/:id', async (req, res) => {
 
         res.json({ success: true, message: 'Transaction updated successfully' });
     } catch (error) {
+        console.error('❌ Error updating transaction:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.delete('/transactions/:id', async (req, res) => {
     try {
@@ -324,15 +348,18 @@ router.delete('/transactions/:id', async (req, res) => {
             [id, userId]
         );
 
+        // ✅ FIXED: Check rowCount (PostgreSQL) instead of affectedRows (MySQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Transaction not found' });
         }
 
         res.json({ success: true, message: 'Transaction deleted successfully' });
     } catch (error) {
+        console.error('❌ Error deleting transaction:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // IMPORT ENDPOINTS
 
@@ -343,7 +370,7 @@ router.post('/transactions/import-preview', upload.single('file'), async (req, r
         }
 
         const workbook = XLSX.readFile(req.file.path);
-        const worksheet = workbook.Sheets[workbook.SheetNames];
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(worksheet);
 
         if (!data || data.length === 0) {
@@ -351,7 +378,7 @@ router.post('/transactions/import-preview', upload.single('file'), async (req, r
             return res.status(400).json({ success: false, message: 'Excel file is empty' });
         }
 
-        const columns = Object.keys(data || {});
+        const columns = Object.keys(data[0] || {});
         const preview = data.slice(0, 10);
 
         fs.unlinkSync(req.file.path);
@@ -364,11 +391,12 @@ router.post('/transactions/import-preview', upload.single('file'), async (req, r
             message: 'Preview loaded successfully'
         });
     } catch (error) {
-        console.error('Preview error:', error);
-        if (req.file) fs.unlinkSync(req.file.path);
+        console.error('❌ Preview error:', error.message);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.post('/transactions/import', upload.single('file'), async (req, res) => {
     try {
@@ -379,7 +407,7 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
         }
 
         const workbook = XLSX.readFile(req.file.path);
-        const worksheet = workbook.Sheets[workbook.SheetNames];
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(worksheet, { raw: true });
 
         if (!data || data.length === 0) {
@@ -393,7 +421,7 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
 
             if (typeof value === 'number') {
                 const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-                return date.toISOString().split('T');
+                return date.toISOString().split('T')[0];
             }
 
             const strVal = String(value).trim();
@@ -466,14 +494,17 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
                     'SELECT id FROM accounts WHERE user_id = $1 AND name = $2 AND currency = $3',
                     [userId, accountName, currency]
                 );
-                let accountId = accountResult.rows.length > 0 ? accountResult.rows.id : null;
+                
+                // ✅ FIXED: Extract rows array from result
+                let accountId = accountResult.rows.length > 0 ? accountResult.rows[0].id : null;
 
                 if (!accountId) {
                     const res = await db.query(
                         'INSERT INTO accounts (user_id, name, currency) VALUES ($1, $2, $3) RETURNING id',
                         [userId, accountName, currency]
                     );
-                    accountId = res.rows.id;
+                    // ✅ FIXED: Extract rows array from result
+                    accountId = res.rows[0].id;
                 }
 
                 // Get/Create Category
@@ -481,14 +512,17 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
                     'SELECT id FROM categories WHERE user_id = $1 AND name = $2 AND mode = $3',
                     [userId, categoryName, mode]
                 );
-                let categoryId = categoryResult.rows.length > 0 ? categoryResult.rows.id : null;
+                
+                // ✅ FIXED: Extract rows array from result
+                let categoryId = categoryResult.rows.length > 0 ? categoryResult.rows[0].id : null;
 
                 if (!categoryId) {
                     const res = await db.query(
                         'INSERT INTO categories (user_id, name, mode) VALUES ($1, $2, $3) RETURNING id',
                         [userId, categoryName, mode]
                     );
-                    categoryId = res.rows.id;
+                    // ✅ FIXED: Extract rows array from result
+                    categoryId = res.rows[0].id;
                 }
 
                 // Insert Transaction
@@ -515,11 +549,12 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Import error:', error);
+        console.error('❌ Import error:', error.message);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // ACCOUNTS ENDPOINTS
 
@@ -541,11 +576,17 @@ router.get('/accounts', async (req, res) => {
         query += ' ORDER BY created_at DESC';
 
         const result = await db.query(query, params);
-        res.json({ success: true, accounts: result.rows });
+        
+        // ✅ FIXED: Extract rows array from result
+        const accounts = result.rows;
+
+        res.json({ success: true, accounts: accounts });
     } catch (error) {
+        console.error('❌ Error fetching accounts:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.post('/accounts', async (req, res) => {
     try {
@@ -561,15 +602,20 @@ router.post('/accounts', async (req, res) => {
             [userId, name, currency]
         );
 
+        // ✅ FIXED: Extract rows array from result
+        const account = result.rows[0];
+
         res.json({
             success: true,
             message: 'Account created successfully',
-            id: result.rows.id
+            id: account?.id || null
         });
     } catch (error) {
+        console.error('❌ Error creating account:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.put('/accounts/:id', async (req, res) => {
     try {
@@ -584,9 +630,11 @@ router.put('/accounts/:id', async (req, res) => {
 
         res.json({ success: true, message: 'Account updated successfully' });
     } catch (error) {
+        console.error('❌ Error updating account:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.delete('/accounts/:id', async (req, res) => {
     try {
@@ -598,15 +646,18 @@ router.delete('/accounts/:id', async (req, res) => {
             [id, userId]
         );
 
+        // ✅ FIXED: Check rowCount (PostgreSQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Account not found' });
         }
 
         res.json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
+        console.error('❌ Error deleting account:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // CATEGORIES ENDPOINTS
 
@@ -628,11 +679,17 @@ router.get('/categories', async (req, res) => {
         query += ' ORDER BY created_at DESC';
 
         const result = await db.query(query, params);
-        res.json({ success: true, categories: result.rows });
+        
+        // ✅ FIXED: Extract rows array from result
+        const categories = result.rows;
+
+        res.json({ success: true, categories: categories });
     } catch (error) {
+        console.error('❌ Error fetching categories:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.post('/categories', async (req, res) => {
     try {
@@ -648,15 +705,20 @@ router.post('/categories', async (req, res) => {
             [userId, name, mode]
         );
 
+        // ✅ FIXED: Extract rows array from result
+        const category = result.rows[0];
+
         res.json({
             success: true,
             message: 'Category created successfully',
-            id: result.rows.id
+            id: category?.id || null
         });
     } catch (error) {
+        console.error('❌ Error creating category:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.put('/categories/:id', async (req, res) => {
     try {
@@ -671,9 +733,11 @@ router.put('/categories/:id', async (req, res) => {
 
         res.json({ success: true, message: 'Category updated successfully' });
     } catch (error) {
+        console.error('❌ Error updating category:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 router.delete('/categories/:id', async (req, res) => {
     try {
@@ -685,15 +749,18 @@ router.delete('/categories/:id', async (req, res) => {
             [id, userId]
         );
 
+        // ✅ FIXED: Check rowCount (PostgreSQL)
         if (result.rowCount === 0) {
             return res.status(403).json({ success: false, message: 'Category not found' });
         }
 
         res.json({ success: true, message: 'Category deleted successfully' });
     } catch (error) {
+        console.error('❌ Error deleting category:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // STATISTICS ENDPOINTS
 
@@ -743,12 +810,13 @@ router.get('/stats', async (req, res) => {
             [userId]
         );
 
-        const inrIncome = parseFloat(inrIncomeResult.rows.total) || 0;
-        const inrExpense = parseFloat(inrExpenseResult.rows.total) || 0;
-        const inrCreditCard = parseFloat(inrCreditCardResult.rows.total) || 0;
-        const sarIncome = parseFloat(sarIncomeResult.rows.total) || 0;
-        const sarExpense = parseFloat(sarExpenseResult.rows.total) || 0;
-        const sarCreditCard = parseFloat(sarCreditCardResult.rows.total) || 0;
+        // ✅ FIXED: Extract rows array from results
+        const inrIncome = parseFloat(inrIncomeResult.rows[0].total) || 0;
+        const inrExpense = parseFloat(inrExpenseResult.rows[0].total) || 0;
+        const inrCreditCard = parseFloat(inrCreditCardResult.rows[0].total) || 0;
+        const sarIncome = parseFloat(sarIncomeResult.rows[0].total) || 0;
+        const sarExpense = parseFloat(sarExpenseResult.rows[0].total) || 0;
+        const sarCreditCard = parseFloat(sarCreditCardResult.rows[0].total) || 0;
 
         res.json({
             success: true,
@@ -768,9 +836,10 @@ router.get('/stats', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('❌ Error fetching stats:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 module.exports = router;

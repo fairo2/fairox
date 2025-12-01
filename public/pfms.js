@@ -1,6 +1,5 @@
 // ============================================
-// PFMS FRONTEND JAVASCRIPT - pfms.js
-// COMBINED: Core PFMS + Privacy Toggle + Dual Currency
+// PFMS FRONTEND JAVASCRIPT
 // ============================================
 
 const API_URL = 'https://api.fairox.co.in/api/pfms';
@@ -8,64 +7,33 @@ const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
 const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
 const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
 
-
-// ============================================
-// ✅ GET AUTH TOKEN - SIMPLE & CLEAN
-// ============================================
-
+// ✅ Get auth token - SIMPLE
 function getAuthToken() {
     const token = localStorage.getItem('token');
-    
-    if (!token) {
-        console.error('❌ No token in localStorage');
-        return null;
-    }
-    
-    if (!token.startsWith('eyJ')) {
-        console.error('❌ Invalid token format');
-        return null;
-    }
-    
+    if (!token || !token.startsWith('eyJ')) return null;
     return token;
 }
 
-
-// Global variables
 let allTransactions = [];
 let allAccounts = [];
 let allCategories = [];
 let currentPage = 1;
-
-
-// ============================================
-// STATE MANAGEMENT - PRIVACY & CURRENCY
-// ============================================
-
-let privacyMode = true; // Start hidden for privacy
-let statsData = {}; // Store stats data
-
-
-// ============================================
-// INITIALIZATION
-// ============================================
+let privacyMode = true;
+let statsData = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ✅ Check if user is logged in
     const authToken = getAuthToken();
-    
     if (!authToken) {
         alert('Please login first!');
         window.location.href = '/index.html';
         return;
     }
 
-    // Load saved privacy preference
     const savedPrivacy = localStorage.getItem('pfmsPrivacyMode');
     if (savedPrivacy !== null) {
         privacyMode = savedPrivacy === 'true';
     }
     
-    // Set initial button state
     const btn = document.getElementById('privacyToggleBtn');
     if (btn) {
         if (privacyMode) {
@@ -75,22 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerHTML = '👁️ Hide';
             btn.style.background = '#4CAF50';
         }
-        
-        // Add click listener to privacy toggle button
         btn.addEventListener('click', togglePrivacyMode);
     }
 
     document.getElementById('transactionDate').valueAsDate = new Date();
-    
-    // Load main data
     loadInitialData();
     
-    // Event listeners
     document.getElementById('currency').addEventListener('change', loadAccounts);
     document.getElementById('mode').addEventListener('change', loadCategories);
     document.getElementById('transactionForm').addEventListener('submit', addTransaction);
     
-    // ✅ LOAD RECURRING TRANSACTIONS DATA (with delay)
     setTimeout(() => {
         console.log('⏳ Initializing recurring transactions...');
         loadAccountsForRecurring();
@@ -100,30 +62,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-
-// ============================================
-// ✅ API HELPER FUNCTION - FIXED VERSION
-// ============================================
-
+// ✅ API CALL - FIXED (Get fresh token EVERY time)
 async function apiCall(url, options = {}) {
     try {
-        // ✅ Get FRESH token on EVERY API call
         const token = getAuthToken();
-        
         if (!token) {
-            console.error('❌ No token available - redirecting to login');
+            console.error('❌ No token');
             showMessage('❌ Please login first', 'error');
             window.location.href = '/index.html';
             return null;
         }
 
         const headers = {
-            'Authorization': `Bearer ${token}`,  // ← FRESH token every time!
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
             ...options.headers
         };
 
-        console.log('🔐 API Call:', url, '| Token:', token.substring(0, 20) + '...');
+        console.log('🔐 API Call:', url);
 
         const response = await fetch(`${API_URL}${url}`, {
             ...options,
@@ -132,25 +88,23 @@ async function apiCall(url, options = {}) {
 
         const data = await response.json();
 
-        // ✅ Handle 401 errors (token expired/invalid)
         if (response.status === 401) {
-            console.error('❌ Token expired or invalid - redirecting to login');
+            console.error('❌ Token expired');
             localStorage.clear();
             window.location.href = '/index.html';
             return null;
         }
 
         if (!response.ok) {
-            console.error('❌ API error:', data.message);
             showMessage(`❌ ${data.message}`, 'error');
             return null;
         }
 
-        console.log('✅ API Response received');
+        console.log('✅ Success');
         return data;
 
     } catch (error) {
-        console.error('❌ API Connection Error:', error);
+        console.error('❌ API Error:', error);
         showMessage('❌ Connection error', 'error');
         return null;
     }
