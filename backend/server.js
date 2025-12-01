@@ -1,7 +1,8 @@
 // ============================================
 // UPDATED SERVER.JS - COMPLETE & FIXED
-// Render-ready with PostgreSQL
+// Render-ready with PostgreSQL & Auto-Admin
 // ============================================
+
 
 const express = require('express');
 const cors = require('cors');
@@ -10,12 +11,15 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const cron = require('node-cron');
 
+
 // Load environment variables
 dotenv.config();
+
 
 // ============================================
 // DEBUG - Check environment
 // ============================================
+
 
 console.log('=====================================');
 console.log('📧 EMAIL CONFIGURATION CHECK:');
@@ -26,18 +30,29 @@ console.log('EMAIL_USER:', process.env.EMAIL_USER || '❌ NOT SET');
 console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '✅ SET' : '❌ NOT SET');
 console.log('EMAIL_FROM:', process.env.EMAIL_FROM || '❌ NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ NOT SET');
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ SET' : '❌ NOT SET');
+console.log('=====================================');
+console.log('🗄️  DATABASE CONFIGURATION CHECK:');
+console.log('=====================================');
+console.log('DB_HOST:', process.env.DB_HOST ? '✅ SET' : '❌ NOT SET');
+console.log('DB_USER:', process.env.DB_USER ? '✅ SET' : '❌ NOT SET');
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '✅ SET' : '❌ NOT SET');
+console.log('DB_NAME:', process.env.DB_NAME ? '✅ SET' : '❌ NOT SET');
+console.log('DB_PORT:', process.env.DB_PORT || '❌ NOT SET');
 console.log('=====================================\n');
+
 
 // ============================================
 // INITIALIZE EXPRESS APP
 // ============================================
 
+
 const app = express();
+
 
 // ============================================
 // IMPORT ROUTES (CORRECT WAY)
 // ============================================
+
 
 // ✅ Import route ROUTER objects (not middleware)
 const authRoutes = require('./routes/auth');
@@ -48,15 +63,19 @@ const budgetRoutes = require('./routes/budget');
 const exportRouter = require('./routes/export');
 const overviewRouter = require('./routes/overview');
 
+
 // ✅ Import database for connection checks
 const db = require('./config/db');
+
 
 // ✅ Import auth middleware (only for protected routes)
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
+
 // ============================================
 // MIDDLEWARE
 // ============================================
+
 
 // CORS configuration
 app.use(cors({
@@ -66,15 +85,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+
 console.log('✅ Middleware initialized\n');
+
 
 // ============================================
 // JWT TOKEN EXTRACTION (for optional auth)
 // ============================================
+
 
 // Attach user from token if present (doesn't require auth)
 const attachUserFromToken = (req, res, next) => {
@@ -92,42 +115,53 @@ const attachUserFromToken = (req, res, next) => {
   next();
 };
 
+
 app.use(attachUserFromToken);
+
 
 // ============================================
 // STATIC FILES
 // ============================================
 
+
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, '../public')));
+
 
 // Explicit HTML routes
 app.get('/index.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+
 app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin.html'));
 });
+
 
 app.get('/pfms.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/pfms.html'));
 });
 
+
 app.get('/dashboard.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/dashboard.html'));
 });
+
 
 // Root redirect
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+
 // ============================================
 // API ROUTES - CORRECT USAGE
 // ============================================
 
+
 console.log('🔗 Registering routes...');
+
 
 // ✅ CORRECT: Pass route ROUTER (not middleware)
 app.use('/api/auth', authRoutes);
@@ -138,11 +172,14 @@ app.use('/api/budget', budgetRoutes);
 app.use('/api/export', exportRouter);
 app.use('/api/overview', overviewRouter);
 
+
 console.log('✅ All routes registered\n');
+
 
 // ============================================
 // DIRECT LOGOUT ENDPOINT
 // ============================================
+
 
 app.get('/logout', (req, res) => {
   try {
@@ -160,9 +197,11 @@ app.get('/logout', (req, res) => {
   }
 });
 
+
 // ============================================
 // HEALTH CHECK ENDPOINT
 // ============================================
+
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -174,9 +213,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
 // ============================================
 // DATABASE CONNECTION CHECK
 // ============================================
+
 
 app.get('/api/db-check', async (req, res) => {
   try {
@@ -196,9 +237,65 @@ app.get('/api/db-check', async (req, res) => {
   }
 });
 
+
+// ============================================
+// AUTO-INITIALIZE ADMIN USER ON STARTUP
+// ============================================
+
+
+async function initializeAdmin() {
+  try {
+    const bcrypt = require('bcryptjs');
+    
+    console.log('\n📋 Initializing admin user...\n');
+
+    // Check if admin exists
+    const adminCheck = await db.query(
+      'SELECT id, email FROM users WHERE email = $1 AND is_admin = $2',
+      ['admin@fairox.co.in', true]
+    );
+
+    if (adminCheck.rows.length === 0) {
+      // Admin doesn't exist - create it
+      console.log('✅ Creating admin user...\n');
+      
+      const hashedPassword = await bcrypt.hash('Admin@123', 10);
+      
+      await db.query(
+        'INSERT INTO users (name, email, password, is_approved, is_admin, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())',
+        ['Admin User', 'admin@fairox.co.in', hashedPassword, true, true]
+      );
+
+      console.log('✅ Admin created successfully!');
+      console.log('   Email: admin@fairox.co.in');
+      console.log('   Password: Admin@123\n');
+    } else {
+      // Admin exists - verify and fix password hash
+      console.log('✅ Admin exists, verifying password...\n');
+      
+      const hashedPassword = await bcrypt.hash('Admin@123', 10);
+      
+      // Update password to ensure it's correct
+      await db.query(
+        'UPDATE users SET password = $1 WHERE email = $2',
+        [hashedPassword, 'admin@fairox.co.in']
+      );
+
+      console.log('✅ Admin password verified/updated');
+      console.log('   Email: admin@fairox.co.in');
+      console.log('   Password: Admin@123\n');
+    }
+  } catch (error) {
+    console.error('⚠️  Admin initialization failed:', error.message);
+    console.error('   You may need to create admin manually\n');
+  }
+}
+
+
 // ============================================
 // CRON JOB - Auto-generate recurring transactions
 // ============================================
+
 
 cron.schedule('0 0 * * *', () => {
   console.log('⏰ Running cron job: Auto-generating recurring transactions...');
@@ -209,9 +306,11 @@ cron.schedule('0 0 * * *', () => {
     .catch(err => console.error('❌ Cron job error:', err.message));
 });
 
+
 // ============================================
 // 404 ERROR HANDLER
 // ============================================
+
 
 app.use((req, res) => {
   // Try to serve HTML files
@@ -225,6 +324,7 @@ app.use((req, res) => {
       });
     });
   }
+
 
   // API 404
   res.status(404).json({
@@ -244,14 +344,17 @@ app.use((req, res) => {
   });
 });
 
+
 // ============================================
 // GLOBAL ERROR HANDLER
 // ============================================
+
 
 app.use((err, req, res, next) => {
   console.error('🔴 Global error handler:', err);
   console.error('   Message:', err.message);
   console.error('   Stack:', err.stack);
+
 
   res.status(err.status || 500).json({
     success: false,
@@ -260,12 +363,15 @@ app.use((err, req, res, next) => {
   });
 });
 
+
 // ============================================
 // SERVER STARTUP
 // ============================================
 
+
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
+
 
 const server = app.listen(PORT, HOST, async () => {
   console.log('\n╔════════════════════════════════════════════════╗');
@@ -285,20 +391,27 @@ const server = app.listen(PORT, HOST, async () => {
   console.log('║  • GET    /api/db-check                         ║');
   console.log('╚════════════════════════════════════════════════╝\n');
 
+
   // Test database connection
   try {
     const result = await db.query('SELECT NOW()');
     console.log('✅ Database: PostgreSQL connected');
     console.log('   Server time:', result.rows[0].now, '\n');
+    
+    // Initialize admin user on startup
+    await initializeAdmin();
+    
   } catch (error) {
     console.error('⚠️  Database connection error:', error.message);
     console.error('   Make sure PostgreSQL is running and DATABASE_URL is set\n');
   }
 });
 
+
 // ============================================
 // GRACEFUL SHUTDOWN
 // ============================================
+
 
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, closing server gracefully...');
@@ -308,6 +421,7 @@ process.on('SIGTERM', () => {
   });
 });
 
+
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, closing server gracefully...');
   server.close(() => {
@@ -316,19 +430,23 @@ process.on('SIGINT', () => {
   });
 });
 
+
 // ============================================
 // ERROR HANDLERS
 // ============================================
+
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('🔴 Unhandled Rejection at:', promise);
   console.error('   Reason:', reason);
 });
 
+
 process.on('uncaughtException', (error) => {
   console.error('🔴 Uncaught Exception:', error.message);
   console.error('   Stack:', error.stack);
   process.exit(1);
 });
+
 
 module.exports = app;
