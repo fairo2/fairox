@@ -1082,6 +1082,72 @@
         });
 
     </script>
+    <!-- ✅ CHANGE PASSWORD MODAL - ADD THIS! -->
+<div id="changePasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+    <div style="background: white; padding: 2rem; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #eee; padding-bottom: 1rem;">
+            <h2 style="margin: 0; color: #1e3c72; font-size: 1.5rem;">🔐 Change Password</h2>
+            <span onclick="closeChangePasswordModal()" style="cursor: pointer; font-size: 28px; color: #999; font-weight: bold;">&times;</span>
+        </div>
+
+        <!-- Error Message -->
+        <div id="passwordErrorMsg" style="background: #fee; color: #c33; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #c33; display: none;"></div>
+
+        <!-- Success Message -->
+        <div id="passwordSuccessMsg" style="background: #efe; color: #3c3; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #3c3; display: none;"></div>
+
+        <!-- Form -->
+        <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
+            <!-- Current Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="currentPassword" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter your current password" style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='#1e3c72';" onblur="this.style.borderColor='#e0e0e0';">
+            </div>
+
+            <!-- New Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="newPassword" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password" oninput="checkPasswordStrength()" style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='#1e3c72';" onblur="this.style.borderColor='#e0e0e0';">
+            </div>
+
+            <!-- Confirm Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="confirmPassword" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">Confirm Password</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm new password" oninput="checkPasswordMatch(); checkPasswordStrength();" style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='#1e3c72';" onblur="this.style.borderColor='#e0e0e0';">
+            </div>
+
+            <!-- Password Match Message -->
+            <div id="passwordMatchMsg" style="color: #666; font-size: 0.9rem; margin-bottom: 1rem; display: none;"></div>
+
+            <!-- Password Strength Indicator -->
+            <div id="passwordStrengthContainer" style="margin-bottom: 1.5rem; display: none;">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #666;">
+                    Password Strength: <span id="strengthText" style="font-weight: 600; color: #1e3c72;">-</span>
+                </div>
+                <div style="display: flex; gap: 0.25rem; margin-bottom: 1rem;">
+                    <div id="strength1" style="flex: 1; height: 8px; background: #666; border-radius: 4px;"></div>
+                    <div id="strength2" style="flex: 1; height: 8px; background: #666; border-radius: 4px;"></div>
+                    <div id="strength3" style="flex: 1; height: 8px; background: #666; border-radius: 4px;"></div>
+                    <div id="strength4" style="flex: 1; height: 8px; background: #666; border-radius: 4px;"></div>
+                </div>
+                <div style="font-size: 0.85rem; color: #666;">Requirements:</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                    <div id="req1" style="color: #ff6384;">✕ At least 8 characters</div>
+                    <div id="req2" style="color: #ff6384;">✕ Uppercase letter (A-Z)</div>
+                    <div id="req3" style="color: #ff6384;">✕ Number (0-9)</div>
+                    <div id="req4" style="color: #ff6384;">✕ Special character (!@#$%^&*)</div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" style="flex: 1; padding: 0.8rem; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s;">🔐 Change Password</button>
+                <button type="button" onclick="closeChangePasswordModal()" style="flex: 1; padding: 0.8rem; background: #999; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 </body>
 </html>

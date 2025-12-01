@@ -62,6 +62,7 @@ const recurringRoutes = require('./routes/recurringTransactions');
 const budgetRoutes = require('./routes/budget');
 const exportRouter = require('./routes/export');
 const overviewRouter = require('./routes/overview');
+const adminRoutes = require('./routes/admin-routes');
 
 
 // ✅ Import database for connection checks
@@ -171,6 +172,7 @@ app.use('/api/recurring', recurringRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/export', exportRouter);
 app.use('/api/overview', overviewRouter);
+app.use('/api', adminRoutes);
 
 
 console.log('✅ All routes registered\n');
