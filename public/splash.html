@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fairox - Loading</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .splash-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            text-align: center;
+        }
+
+        /* MAIN LOGO */
+        .splash-logo {
+            font-size: 4rem;
+            font-weight: 900;
+            color: white;
+            text-align: center;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            animation: fadeInScale 1.5s ease-out forwards;
+            opacity: 0;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+        }
+
+        /* TAGLINE */
+        .splash-tagline {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 0.05em;
+            font-weight: 300;
+            animation: fadeInUp 1.5s ease-out 0.5s forwards;
+            opacity: 0;
+        }
+
+        /* LOADING SPINNER */
+        .splash-loader {
+            width: 50px;
+            height: 50px;
+            position: relative;
+            animation: fadeIn 1.5s ease-out 1s forwards;
+            opacity: 0;
+        }
+
+        .splash-loader span {
+            position: absolute;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            opacity: 1;
+            border-radius: 50%;
+            animation: ripple 1.5s infinite;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .splash-loader span:nth-child(2) {
+            animation-delay: -0.5s;
+        }
+
+        .splash-loader span:nth-child(3) {
+            animation-delay: -1s;
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes ripple {
+            from {
+                width: 0;
+                height: 0;
+                opacity: 1;
+            }
+            to {
+                width: 50px;
+                height: 50px;
+                opacity: 0;
+            }
+        }
+
+        /* MOBILE RESPONSIVE */
+        @media (max-width: 768px) {
+            .splash-logo {
+                font-size: 3rem;
+            }
+
+            .splash-tagline {
+                font-size: 1rem;
+            }
+
+            .splash-container {
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .splash-logo {
+                font-size: 2.5rem;
+            }
+
+            .splash-tagline {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- SPLASH SCREEN CONTAINER -->
+    <div class="splash-container">
+        <!-- FAIROX LOGO -->
+        <div class="splash-logo">FAIROX</div>
+
+        <!-- TAGLINE -->
+        <div class="splash-tagline">Personal Finance Management</div>
+
+        <!-- LOADING SPINNER -->
+        <div class="splash-loader">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+
+    <script>
+        // Redirect to home page after 2.5 seconds
+        setTimeout(function() {
+            window.location.href = '/index.html';
+        }, 2500);
+    </script>
+</body>
+</html>
