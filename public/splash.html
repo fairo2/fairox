@@ -1,240 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Fairox - Modern Business Solutions</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%; height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #001f3f, #007acc);
-    overflow: hidden;
-  }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fairox - Modern Business Solutions</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
 
-  /* Animated background circles */
-  .bg-circle {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.15;
-    animation: floatCircles 20s ease-in-out infinite;
-  }
+        html, body {
+            width: 100%; 
+            height: 100%;
+            font-family: 'Arial Black', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #001f3f 0%, #003d82 50%, #007acc 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-  @keyframes floatCircles {
-    0% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(20px) translateX(20px); }
-    100% { transform: translateY(0) translateX(0); }
-  }
+        /* Animated background circles */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: floatCircles 20s ease-in-out infinite;
+        }
 
-  /* Main container */
-  .splash {
-    position: relative;
-    width: 100%; height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-    color: white;
-  }
+        @keyframes floatCircles {
+            0% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(20px) translateX(20px); }
+            100% { transform: translateY(0) translateX(0); }
+        }
 
-  /* Logo with 3D scale & rotation */
-  .logo {
-    font-size: 4rem;
-    font-weight: 900;
-    letter-spacing: 0.2em;
-    font-family: 'Arial Black', sans-serif;
-    background: linear-gradient(135deg, #ffffff, #cccccc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transform: scale(0.8) rotateY(0deg);
-    opacity: 0;
-    animation: logoEntrance 2s forwards;
-    filter: drop-shadow(0 0 20px rgba(255,255,255,0.2));
-  }
+        /* Main container */
+        .splash {
+            position: relative;
+            width: 100%; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            color: white;
+            z-index: 10;
+        }
 
-@keyframes logoEntrance {
-  0% { opacity: 0; transform: scale(0.8) rotateY(90deg); filter: blur(5px); }
-  50% { opacity: 1; transform: scale(1.05) rotateY(10deg); filter: blur(2px); }
-  100% { opacity: 1; transform: scale(1) rotateY(0deg); filter: blur(0); }
-}
+        /* Logo Container */
+        .logo-container {
+            display: flex;
+            gap: 0.2em;
+            margin-bottom: 1rem;
+            min-height: 100px;
+            justify-content: center;
+        }
 
-  /* Tagline - animated letter by letter */
-#tagline {
-  font-size: 1.5rem;
-  margin-top: 1rem;
-  opacity: 0;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  overflow: hidden;
-  font-family: monospace;
-}
+        /* Individual letter styling */
+        .letter {
+            font-size: 5.5rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            font-family: 'Arial Black', sans-serif;
+            opacity: 0;
+            transform: translateX(-100px) scale(0.8);
+            filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 40px rgba(255, 0, 255, 0.3));
+            animation: slideInLetter 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.8),
+                0 0 20px rgba(255, 0, 255, 0.6),
+                0 0 30px rgba(0, 221, 255, 0.4);
+            background: linear-gradient(135deg, #00ffff, #ffffff, #00dfff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-#tagline span {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(20px) scale(0.8);
-  animation: letterFade 0.5s forwards;
-}
+        /* Netflix-style staggered animation delays - continuous sequence */
+        .letter:nth-child(1) { animation-delay: 0s; }
+        .letter:nth-child(2) { animation-delay: 0.15s; }
+        .letter:nth-child(3) { animation-delay: 0.3s; }
+        .letter:nth-child(4) { animation-delay: 0.45s; }
+        .letter:nth-child(5) { animation-delay: 0.6s; }
+        .letter:nth-child(6) { animation-delay: 0.75s; }
 
-@keyframes letterFade {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
+        @keyframes slideInLetter {
+            0% {
+                opacity: 0;
+                transform: translateX(-100px) scale(0.8);
+                filter: blur(5px) drop-shadow(0 0 0px rgba(0, 255, 255, 0));
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(5px) scale(1.05);
+                filter: blur(1px) drop-shadow(0 0 30px rgba(0, 255, 255, 0.8)) drop-shadow(0 0 50px rgba(255, 0, 255, 0.5));
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+                filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 40px rgba(255, 0, 255, 0.3));
+            }
+        }
 
-/* Spinner layers */
-.spinners {
-  position: relative;
-  width: 80px; height: 80px;
-  margin-top: 2rem;
-}
+        /* Tagline - animated letter by letter */
+        #tagline {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            opacity: 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            overflow: hidden;
+            font-family: 'Segoe UI', monospace;
+            letter-spacing: 0.05em;
+            animation: taglineFadeIn 0.8s ease-in 1.5s forwards;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6), 0 0 20px rgba(255, 0, 255, 0.3);
+        }
 
-.spinner {
-  position: absolute; top: 50%; left: 50%;
-  width: 100%; height: 100%;
-  border-radius: 50%;
-  transform: translate(-50%, -50%) rotate(0deg);
-  border: 4px solid transparent;
-  animation: spin 4s linear infinite;
-}
-.spinner:nth-child(1) {
-  border-top-color: #00ffff; width: 60px; height: 60px; animation-duration: 3s;
-}
-.spinner:nth-child(2) {
-  border-top-color: #ff00ff; width: 80px; height: 80px; animation-duration: 4s; animation-direction: reverse;
-}
-.spinner:nth-child(3) {
-  border-top-color: #0000ff; width: 70px; height: 70px; animation-duration: 2.5s; animation-delay: 0.5s;
-}
+        #tagline span {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px) scale(0.8);
+            animation: letterFade 0.5s ease-out forwards;
+            animation-delay: inherit;
+        }
 
-@keyframes spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
+        @keyframes taglineFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
 
-/* Progress bar style */
-#progressContainer {
-  width: 80%;
-  max-width: 400px;
-  height: 8px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 4px;
-  margin-top: 2rem;
-  overflow: hidden;
-}
+        @keyframes letterFade {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-#progressBar {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(135deg, #00ffff, #ff00ff, #00dfff);
-  animation: fillProgress 3s forwards;
-  border-radius: 4px;
-}
+        /* Spinner layers */
+        .spinners {
+            position: relative;
+            width: 100px; 
+            height: 100px;
+            margin-top: 2rem;
+            opacity: 0;
+            animation: spinnerFadeIn 0.5s ease-in 1.8s forwards;
+        }
 
-@keyframes fillProgress {
-  from { width: 0%; }
-  to { width: 100%; }
-}
+        @keyframes spinnerFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
 
-/* Loading text with blinking dots */
-#loadingText {
-  margin-top: 1rem;
-  font-size: 1rem;
-  letter-spacing: 0.05em;
-  opacity: 0;
-  animation: fadeIn 1s forwards 3.5s;
-}
+        .spinner {
+            position: absolute; 
+            top: 50%; 
+            left: 50%;
+            width: 100%; 
+            height: 100%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            border: 4px solid transparent;
+            animation: spin 4s linear infinite;
+        }
 
-@keyframes fadeIn {
-  to { opacity: 1; }
-}
+        .spinner:nth-child(1) {
+            border-top-color: #00ffff; 
+            width: 60px; 
+            height: 60px; 
+            animation-duration: 3s;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.6));
+        }
 
-.loading-dots {
-  display: inline-block;
-  margin-left: 0.5em;
-}
+        .spinner:nth-child(2) {
+            border-top-color: #ff00ff; 
+            width: 80px; 
+            height: 80px; 
+            animation-duration: 4s; 
+            animation-direction: reverse;
+            filter: drop-shadow(0 0 10px rgba(255, 0, 255, 0.6));
+        }
 
-.loading-dots span {
-  opacity: 0;
-  display: inline-block;
-  margin-right: 5px;
-  animation: blink 1s infinite ease-in-out;
-}
+        .spinner:nth-child(3) {
+            border-top-color: #00dfff; 
+            width: 70px; 
+            height: 70px; 
+            animation-duration: 2.5s; 
+            animation-delay: 0.5s;
+            filter: drop-shadow(0 0 10px rgba(0, 221, 255, 0.6));
+        }
 
-.loading-dots span:nth-child(1) { animation-delay: 0.2s; }
-.loading-dots span:nth-child(2) { animation-delay: 0.4s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.6s; }
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
 
-@keyframes blink {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 1; }
-}
+        /* Progress bar style */
+        #progressContainer {
+            width: 80%;
+            max-width: 400px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            margin-top: 2rem;
+            overflow: hidden;
+            opacity: 0;
+            animation: progressFadeIn 0.5s ease-in 2.5s forwards;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
 
-</style>
+        @keyframes progressFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(135deg, #00ffff, #ff00ff, #00dfff);
+            animation: fillProgress 3s ease-in forwards 1.6s;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 0 0 25px rgba(255, 0, 255, 0.6);
+        }
+
+        @keyframes fillProgress {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+
+        /* Loading text with blinking dots */
+        #loadingText {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            letter-spacing: 0.1em;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-in 3.2s forwards;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .loading-dots {
+            display: inline-block;
+            margin-left: 0.5em;
+        }
+
+        .loading-dots span {
+            opacity: 0;
+            display: inline-block;
+            margin-right: 5px;
+            animation: blink 1s infinite ease-in-out;
+            color: #ff00ff;
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: 2.3s; }
+        .loading-dots span:nth-child(2) { animation-delay: 2.5s; }
+        .loading-dots span:nth-child(3) { animation-delay: 2.7s; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .letter {
+                font-size: 3.5rem;
+            }
+
+            #tagline {
+                font-size: 1rem;
+            }
+
+            .spinners {
+                width: 80px;
+                height: 80px;
+            }
+
+            .spinner:nth-child(1) {
+                width: 50px;
+                height: 50px;
+            }
+
+            .spinner:nth-child(2) {
+                width: 65px;
+                height: 65px;
+            }
+
+            .spinner:nth-child(3) {
+                width: 55px;
+                height: 55px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .letter {
+                font-size: 2.5rem;
+            }
+
+            #tagline {
+                font-size: 0.9rem;
+            }
+
+            .spinners {
+                width: 60px;
+                height: 60px;
+            }
+
+            .spinner:nth-child(1) {
+                width: 40px;
+                height: 40px;
+            }
+
+            .spinner:nth-child(2) {
+                width: 55px;
+                height: 55px;
+            }
+
+            .spinner:nth-child(3) {
+                width: 48px;
+                height: 48px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Floating animated background circles -->
+    <div class="bg-circle" style="width: 150px; height: 150px; bottom: 10%; right: 5%; background: radial-gradient(circle, #00ffff, transparent);"></div>
+    <div class="bg-circle" style="width: 200px; height: 200px; top: 20%; left: 10%; background: radial-gradient(circle, #ff00ff, transparent); animation-delay: 10s;"></div>
+    <div class="bg-circle" style="width: 120px; height: 120px; top: 60%; right: 15%; background: radial-gradient(circle, #00dfff, transparent); animation-delay: 15s;"></div>
 
-<!-- Floating animated background circles -->
-<div class="bg-circle" style="width: 150px; height: 150px; bottom: 10%; right: 5%; background: radial-gradient(circle, #00ffff, transparent);"></div>
-<div class="bg-circle" style="width: 200px; height: 200px; top: 20%; left: 10%; background: radial-gradient(circle, #ff00ff, transparent); animation-delay: 10s;"></div>
-<div class="bg-circle" style="width: 120px; height: 120px; top: 60%; right: 15%; background: radial-gradient(circle, #00dfff, transparent); animation-delay: 15s;"></div>
+    <!-- Splash container -->
+    <div class="splash">
+        <!-- Enhanced Logo with Netflix-style letter-by-letter sliding -->
+        <div class="logo-container" id="logoContainer"></div>
+        
+        <!-- Tagline animated letter by letter -->
+        <div id="tagline"></div>
+        
+        <!-- Multi-layer spinner -->
+        <div class="spinners">
+            <div class="spinner"></div>
+            <div class="spinner"></div>
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- Progress bar -->
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+        </div>
+        
+        <!-- Loading message with blinking dots -->
+        <div id="loadingText">
+            LOADING<span class="loading-dots">
+                <span>.</span>
+                <span>.</span>
+                <span>.</span>
+            </span>
+        </div>
+    </div>
 
-<!-- Splash container -->
-<div class="splash">
-  <!-- Advanced Logo -->
-  <div class="logo">FAIROX</div>
-  
-  <!-- Tagline animated letter by letter -->
-  <div id="tagline"></div>
-  
-  <!-- Multi-layer spinner -->
-  <div class="spinners">
-    <div class="spinner"></div>
-    <div class="spinner"></div>
-    <div class="spinner"></div>
-  </div>
-  
-  <!-- Progress bar -->
-  <div id="progressContainer">
-    <div id="progressBar"></div>
-  </div>
-  
-  <!-- Loading message with blinking dots -->
-  <div id="loadingText">
-    LOADING<span class="loading-dots">
-      <span>.</span>
-      <span>.</span>
-      <span>.</span>
-    </span>
-  </div>
-</div>
+    <script>
+        // Split FAIROX into individual letters with animations
+        const logoText = "FAIROX";
+        const logoContainer = document.getElementById('logoContainer');
 
-<script>
-  // Animate the tagline letter by letter
-  const taglineText = "Fairox - Modern Business Solutions";
-  const taglineContainer = document.getElementById('tagline');
+        for (const letter of logoText) {
+            const span = document.createElement('span');
+            span.textContent = letter;
+            span.className = 'letter';
+            logoContainer.appendChild(span);
+        }
 
-  for (const [i, letter] of [...taglineText].entries()) {
-    const span = document.createElement('span');
-    span.textContent = letter;
-    span.style.animationDelay = `${0.1 + i * 0.05}s`;
-    // Optional: skip spaces
-    if (letter === ' ') {
-      span.style.width = '0.5em';
-    }
-    taglineContainer.appendChild(span);
-  }
+        // Animate the tagline letter by letter
+        const taglineText = "Modern Business Solutions";
+        const taglineContainer = document.getElementById('tagline');
 
-  // Automatic redirect after ~3.5 seconds
-  setTimeout(() => {
-    window.location.href = '/index.html';
-  }, 3500);
-</script>
+        for (const [i, letter] of [...taglineText].entries()) {
+            const span = document.createElement('span');
+            span.textContent = letter;
+            span.style.animationDelay = `${1.2 + i * 0.05}s`;
+            if (letter === ' ') {
+                span.style.width = '0.3em';
+            }
+            taglineContainer.appendChild(span);
+        }
 
+        // Automatic redirect after ~3.5 seconds
+        setTimeout(() => {
+            window.location.href = '/index.html';
+        }, 3500);
+    </script>
 </body>
 </html>
