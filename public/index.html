@@ -14,18 +14,21 @@
             }
         });
 
-        // Auto-scroll to contact section if redirected from construction
-document.addEventListener('DOMContentLoaded', function() {
-    if (sessionStorage.getItem('redirectToContact') === 'true') {
-        sessionStorage.removeItem('redirectToContact');
-        const contactSection = document.getElementById('contact');
-        if (contactSection) {
-            setTimeout(() => {
-                contactSection.scrollIntoView({ behavior: 'smooth' });
-            }, 300);
+       
+    // Auto-scroll to contact when page loads with hash
+    window.addEventListener('load', function() {
+        const hash = window.location.hash;
+        if (hash === '#contact') {
+            const contactSection = document.getElementById('contact');
+            if (contactSection) {
+                setTimeout(() => {
+                    contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+            }
         }
-    }
-});
+    });
+
+
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
