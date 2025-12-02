@@ -1,3 +1,5 @@
+
+splash.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -226,14 +228,14 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(135deg, #00ffff, #ff00ff, #00dfff);
-            animation: fillProgress 4.5s ease-in forwards 1.6s;
+            animation: fillProgress 3.5s ease-out forwards 2.0s;
             border-radius: 4px;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 0 0 25px rgba(255, 0, 255, 0.6);
         }
 
         @keyframes fillProgress {
-            from { width: 0%; }
-            to { width: 100%; }
+            0% { width: 0%; }
+            100% { width: 100%; }
         }
 
         /* Loading text with blinking dots */
@@ -242,7 +244,7 @@
             font-size: 0.95rem;
             letter-spacing: 0.1em;
             opacity: 0;
-            animation: fadeIn 0.6s ease-in 3.2s forwards;
+            animation: fadeIn 0.6s ease-in 3.8s forwards;
             color: #00ffff;
             text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
         }
@@ -264,9 +266,9 @@
             color: #ff00ff;
         }
 
-        .loading-dots span:nth-child(1) { animation-delay: 2.3s; }
-        .loading-dots span:nth-child(2) { animation-delay: 2.5s; }
-        .loading-dots span:nth-child(3) { animation-delay: 2.7s; }
+        .loading-dots span:nth-child(1) { animation-delay: 4.0s; }
+        .loading-dots span:nth-child(2) { animation-delay: 4.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 4.4s; }
 
         @keyframes blink {
             0%, 100% { opacity: 0; }
@@ -398,12 +400,12 @@
         }
 
         // Automatic redirect AFTER progress bar reaches 100%
-        // Progress bar animation: starts at 1.6s and takes 4.5s to complete
-        // Total time: 1.6s + 4.5s = 6.1s
-        // Adding 500ms buffer for completion animation
+        // Progress bar: starts at 2.0s, duration 3.5s = completes at 5.5s
+        // Loading dots: start at 4.0s
+        // Redirect: at 5.8s (after progress bar fully completes and animations finish)
         setTimeout(() => {
-            window.location.href = '/index.html';
-        }, 6600);
+            window.location.href = 'index.html';
+        }, 5800);
     </script>
 </body>
 </html>
