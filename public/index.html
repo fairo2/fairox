@@ -13,6 +13,19 @@
                 window.location.href = '/splash.html';
             }
         });
+
+        // Auto-scroll to contact section if redirected from construction
+document.addEventListener('DOMContentLoaded', function() {
+    if (sessionStorage.getItem('redirectToContact') === 'true') {
+        sessionStorage.removeItem('redirectToContact');
+        const contactSection = document.getElementById('contact');
+        if (contactSection) {
+            setTimeout(() => {
+                contactSection.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        }
+    }
+});
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1288,19 +1301,6 @@
             textEl.textContent = text;
             textEl.style.display = 'inline';
         }
-
-        // Auto-scroll to contact section if redirected from construction
-document.addEventListener('DOMContentLoaded', function() {
-    if (sessionStorage.getItem('redirectToContact') === 'true') {
-        sessionStorage.removeItem('redirectToContact');
-        const contactSection = document.getElementById('contact');
-        if (contactSection) {
-            setTimeout(() => {
-                contactSection.scrollIntoView({ behavior: 'smooth' });
-            }, 300);
-        }
-    }
-});
 
     </script>
     
