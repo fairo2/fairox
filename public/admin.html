@@ -908,624 +908,692 @@
 
     <!-- Complete Admin Dashboard Script with Login, Session & Password Management -->
     <script>
-        const API_URL = '/api';
-        let currentToken = null;
-        let sessionId = null;
+    const API_URL = '/api';
+    let currentToken = null;
+    let sessionId = null;
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    function getAuthToken() {
+        return currentToken || localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
+    }
+    
+    function getSessionId() {
+        return sessionId || localStorage.getItem('sessionId');
+    }
+    
+    function apiCall(endpoint, options = {}) {
+        const token = getAuthToken();
+        const session = getSessionId();
         
-        // ============================================
-        // HELPER FUNCTIONS
-        // ============================================
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
         
-        function getAuthToken() {
-            return currentToken || localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
         
-        function getSessionId() {
-            return sessionId || localStorage.getItem('sessionId');
+        if (session) {
+            headers['X-Session-ID'] = session;
         }
         
-        function apiCall(endpoint, options = {}) {
-            const token = getAuthToken();
-            const session = getSessionId();
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-            
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-            
-            if (session) {
-                headers['X-Session-ID'] = session;
-            }
-            
-            return fetch(endpoint, {
-                ...options,
-                headers
-            });
-        }
-        
-        // ============================================
-        // LOGIN
-        // ============================================
-        
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            console.log('🔐 Attempting admin login...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/admin-login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Login successful!');
-                    console.log('   Token received:', data.token.substring(0, 20) + '...');
-                    console.log('   Session ID:', data.sessionId.substring(0, 20) + '...');
-                    
-                    currentToken = data.token;
-                    sessionId = data.sessionId;
-                    
-                    localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('sessionId', data.sessionId);
-                    localStorage.setItem('adminToken', data.token);
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('adminId', data.admin.id);
-                    localStorage.setItem('adminEmail', data.admin.email);
-                    localStorage.setItem('user', JSON.stringify(data.admin));
-                    
-                    // Set session ID in data attribute
-                    document.documentElement.setAttribute('data-session-id', data.sessionId);
-                    
-                    console.log('✅ Token and session stored');
-                    
-                    showDashboard();
-                } else {
-                    showMessage('loginMessage', data.message, 'error');
-                }
-            } catch (error) {
-                console.error('❌ Login error:', error);
-                showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
-            }
+        return fetch(endpoint, {
+            ...options,
+            headers
         });
-
-        // ============================================
-        // SHOW DASHBOARD
-        // ============================================
+    }
+    
+    // ============================================
+    // LOGIN - WITH ERROR HANDLING FIXED ✅
+    // ============================================
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        function showDashboard() {
-            console.log('📊 Showing dashboard...');
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('dashboard').classList.add('active');
-            loadStats();
-            loadPendingUsers();
-        }
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-        // ============================================
-        // LOAD STATISTICS
-        // ============================================
-        
-        async function loadStats() {
-            console.log('📊 Loading stats...');
-            
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/stats`);
-                const data = await response.json();
+        console.log('🔐 Attempting admin login...');
 
-                if (data.success) {
-                    console.log('✅ Stats loaded');
-                    document.getElementById('statPending').textContent = data.stats.pending;
-                    document.getElementById('statApproved').textContent = data.stats.approved;
-                    document.getElementById('statTotal').textContent = data.stats.total;
-                    document.getElementById('statContacts').textContent = data.stats.contacts;
-                } else {
-                    console.error('❌ Error:', data.message);
+        try {
+            const response = await fetch(`${API_URL}/auth/admin-login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            console.log('📊 Response status:', response.status);
+
+            // ✅ ERROR HANDLING ADDED - CHECK RESPONSE STATUS FIRST
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                let errorMessage = 'Login failed';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || 'Server error';
                 }
-            } catch (error) {
-                console.error('❌ Failed to load stats:', error);
-            }
-        }
-
-        // ============================================
-        // LOAD PENDING USERS
-        // ============================================
-        
-        async function loadPendingUsers() {
-            console.log('📋 Loading pending users...');
-            
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/pending-users`);
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Pending users loaded:', data.users?.length || 0);
-                    const tbody = document.getElementById('pendingUsersBody');
-                    
-                    if (!data.users || data.users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No pending users</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.users.map(user => `
-                            <tr>
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
-                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                                <td class="action-buttons">
-                                    <button class="action-btn approve-btn" onclick="approveUser(${user.id})">✓ Approve</button>
-                                    <button class="action-btn reject-btn" onclick="rejectUser(${user.id})">✗ Reject</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                } else {
-                    console.error('❌ Error:', data.message);
-                }
-            } catch (error) {
-                console.error('❌ Failed to load pending users:', error);
-            }
-        }
-
-        // ============================================
-        // LOAD APPROVED USERS
-        // ============================================
-        
-        async function loadApprovedUsers() {
-            console.log('✅ Loading approved users...');
-            
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/approved-users`);
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Approved users loaded:', data.users?.length || 0);
-                    const tbody = document.getElementById('approvedUsersBody');
-                    
-                    if (!data.users || data.users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No approved users</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.users.map(user => `
-                            <tr>
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
-                                <td>${user.approved_at ? new Date(user.approved_at).toLocaleDateString() : 'N/A'}</td>
-                                <td class="action-buttons">
-                                    <button class="action-btn revoke-btn" onclick="revokeUser(${user.id})">⚠ Revoke Access</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                } else {
-                    console.error('❌ Error:', data.message);
-                }
-            } catch (error) {
-                console.error('❌ Failed to load approved users:', error);
-            }
-        }
-
-        // ============================================
-        // LOAD CONTACTS
-        // ============================================
-        
-        async function loadContacts() {
-            console.log('📞 Loading contacts...');
-            
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/contacts`);
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Contacts loaded:', data.contacts?.length || 0);
-                    const tbody = document.getElementById('contactsBody');
-                    
-                    if (!data.contacts || data.contacts.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No contact messages</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.contacts.map(contact => `
-                            <tr>
-                                <td>${contact.name}</td>
-                                <td>${contact.email}</td>
-                                <td>${contact.subject}</td>
-                                <td>${new Date(contact.created_at).toLocaleDateString()}</td>
-                            </tr>
-                        `).join('');
-                    }
-                } else {
-                    console.error('❌ Error:', data.message);
-                }
-            } catch (error) {
-                console.error('❌ Failed to load contacts:', error);
-            }
-        }
-
-        // ============================================
-        // APPROVE USER
-        // ============================================
-        
-        async function approveUser(userId) {
-            if (!confirm('Approve this user?')) return;
-
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/approve-user/${userId}`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ User approved');
-                    loadStats();
-                    loadPendingUsers();
-                    alert('User approved successfully!');
-                } else {
-                    console.error('❌ Error:', data.message);
-                    alert(data.message || 'Failed to approve user');
-                }
-            } catch (error) {
-                console.error('❌ Failed to approve user:', error);
-                alert('Failed to approve user');
-            }
-        }
-
-        // ============================================
-        // REJECT USER
-        // ============================================
-        
-        async function rejectUser(userId) {
-            if (!confirm('Reject and delete this user?')) return;
-
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/reject-user/${userId}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ User rejected');
-                    loadStats();
-                    loadPendingUsers();
-                    alert('User rejected and deleted');
-                } else {
-                    console.error('❌ Error:', data.message);
-                    alert(data.message || 'Failed to reject user');
-                }
-            } catch (error) {
-                console.error('❌ Failed to reject user:', error);
-                alert('Failed to reject user');
-            }
-        }
-
-        // ============================================
-        // REVOKE USER
-        // ============================================
-        
-        async function revokeUser(userId) {
-            if (!confirm('Revoke access for this user?')) return;
-
-            try {
-                const response = await apiCall(`${API_URL}/auth/admin/revoke-user/${userId}`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ User access revoked');
-                    loadStats();
-                    loadApprovedUsers();
-                    alert('User access revoked');
-                } else {
-                    console.error('❌ Error:', data.message);
-                    alert(data.message || 'Failed to revoke user');
-                }
-            } catch (error) {
-                console.error('❌ Failed to revoke user:', error);
-                alert('Failed to revoke user');
-            }
-        }
-
-        // ============================================
-        // SWITCH TAB
-        // ============================================
-        
-        function switchTab(tab) {
-            console.log('📑 Switching tab to:', tab);
-            
-            document.querySelectorAll('.tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            event.target.classList.add('active');
-            document.getElementById(tab).classList.add('active');
-
-            if (tab === 'approved') loadApprovedUsers();
-            if (tab === 'contacts') loadContacts();
-            if (tab === 'pending') loadPendingUsers();
-        }
-
-        // ============================================
-        // LOGOUT
-        // ============================================
-        
-        async function logout() {
-            console.log('🔐 Logging out...');
-            
-            try {
-                await apiCall(`${API_URL}/auth/logout`, {
-                    method: 'GET'
-                });
-            } catch (error) {
-                console.error('Logout error:', error);
+                throw new Error(errorMessage);
             }
 
-            currentToken = null;
-            sessionId = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('sessionId');
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('adminId');
-            localStorage.removeItem('adminEmail');
-            localStorage.removeItem('user');
-            location.reload();
-        }
+            // ✅ NOW SAFE TO PARSE JSON
+            const data = await response.json();
 
-        // ============================================
-        // SHOW MESSAGE
-        // ============================================
-        
-        function showMessage(id, message, type) {
-            const el = document.getElementById(id);
-            el.textContent = message;
-            el.className = `message ${type} active`;
-        }
-
-        // ============================================
-        // CHANGE PASSWORD - MODAL FUNCTIONS
-        // ============================================
-
-        function openChangePasswordModal() {
-            console.log('🔐 Opening change password modal...');
-            const modal = document.getElementById('changePasswordModal');
-            modal.classList.add('show');
-            clearPasswordForm();
-            document.getElementById('currentPassword').focus();
-        }
-
-        function closeChangePasswordModal() {
-            console.log('🔐 Closing change password modal...');
-            const modal = document.getElementById('changePasswordModal');
-            modal.classList.remove('show');
-            clearPasswordForm();
-        }
-
-        function clearPasswordForm() {
-            document.getElementById('changePasswordForm').reset();
-            document.getElementById('passwordErrorMsg').classList.remove('show');
-            document.getElementById('passwordSuccessMsg').classList.remove('show');
-            document.getElementById('passwordStrengthContainer').style.display = 'none';
-            document.getElementById('passwordMatchMsg').className = 'password-match-message';
-            resetPasswordRequirements();
-        }
-
-        function checkPasswordStrength() {
-            const password = document.getElementById('newPassword').value;
-            
-            if (password) {
-                document.getElementById('passwordStrengthContainer').style.display = 'flex';
-                document.getElementById('passwordStrengthContainer').style.flexDirection = 'column';
-            }
-            
-            let strength = 0;
-            const req1 = password.length >= 8;
-            const req2 = /[A-Z]/.test(password);
-            const req3 = /[0-9]/.test(password);
-            const req4 = /[!@#$%^&*]/.test(password);
-            
-            updateRequirement('req1', req1);
-            updateRequirement('req2', req2);
-            updateRequirement('req3', req3);
-            updateRequirement('req4', req4);
-            
-            if (req1) strength++;
-            if (req2) strength++;
-            if (req3) strength++;
-            if (req4) strength++;
-            
-            updateStrengthBars(strength);
-            
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            if (confirmPassword) {
-                checkPasswordMatch();
-            }
-        }
-
-        function checkPasswordMatch() {
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const matchMsg = document.getElementById('passwordMatchMsg');
-            
-            if (confirmPassword) {
-                if (password === confirmPassword) {
-                    matchMsg.className = 'password-match-message match';
-                    matchMsg.textContent = '✓ Passwords match';
-                } else {
-                    matchMsg.className = 'password-match-message no-match';
-                    matchMsg.textContent = '✕ Passwords do not match';
-                }
-            }
-        }
-
-        function updateRequirement(id, met) {
-            const el = document.getElementById(id);
-            if (met) {
-                el.classList.remove('unmet');
-                el.classList.add('met');
-                el.textContent = el.textContent.replace('✕', '✓');
+            if (data.success) {
+                console.log('✅ Login successful!');
+                console.log('   Token received:', data.token.substring(0, 20) + '...');
+                console.log('   Session ID:', data.sessionId.substring(0, 20) + '...');
+                
+                currentToken = data.token;
+                sessionId = data.sessionId;
+                
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('sessionId', data.sessionId);
+                localStorage.setItem('adminToken', data.token);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('adminId', data.admin.id);
+                localStorage.setItem('adminEmail', data.admin.email);
+                localStorage.setItem('user', JSON.stringify(data.admin));
+                
+                // Set session ID in data attribute
+                document.documentElement.setAttribute('data-session-id', data.sessionId);
+                
+                console.log('✅ Token and session stored');
+                
+                showDashboard();
             } else {
-                el.classList.remove('met');
-                el.classList.add('unmet');
-                el.textContent = el.textContent.replace('✓', '✕');
+                showMessage('loginMessage', data.message, 'error');
             }
+        } catch (error) {
+            console.error('❌ Login error:', error);
+            showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
         }
+    });
 
-        function updateStrengthBars(strength) {
-            let colors = ['#ccc', '#ccc', '#ccc', '#ccc'];
-            let strengthTexts = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    // ============================================
+    // SHOW DASHBOARD
+    // ============================================
+    
+    function showDashboard() {
+        console.log('📊 Showing dashboard...');
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('dashboard').classList.add('active');
+        loadStats();
+        loadPendingUsers();
+    }
+
+    // ============================================
+    // LOAD STATISTICS
+    // ============================================
+    
+    async function loadStats() {
+        console.log('📊 Loading stats...');
+        
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/stats`);
             
-            if (strength >= 1) colors = ['#ff6384', '#ccc', '#ccc', '#ccc'];
-            if (strength >= 2) colors = ['#ff6384', '#ffce56', '#ccc', '#ccc'];
-            if (strength >= 3) colors = ['#ffce56', '#ffce56', '#66bb6a', '#ccc'];
-            if (strength >= 4) colors = ['#00d9ff', '#00d9ff', '#00d9ff', '#00d9ff'];
-            
-            for (let i = 1; i <= 4; i++) {
-                document.getElementById(`strength${i}`).style.background = colors[i - 1];
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to load stats');
             }
             
-            document.getElementById('strengthText').textContent = strengthTexts[strength];
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Stats loaded');
+                document.getElementById('statPending').textContent = data.stats.pending;
+                document.getElementById('statApproved').textContent = data.stats.approved;
+                document.getElementById('statTotal').textContent = data.stats.total;
+                document.getElementById('statContacts').textContent = data.stats.contacts;
+            } else {
+                console.error('❌ Error:', data.message);
+            }
+        } catch (error) {
+            console.error('❌ Failed to load stats:', error);
         }
+    }
 
-        function resetPasswordRequirements() {
-            document.querySelectorAll('.requirement-item').forEach(req => {
-                req.classList.remove('met');
-                req.classList.add('unmet');
-            });
-            document.getElementById('req1').textContent = '✕ At least 8 characters';
-            document.getElementById('req2').textContent = '✕ Uppercase letter (A-Z)';
-            document.getElementById('req3').textContent = '✕ Number (0-9)';
-            document.getElementById('req4').textContent = '✕ Special character (!@#$%^&*)';
-        }
-
-        async function submitChangePassword(event) {
-            event.preventDefault();
+    // ============================================
+    // LOAD PENDING USERS
+    // ============================================
+    
+    async function loadPendingUsers() {
+        console.log('📋 Loading pending users...');
+        
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/pending-users`);
             
-            const currentPassword = document.getElementById('currentPassword').value.trim();
-            const newPassword = document.getElementById('newPassword').value.trim();
-            const confirmPassword = document.getElementById('confirmPassword').value.trim();
-            const errorMsg = document.getElementById('passwordErrorMsg');
-            const successMsg = document.getElementById('passwordSuccessMsg');
-
-            console.log('🔐 Validating password change...');
-
-            // Clear messages
-            errorMsg.classList.remove('show');
-            successMsg.classList.remove('show');
-
-            // Validation
-            if (!currentPassword) {
-                showPasswordError(errorMsg, 'Please enter current password');
-                return;
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to load pending users');
             }
+            
+            const data = await response.json();
 
-            if (!newPassword) {
-                showPasswordError(errorMsg, 'Please enter new password');
-                return;
-            }
-
-            if (newPassword.length < 8) {
-                showPasswordError(errorMsg, 'New password must be at least 8 characters');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showPasswordError(errorMsg, 'Passwords do not match');
-                return;
-            }
-
-            if (currentPassword === newPassword) {
-                showPasswordError(errorMsg, 'New password must be different from current password');
-                return;
-            }
-
-            try {
-                console.log('📤 Sending password change request...');
+            if (data.success) {
+                console.log('✅ Pending users loaded:', data.users?.length || 0);
+                const tbody = document.getElementById('pendingUsersBody');
                 
-                const token = getAuthToken();
-                if (!token) {
-                    showPasswordError(errorMsg, 'Session expired. Please log in again.');
-                    return;
-                }
-
-                const response = await apiCall(`${API_URL}/auth/change-password`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        currentPassword: currentPassword,
-                        newPassword: newPassword
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Password changed successfully');
-                    showPasswordSuccess(successMsg, '✅ Password changed successfully! You will be logged out automatically.');
-                    
-                    setTimeout(() => {
-                        closeChangePasswordModal();
-                        console.log('🔄 Logging out...');
-                        logout();
-                    }, 2000);
+                if (!data.users || data.users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No pending users</td></tr>';
                 } else {
-                    console.log('❌ Password change failed:', data.message);
-                    showPasswordError(errorMsg, data.message || 'Failed to change password');
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                            <td class="action-buttons">
+                                <button class="action-btn approve-btn" onclick="approveUser(${user.id})">✓ Approve</button>
+                                <button class="action-btn reject-btn" onclick="rejectUser(${user.id})">✗ Reject</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 }
+            } else {
+                console.error('❌ Error:', data.message);
+            }
+        } catch (error) {
+            console.error('❌ Failed to load pending users:', error);
+        }
+    }
+
+    // ============================================
+    // LOAD APPROVED USERS
+    // ============================================
+    
+    async function loadApprovedUsers() {
+        console.log('✅ Loading approved users...');
+        
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/approved-users`);
+            
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to load approved users');
+            }
+            
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Approved users loaded:', data.users?.length || 0);
+                const tbody = document.getElementById('approvedUsersBody');
                 
-            } catch (error) {
-                console.error('❌ Error changing password:', error);
-                showPasswordError(errorMsg, 'Error: ' + error.message);
+                if (!data.users || data.users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No approved users</td></tr>';
+                } else {
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${user.approved_at ? new Date(user.approved_at).toLocaleDateString() : 'N/A'}</td>
+                            <td class="action-buttons">
+                                <button class="action-btn revoke-btn" onclick="revokeUser(${user.id})">⚠ Revoke Access</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } else {
+                console.error('❌ Error:', data.message);
             }
+        } catch (error) {
+            console.error('❌ Failed to load approved users:', error);
         }
+    }
 
-        function showPasswordError(element, message) {
-            element.textContent = '❌ ' + message;
-            element.classList.add('show');
-        }
-
-        function showPasswordSuccess(element, message) {
-            element.textContent = message;
-            element.classList.add('show');
-        }
-
-        // Close modal when clicking outside
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('changePasswordModal');
-            if (event.target === modal) {
-                closeChangePasswordModal();
-            }
-        });
-
-        // Close modal on Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeChangePasswordModal();
-            }
-        });
-
-        // ============================================
-        // CHECK IF ALREADY LOGGED IN
-        // ============================================
+    // ============================================
+    // LOAD CONTACTS
+    // ============================================
+    
+    async function loadContacts() {
+        console.log('📞 Loading contacts...');
         
-        const savedToken = localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
-        const savedSession = localStorage.getItem('sessionId');
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/contacts`);
+            
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to load contacts');
+            }
+            
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Contacts loaded:', data.contacts?.length || 0);
+                const tbody = document.getElementById('contactsBody');
+                
+                if (!data.contacts || data.contacts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No contact messages</td></tr>';
+                } else {
+                    tbody.innerHTML = data.contacts.map(contact => `
+                        <tr>
+                            <td>${contact.name}</td>
+                            <td>${contact.email}</td>
+                            <td>${contact.subject}</td>
+                            <td>${new Date(contact.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } else {
+                console.error('❌ Error:', data.message);
+            }
+        } catch (error) {
+            console.error('❌ Failed to load contacts:', error);
+        }
+    }
+
+    // ============================================
+    // APPROVE USER
+    // ============================================
+    
+    async function approveUser(userId) {
+        if (!confirm('Approve this user?')) return;
+
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/approve-user/${userId}`, {
+                method: 'POST'
+            });
+
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to approve user');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ User approved');
+                loadStats();
+                loadPendingUsers();
+                alert('User approved successfully!');
+            } else {
+                console.error('❌ Error:', data.message);
+                alert(data.message || 'Failed to approve user');
+            }
+        } catch (error) {
+            console.error('❌ Failed to approve user:', error);
+            alert('Failed to approve user');
+        }
+    }
+
+    // ============================================
+    // REJECT USER
+    // ============================================
+    
+    async function rejectUser(userId) {
+        if (!confirm('Reject and delete this user?')) return;
+
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/reject-user/${userId}`, {
+                method: 'DELETE'
+            });
+
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to reject user');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ User rejected');
+                loadStats();
+                loadPendingUsers();
+                alert('User rejected and deleted');
+            } else {
+                console.error('❌ Error:', data.message);
+                alert(data.message || 'Failed to reject user');
+            }
+        } catch (error) {
+            console.error('❌ Failed to reject user:', error);
+            alert('Failed to reject user');
+        }
+    }
+
+    // ============================================
+    // REVOKE USER
+    // ============================================
+    
+    async function revokeUser(userId) {
+        if (!confirm('Revoke access for this user?')) return;
+
+        try {
+            const response = await apiCall(`${API_URL}/auth/admin/revoke-user/${userId}`, {
+                method: 'POST'
+            });
+
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to revoke user');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ User access revoked');
+                loadStats();
+                loadApprovedUsers();
+                alert('User access revoked');
+            } else {
+                console.error('❌ Error:', data.message);
+                alert(data.message || 'Failed to revoke user');
+            }
+        } catch (error) {
+            console.error('❌ Failed to revoke user:', error);
+            alert('Failed to revoke user');
+        }
+    }
+
+    // ============================================
+    // SWITCH TAB
+    // ============================================
+    
+    function switchTab(tab) {
+        console.log('📑 Switching tab to:', tab);
         
-        if (savedToken && savedSession) {
-            console.log('✅ Found saved token and session, restoring...');
-            currentToken = savedToken;
-            sessionId = savedSession;
-            document.documentElement.setAttribute('data-session-id', savedSession);
-            showDashboard();
+        document.querySelectorAll('.tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        event.target.classList.add('active');
+        document.getElementById(tab).classList.add('active');
+
+        if (tab === 'approved') loadApprovedUsers();
+        if (tab === 'contacts') loadContacts();
+        if (tab === 'pending') loadPendingUsers();
+    }
+
+    // ============================================
+    // LOGOUT
+    // ============================================
+    
+    async function logout() {
+        console.log('🔐 Logging out...');
+        
+        try {
+            await apiCall(`${API_URL}/auth/logout`, {
+                method: 'GET'
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+
+        currentToken = null;
+        sessionId = null;
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('token');
+        localStorage.removeItem('adminId');
+        localStorage.removeItem('adminEmail');
+        localStorage.removeItem('user');
+        location.reload();
+    }
+
+    // ============================================
+    // SHOW MESSAGE
+    // ============================================
+    
+    function showMessage(id, message, type) {
+        const el = document.getElementById(id);
+        el.textContent = message;
+        el.className = `message ${type} active`;
+    }
+
+    // ============================================
+    // CHANGE PASSWORD - MODAL FUNCTIONS
+    // ============================================
+
+    function openChangePasswordModal() {
+        console.log('🔐 Opening change password modal...');
+        const modal = document.getElementById('changePasswordModal');
+        modal.classList.add('show');
+        clearPasswordForm();
+        document.getElementById('currentPassword').focus();
+    }
+
+    function closeChangePasswordModal() {
+        console.log('🔐 Closing change password modal...');
+        const modal = document.getElementById('changePasswordModal');
+        modal.classList.remove('show');
+        clearPasswordForm();
+    }
+
+    function clearPasswordForm() {
+        document.getElementById('changePasswordForm').reset();
+        document.getElementById('passwordErrorMsg').classList.remove('show');
+        document.getElementById('passwordSuccessMsg').classList.remove('show');
+        document.getElementById('passwordStrengthContainer').style.display = 'none';
+        document.getElementById('passwordMatchMsg').className = 'password-match-message';
+        resetPasswordRequirements();
+    }
+
+    function checkPasswordStrength() {
+        const password = document.getElementById('newPassword').value;
+        
+        if (password) {
+            document.getElementById('passwordStrengthContainer').style.display = 'flex';
+            document.getElementById('passwordStrengthContainer').style.flexDirection = 'column';
+        }
+        
+        let strength = 0;
+        const req1 = password.length >= 8;
+        const req2 = /[A-Z]/.test(password);
+        const req3 = /[0-9]/.test(password);
+        const req4 = /[!@#$%^&*]/.test(password);
+        
+        updateRequirement('req1', req1);
+        updateRequirement('req2', req2);
+        updateRequirement('req3', req3);
+        updateRequirement('req4', req4);
+        
+        if (req1) strength++;
+        if (req2) strength++;
+        if (req3) strength++;
+        if (req4) strength++;
+        
+        updateStrengthBars(strength);
+        
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        if (confirmPassword) {
+            checkPasswordMatch();
+        }
+    }
+
+    function checkPasswordMatch() {
+        const password = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const matchMsg = document.getElementById('passwordMatchMsg');
+        
+        if (confirmPassword) {
+            if (password === confirmPassword) {
+                matchMsg.className = 'password-match-message match';
+                matchMsg.textContent = '✓ Passwords match';
+            } else {
+                matchMsg.className = 'password-match-message no-match';
+                matchMsg.textContent = '✕ Passwords do not match';
+            }
+        }
+    }
+
+    function updateRequirement(id, met) {
+        const el = document.getElementById(id);
+        if (met) {
+            el.classList.remove('unmet');
+            el.classList.add('met');
+            el.textContent = el.textContent.replace('✕', '✓');
         } else {
-            console.log('❌ No saved credentials found, showing login screen');
+            el.classList.remove('met');
+            el.classList.add('unmet');
+            el.textContent = el.textContent.replace('✓', '✕');
         }
-    </script>
+    }
+
+    function updateStrengthBars(strength) {
+        let colors = ['#ccc', '#ccc', '#ccc', '#ccc'];
+        let strengthTexts = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+        
+        if (strength >= 1) colors = ['#ff6384', '#ccc', '#ccc', '#ccc'];
+        if (strength >= 2) colors = ['#ff6384', '#ffce56', '#ccc', '#ccc'];
+        if (strength >= 3) colors = ['#ffce56', '#ffce56', '#66bb6a', '#ccc'];
+        if (strength >= 4) colors = ['#00d9ff', '#00d9ff', '#00d9ff', '#00d9ff'];
+        
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`strength${i}`).style.background = colors[i - 1];
+        }
+        
+        document.getElementById('strengthText').textContent = strengthTexts[strength];
+    }
+
+    function resetPasswordRequirements() {
+        document.querySelectorAll('.requirement-item').forEach(req => {
+            req.classList.remove('met');
+            req.classList.add('unmet');
+        });
+        document.getElementById('req1').textContent = '✕ At least 8 characters';
+        document.getElementById('req2').textContent = '✕ Uppercase letter (A-Z)';
+        document.getElementById('req3').textContent = '✕ Number (0-9)';
+        document.getElementById('req4').textContent = '✕ Special character (!@#$%^&*)';
+    }
+
+    async function submitChangePassword(event) {
+        event.preventDefault();
+        
+        const currentPassword = document.getElementById('currentPassword').value.trim();
+        const newPassword = document.getElementById('newPassword').value.trim();
+        const confirmPassword = document.getElementById('confirmPassword').value.trim();
+        const errorMsg = document.getElementById('passwordErrorMsg');
+        const successMsg = document.getElementById('passwordSuccessMsg');
+
+        console.log('🔐 Validating password change...');
+
+        // Clear messages
+        errorMsg.classList.remove('show');
+        successMsg.classList.remove('show');
+
+        // Validation
+        if (!currentPassword) {
+            showPasswordError(errorMsg, 'Please enter current password');
+            return;
+        }
+
+        if (!newPassword) {
+            showPasswordError(errorMsg, 'Please enter new password');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            showPasswordError(errorMsg, 'New password must be at least 8 characters');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showPasswordError(errorMsg, 'Passwords do not match');
+            return;
+        }
+
+        if (currentPassword === newPassword) {
+            showPasswordError(errorMsg, 'New password must be different from current password');
+            return;
+        }
+
+        try {
+            console.log('📤 Sending password change request...');
+            
+            const token = getAuthToken();
+            if (!token) {
+                showPasswordError(errorMsg, 'Session expired. Please log in again.');
+                return;
+            }
+
+            const response = await apiCall(`${API_URL}/auth/change-password`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            });
+
+            // ✅ ERROR HANDLING - CHECK RESPONSE STATUS
+            if (!response.ok) {
+                console.error('❌ HTTP Error:', response.status);
+                throw new Error('Failed to change password');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Password changed successfully');
+                showPasswordSuccess(successMsg, '✅ Password changed successfully! You will be logged out automatically.');
+                
+                setTimeout(() => {
+                    closeChangePasswordModal();
+                    console.log('🔄 Logging out...');
+                    logout();
+                }, 2000);
+            } else {
+                console.log('❌ Password change failed:', data.message);
+                showPasswordError(errorMsg, data.message || 'Failed to change password');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error changing password:', error);
+            showPasswordError(errorMsg, 'Error: ' + error.message);
+        }
+    }
+
+    function showPasswordError(element, message) {
+        element.textContent = '❌ ' + message;
+        element.classList.add('show');
+    }
+
+    function showPasswordSuccess(element, message) {
+        element.textContent = message;
+        element.classList.add('show');
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('changePasswordModal');
+        if (event.target === modal) {
+            closeChangePasswordModal();
+        }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeChangePasswordModal();
+        }
+    });
+
+    // ============================================
+    // CHECK IF ALREADY LOGGED IN
+    // ============================================
+    
+    const savedToken = localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
+    const savedSession = localStorage.getItem('sessionId');
+    
+    if (savedToken && savedSession) {
+        console.log('✅ Found saved token and session, restoring...');
+        currentToken = savedToken;
+        sessionId = savedSession;
+        document.documentElement.setAttribute('data-session-id', savedSession);
+        showDashboard();
+    } else {
+        console.log('❌ No saved credentials found, showing login screen');
+    }
+</script>
 
 </body>
 </html>
