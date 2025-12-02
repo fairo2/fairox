@@ -1,33 +1,32 @@
-// 📧 FIXED EMAIL CONFIG - PORT 465 SSL VERSION
-// File: config/emailConfig.js
-// Issue: Render blocks port 587, use 465 instead
+// 📧 MAILJET EMAIL CONFIG - COMPLETE & PRODUCTION READY
+// File: backend/config/emailConfig.js
+// Provider: Mailjet SMTP (free tier, 200 emails/day)
 // Works on: Render Production + Localhost
+// Updated: December 2, 2025
 
 const nodemailer = require('nodemailer');
 
-console.log('\n' + '='.repeat(60));
-console.log('📧 INITIALIZING EMAIL SERVICE');
-console.log('='.repeat(60));
+console.log('\n' + '='.repeat(70));
+console.log('📧 INITIALIZING EMAIL SERVICE - MAILJET SMTP');
+console.log('='.repeat(70));
 
 // ============================================
 // ENVIRONMENT VARIABLES CHECK
 // ============================================
 
 const requiredEnvVars = [
-    'EMAIL_HOST',
-    'EMAIL_PORT',
-    'EMAIL_USER',
-    'EMAIL_PASS',
+    'MAILJET_API_KEY',
+    'MAILJET_SECRET_KEY',
     'EMAIL_FROM'
 ];
 
-console.log('\n✅ CHECKING ENVIRONMENT VARIABLES:');
+console.log('\n✅ CHECKING REQUIRED ENVIRONMENT VARIABLES:');
 let missingVars = [];
 requiredEnvVars.forEach(variable => {
     if (process.env[variable]) {
         const value = process.env[variable];
-        const masked = variable.includes('PASS') 
-            ? '*'.repeat(value.length) 
+        const masked = variable.includes('KEY') || variable.includes('SECRET')
+            ? '*'.repeat(Math.min(value.length, 12)) + '...'
             : value;
         console.log(`   ✓ ${variable}: ${masked}`);
     } else {
@@ -38,66 +37,60 @@ requiredEnvVars.forEach(variable => {
 
 if (missingVars.length > 0) {
     console.error(`\n❌ MISSING ENVIRONMENT VARIABLES: ${missingVars.join(', ')}`);
-    console.error('Please add these to your Render environment variables!');
+    console.error('   Please add these to your Render environment variables!');
+    console.error('   Go to: Render Dashboard → Your Service → Environment Tab\n');
 }
 
 // ============================================
-// CREATE TRANSPORTER - RENDER OPTIMIZED
+// CREATE TRANSPORTER - MAILJET OPTIMIZED
 // ============================================
 
 function createTransporter() {
-    console.log('\n🔧 Creating email transporter...');
+    console.log('\n🔧 Creating Mailjet SMTP transporter...');
     
-    // ⚠️ CRITICAL FIX FOR RENDER:
-    // - Port 587 (TLS) is BLOCKED on Render
-    // - Use port 465 (SSL) instead
-    // - This is the standard Gmail SSL port
+    // Mailjet SMTP Configuration
+    // - Host: in-v3.mailjet.com (Mailjet's SMTP server)
+    // - Port: 587 (TLS - works on Render!)
+    // - Auth: API Key as username, Secret Key as password
     
     const config = {
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT),
-        secure: process.env.EMAIL_SECURE === 'true', // ✅ Set to true for port 465
+        host: 'in-v3.mailjet.com',
+        port: 587,
+        secure: false,  // false for port 587 (TLS), true for 465 (SSL)
         auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+            user: process.env.MAILJET_API_KEY,
+            pass: process.env.MAILJET_SECRET_KEY
         },
-        // Add timeout for Render connections
         connectionTimeout: 10000,
-        socketTimeout: 10000
+        socketTimeout: 10000,
+        logger: false,
+        debug: false
     };
 
     console.log('   Configuration:');
-    console.log('   - Host:', config.host);
-    console.log('   - Port:', config.port);
-    console.log('   - Secure (SSL):', config.secure);
-    console.log('   - User:', config.auth.user);
+    console.log('   - Host: in-v3.mailjet.com');
+    console.log('   - Port: 587 (TLS)');
+    console.log('   - Provider: Mailjet');
+    console.log('   - Auth: API Key + Secret Key');
 
     const transporter = nodemailer.createTransport(config);
     
-    // Verify connection
+    // Verify connection on startup
     transporter.verify((error, success) => {
         if (error) {
-            console.error('❌ SMTP VERIFICATION FAILED:');
+            console.error('\n❌ MAILJET VERIFICATION FAILED:');
             console.error('   Error:', error.message);
             console.error('   Code:', error.code);
-            
-            if (error.code === 'ETIMEDOUT') {
-                console.error('\n🔍 PORT TIMEOUT DETECTED:');
-                console.error('   Render likely blocks port 587');
-                console.error('   ✅ Solution: Set EMAIL_PORT=465 and EMAIL_SECURE=true');
-            }
-            
             console.error('\n🔍 TROUBLESHOOTING:');
-            console.error('   1. Set EMAIL_PORT=465 (SSL) not 587 (TLS)');
-            console.error('   2. Set EMAIL_SECURE=true for port 465');
-            console.error('   3. Gmail users: Use 16-char App Password');
-            console.error('   4. Verify Gmail account has 2FA enabled');
-            console.error('   5. Check if SMTP port is blocked by firewall');
+            console.error('   1. Verify MAILJET_API_KEY is correct');
+            console.error('   2. Verify MAILJET_SECRET_KEY is correct');
+            console.error('   3. Make sure Mailjet account is active');
+            console.error('   4. Go to: https://app.mailjet.com/account/api_keys');
         } else {
-            console.log('✅ SMTP CONNECTION VERIFIED');
-            console.log('   Host:', process.env.EMAIL_HOST);
-            console.log('   Port:', process.env.EMAIL_PORT, '(SSL)');
-            console.log('   User:', process.env.EMAIL_USER);
+            console.log('✅ MAILJET SMTP CONNECTION VERIFIED');
+            console.log('   Host: in-v3.mailjet.com');
+            console.log('   Port: 587 (TLS)');
+            console.log('   Status: Ready to send emails\n');
         }
     });
 
@@ -155,7 +148,7 @@ async function sendEmail(to, subject, html) {
 
 const emailTemplates = {
     consultationReceived: (data) => ({
-        to: process.env.EMAIL_FROM, // Send to admin
+        to: process.env.EMAIL_FROM,
         subject: `🎯 New Consultation Inquiry from ${data.name}`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
@@ -178,7 +171,7 @@ const emailTemplates = {
                     <h2 style="color: #2180C8;">Description</h2>
                     <p>${data.description.replace(/\n/g, '<br>')}</p>
                     
-                    <h2 style="color: #2180C8;">Preferred Contact</h2>
+                    <h2 style="color: #2180C8;">Preferred Contact Method</h2>
                     <p><strong>${data.contactMethod.toUpperCase()}</strong></p>
                 </div>
                 <div style="background: #2180C8; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px;">
@@ -201,14 +194,14 @@ const emailTemplates = {
                     <p>Thank you for reaching out to Fairox! We've received your consultation request and will review it shortly.</p>
                     
                     <h2 style="color: #2180C8;">Your Request Summary</h2>
-                    <ul style="list-style: none; padding: 0;">
-                        <li>✓ Project: ${data.projectType}</li>
-                        <li>✓ Budget: ${data.budget}</li>
-                        <li>✓ Timeline: ${data.timeline}</li>
-                        <li>✓ Services: ${Array.isArray(data.services) ? data.services.join(', ') : data.services}</li>
+                    <ul style="list-style: none; padding: 0; margin: 15px 0;">
+                        <li style="margin: 8px 0;">✓ <strong>Project Type:</strong> ${data.projectType}</li>
+                        <li style="margin: 8px 0;">✓ <strong>Budget:</strong> ${data.budget}</li>
+                        <li style="margin: 8px 0;">✓ <strong>Timeline:</strong> ${data.timeline}</li>
+                        <li style="margin: 8px 0;">✓ <strong>Services:</strong> ${Array.isArray(data.services) ? data.services.join(', ') : data.services}</li>
                     </ul>
                     
-                    <p style="margin-top: 20px;">Our team will contact you via <strong>${data.contactMethod.toUpperCase()}</strong> within 24 hours.</p>
+                    <p style="margin-top: 20px; color: #333;">Our team will contact you via <strong>${data.contactMethod.toUpperCase()}</strong> within 24 hours.</p>
                 </div>
                 <div style="background: #2180C8; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px;">
                     <p style="margin: 0;">© 2025 Fairox. All rights reserved.</p>
@@ -226,14 +219,15 @@ const emailTemplates = {
                     <h1 style="margin: 0; font-size: 24px;">🎉 Welcome to Fairox!</h1>
                 </div>
                 <div style="background: white; padding: 20px;">
-                    <p>Hi ${user.name},</p>
+                    <p>Hi <strong>${user.name}</strong>,</p>
                     <p>Great news! Your account has been approved by our admin team. You can now access all features of Fairox.</p>
                     
                     <h2 style="color: #28a745;">Account Details</h2>
                     <p><strong>Email:</strong> ${user.email}</p>
                     <p><strong>Status:</strong> ✅ APPROVED</p>
+                    <p><strong>Access Date:</strong> ${new Date().toLocaleString()}</p>
                     
-                    <p style="margin-top: 20px;">
+                    <p style="margin-top: 20px; text-align: center;">
                         <a href="https://fairox.co.in" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Login Now →</a>
                     </p>
                 </div>
@@ -242,11 +236,38 @@ const emailTemplates = {
                 </div>
             </div>
         `
+    }),
+
+    userRegistration: (user) => ({
+        to: process.env.EMAIL_FROM,
+        subject: `🔔 New User Registration - ${user.name}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                    <h1 style="margin: 0; font-size: 24px;">🔔 New User Registration</h1>
+                </div>
+                <div style="background: white; padding: 20px;">
+                    <p>A new user has registered and is pending your approval:</p>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 15px 0;">
+                        <li style="margin: 10px 0;"><strong>Name:</strong> ${user.name}</li>
+                        <li style="margin: 10px 0;"><strong>Email:</strong> ${user.email}</li>
+                        <li style="margin: 10px 0;"><strong>Status:</strong> Pending Approval</li>
+                        <li style="margin: 10px 0;"><strong>Registered:</strong> ${new Date().toLocaleString()}</li>
+                    </ul>
+                    
+                    <p style="margin-top: 20px; color: #666;">Please login to the admin panel to approve or reject this user.</p>
+                </div>
+                <div style="background: #007bff; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px;">
+                    <p style="margin: 0;">© 2025 Fairox. All rights reserved.</p>
+                </div>
+            </div>
+        `
     })
 };
 
 // ============================================
-// EXPORT
+// EXPORT FUNCTIONS
 // ============================================
 
 module.exports = {
@@ -256,4 +277,4 @@ module.exports = {
     createTransporter
 };
 
-console.log('='.repeat(60) + '\n');
+console.log('='.repeat(70) + '\n');
