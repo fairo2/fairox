@@ -234,8 +234,8 @@ router.get('/test', (req, res) => {
 });
 
 // ============================================
-// ROUTE 2: ADMIN LOGIN - SECURITY ENHANCED
-// ✅ FULLY CORRECTED WITH sessionId
+// ✅ ROUTE 2: ADMIN LOGIN - FULLY CORRECTED ✅
+// ✅ CRYPTO MODULE BUG FIXED
 // ============================================
 
 router.post('/admin-login', loginLimiter, async (req, res) => {
@@ -356,9 +356,10 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     console.log('   ✅ Token generated');
     console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
 
-    // ✅ STEP 6: Generate session ID (NEW - CRITICAL FIX)
+    // ✅ STEP 6: Generate session ID
+    // ✅ FIXED: Use crypto that's already imported at top of file!
+    // ❌ DO NOT: const crypto = require('crypto');  (Already imported!)
     console.log('\n[STEP 6] Generating session ID...');
-    const crypto = require('crypto');
     const sessionId = crypto.randomBytes(32).toString('hex');
     console.log('   ✅ Session ID generated');
     console.log('   Session ID (first 32 chars):', sessionId.substring(0, 32) + '...');
@@ -378,30 +379,21 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       [admin.id, 'LOGIN', req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
 
-    console.log('\n🔍 DEBUG: About to send response');
-console.log('   Token:', token ? token.substring(0, 20) + '...' : 'UNDEFINED');
-console.log('   SessionId:', sessionId ? sessionId.substring(0, 20) + '...' : 'UNDEFINED');
-console.log('   Admin ID:', admin.id);
+    console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
 
-console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
-
-console.log('📤 Sending response now...');
-
-res.json({
-    success: true,
-    message: 'Admin login successful',
-    token: token,
-    sessionId: sessionId,
-    admin: {
+    // ✅ FINAL RESPONSE - SENDS COMPLETE DATA
+    res.json({
+      success: true,
+      message: 'Admin login successful',
+      token: token,
+      sessionId: sessionId,
+      admin: {
         id: admin.id,
         name: admin.name,
         email: admin.email,
         is_admin: true
-    }
-});
-
-console.log('✅ Response sent!');
-
+      }
+    });
 
   } catch (error) {
     console.error('\n❌ Admin login error:', error.message);
