@@ -1,7 +1,8 @@
 // ============================================
 // ✅ ENHANCED SERVER.JS - PRODUCTION READY
 // Render-ready with PostgreSQL & Email Config
-// Updated: December 2, 2025
+// FIXED: Middleware order corrected
+// Updated: December 3, 2025
 // ============================================
 
 const express = require('express');
@@ -153,27 +154,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 console.log('✅ Middleware initialized\n');
 
 // ============================================
-// JWT TOKEN EXTRACTION (for optional auth)
-// ============================================
-
-const attachUserFromToken = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
-      req.user = decoded;
-      req.user.id = decoded.id || decoded.userId;
-    }
-  } catch (error) {
-    // Token invalid or expired - continue without auth
-  }
-  next();
-};
-
-app.use(attachUserFromToken);
-
-// ============================================
 // STATIC FILES
 // ============================================
 
@@ -221,6 +201,28 @@ app.use('/test-email', testEmailRoutes);
 app.use('/test-email-advanced', advancedEmailDiag);
 
 console.log('✅ All routes registered\n');
+
+// ============================================
+// JWT TOKEN EXTRACTION (for optional auth)
+// ✅ FIXED: Moved AFTER routes (was before, causing login failure)
+// ============================================
+
+const attachUserFromToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
+      req.user = decoded;
+      req.user.id = decoded.id || decoded.userId;
+    }
+  } catch (error) {
+    // Token invalid or expired - continue without auth
+  }
+  next();
+};
+
+app.use(attachUserFromToken);
 
 // ============================================
 // DIRECT LOGOUT ENDPOINT
