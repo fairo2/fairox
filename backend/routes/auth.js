@@ -4,8 +4,9 @@
 // Database: PostgreSQL
 // Email: Mailjet SMTP (Port 2525)
 // Security: Enhanced with rate limiting, input validation, CSRF protection
-// Updated: Dec 3, 2025
+// Updated: Dec 3, 2025 - FIXED & PRODUCTION READY
 // ============================================
+
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -15,14 +16,18 @@ const rateLimit = require('express-rate-limit');
 const validator = require('validator');
 const crypto = require('crypto');
 
+
 // ✅ FIXED: Import pool directly (NOT destructured)
 const pool = require('../config/db');
 
+
 const router = express.Router();
+
 
 // ============================================
 // SECURITY CONSTANTS
 // ============================================
+
 
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -30,9 +35,11 @@ const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
 const LOGIN_ATTEMPT_WINDOW = 15 * 60 * 1000; // 15 minutes
 
+
 // Store login attempts in memory (in production, use Redis)
 const loginAttempts = new Map();
 const accountLockouts = new Map();
+
 
 // ✅ Verify database connection on startup
 try {
@@ -46,14 +53,18 @@ try {
   process.exit(1);
 }
 
+
 // ✅ Import auth middleware - BOTH authMiddleware and adminMiddleware
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
+
 console.log('✅ Auth routes loaded\n');
+
 
 // ============================================
 // RATE LIMITING
 // ============================================
+
 
 // Strict rate limit for login attempts
 const loginLimiter = rateLimit({
@@ -68,6 +79,7 @@ const loginLimiter = rateLimit({
   }
 });
 
+
 // General API rate limit
 const apiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -77,9 +89,11 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 
+
 // ============================================
 // SECURITY MIDDLEWARE
 // ============================================
+
 
 // Add security headers
 router.use((req, res, next) => {
@@ -91,13 +105,16 @@ router.use((req, res, next) => {
   next();
 });
 
+
 // ============================================
 // HELPER FUNCTIONS - SECURITY ENHANCED
 // ============================================
 
+
 function validateEmail(email) {
   return validator.isEmail(email);
 }
+
 
 function validatePassword(password) {
   if (!password || password.length < PASSWORD_MIN_LENGTH) {
@@ -107,6 +124,7 @@ function validatePassword(password) {
     };
   }
 
+
   if (!PASSWORD_REGEX.test(password)) {
     return {
       valid: false,
@@ -114,35 +132,44 @@ function validatePassword(password) {
     };
   }
 
+
   return { valid: true };
 }
+
 
 function sanitizeInput(input) {
   if (typeof input !== 'string') return input;
   return validator.trim(input);
 }
 
+
 function recordLoginAttempt(email) {
   const key = `login_${email}`;
   const now = Date.now();
+
 
   if (!loginAttempts.has(key)) {
     loginAttempts.set(key, []);
   }
 
+
   const attempts = loginAttempts.get(key);
   attempts.push(now);
+
 
   // Remove attempts older than window
   const filtered = attempts.filter(t => now - t < LOGIN_ATTEMPT_WINDOW);
   loginAttempts.set(key, filtered);
 
+
   return filtered.length;
 }
+
 
 function checkLoginAttempts(email) {
   const attempts = recordLoginAttempt(email);
   const lockoutKey = `lockout_${email}`;
+
 
   if (attempts > MAX_LOGIN_ATTEMPTS) {
     accountLockouts.set(lockoutKey, Date.now() + LOCKOUT_TIME);
@@ -152,6 +179,7 @@ function checkLoginAttempts(email) {
       locked: true
     };
   }
+
 
   if (accountLockouts.has(lockoutKey)) {
     const lockoutTime = accountLockouts.get(lockoutKey);
@@ -167,17 +195,21 @@ function checkLoginAttempts(email) {
     }
   }
 
+
   return { allowed: true };
 }
+
 
 function resetLoginAttempts(email) {
   loginAttempts.delete(`login_${email}`);
   accountLockouts.delete(`lockout_${email}`);
 }
 
+
 // ============================================
 // EMAIL CONFIGURATION - MAILJET (PORT 2525) ✅
 // ============================================
+
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -197,11 +229,13 @@ function createTransporter() {
   });
 }
 
+
 async function sendEmail(to, subject, html) {
   try {
     console.log('\n📤 Sending email via Mailjet...');
     console.log('   To:', to);
     console.log('   Subject:', subject);
+
 
     const transporter = createTransporter();
     const result = await transporter.sendMail({
@@ -210,6 +244,7 @@ async function sendEmail(to, subject, html) {
       subject: subject,
       html: html
     });
+
 
     console.log(`✅ Email sent successfully to ${to}`);
     console.log('   Message ID:', result.messageId);
@@ -221,9 +256,11 @@ async function sendEmail(to, subject, html) {
   }
 }
 
+
 // ============================================
 // ROUTE 1: TEST
 // ============================================
+
 
 router.get('/test', (req, res) => {
   res.json({
@@ -233,21 +270,28 @@ router.get('/test', (req, res) => {
   });
 });
 
+
 // ============================================
 // ✅ ROUTE 2: ADMIN LOGIN - FULLY CORRECTED ✅
 // ✅ CRYPTO MODULE BUG FIXED
+// ✅ CASE-INSENSITIVE EMAIL LOOKUP ADDED
+// ✅ EXPLICIT RETURN STATEMENTS ADDED
 // ============================================
+
 
 router.post('/admin-login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
+
     console.log('\n' + '='.repeat(60));
     console.log('🔐 ADMIN LOGIN ATTEMPT');
     console.log('='.repeat(60));
 
+
     // Input validation
     const sanitizedEmail = sanitizeInput(email);
+
 
     if (!sanitizedEmail || !password) {
       console.log('❌ Missing email or password');
@@ -257,6 +301,7 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       });
     }
 
+
     if (!validateEmail(sanitizedEmail)) {
       console.log('❌ Invalid email format');
       return res.status(400).json({
@@ -264,6 +309,7 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
         message: 'Invalid email format'
       });
     }
+
 
     // Check login attempts
     const attemptCheck = checkLoginAttempts(sanitizedEmail);
@@ -275,18 +321,22 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       });
     }
 
+
     console.log('Email:', sanitizedEmail);
     console.log('Password received:', !!password);
 
-    // ✅ Step 1: Query database
+
+    // ✅ Step 1: Query database - CASE-INSENSITIVE
     console.log('\n[STEP 1] Querying database...');
     const result = await pool.query(
-      'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
+      'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE LOWER(email) = LOWER($1) AND is_admin = $2',
       [sanitizedEmail, true]
     );
 
+
     const users = result.rows;
     console.log('   Rows found:', users.length);
+
 
     if (!users || users.length === 0) {
       console.log('   ❌ No admin user found');
@@ -296,10 +346,12 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       });
     }
 
+
     const admin = users[0];
     console.log('   ✅ Admin found:', admin.email);
     console.log('   is_approved:', admin.is_approved);
     console.log('   is_admin:', admin.is_admin);
+
 
     // ✅ Step 2: Check approval status
     console.log('\n[STEP 2] Checking approval status...');
@@ -312,10 +364,12 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     }
     console.log('   ✅ Admin is approved');
 
+
     // ✅ Step 3: Verify password
     console.log('\n[STEP 3] Verifying password...');
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     console.log('   Password match:', isPasswordValid);
+
 
     if (!isPasswordValid) {
       console.log('   ❌ Password incorrect');
@@ -326,8 +380,10 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     }
     console.log('   ✅ Password correct');
 
+
     // Reset login attempts on successful login
     resetLoginAttempts(sanitizedEmail);
+
 
     // ✅ Step 4: Check JWT_SECRET
     console.log('\n[STEP 4] Checking JWT_SECRET...');
@@ -339,6 +395,7 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       });
     }
     console.log('   ✅ JWT_SECRET is set');
+
 
     // ✅ Step 5: Generate token with enhanced security
     console.log('\n[STEP 5] Generating JWT token with enhanced security...');
@@ -356,33 +413,26 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     console.log('   ✅ Token generated');
     console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
 
+
     // ✅ STEP 6: Generate session ID
-    // ✅ FIXED: Use crypto that's already imported at top of file!
-    // ❌ DO NOT: const crypto = require('crypto');  (Already imported!)
     console.log('\n[STEP 6] Generating session ID...');
     const sessionId = crypto.randomBytes(32).toString('hex');
     console.log('   ✅ Session ID generated');
     console.log('   Session ID (first 32 chars):', sessionId.substring(0, 32) + '...');
 
-    // Optional: Store session in database for tracking
-    // Uncomment if you want to store sessions in database
-    /*
-    await pool.query(
-      'INSERT INTO admin_sessions (admin_id, session_id, created_at, expires_at, is_active) VALUES ($1, $2, NOW(), NOW() + INTERVAL \'24 HOURS\', true)',
-      [admin.id, sessionId]
-    ).catch(err => console.warn('Session storage failed:', err.message));
-    */
 
     // Log admin login for audit trail
     await pool.query(
       'INSERT INTO admin_logs (admin_id, action, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, NOW())',
       [admin.id, 'LOGIN', req.ip, req.get('user-agent')]
-    ).catch(err => console.warn('Audit log failed:', err.message));
+    ).catch(err => console.warn('⚠️  Audit log failed:', err.message));
+
 
     console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
 
-    // ✅ FINAL RESPONSE - SENDS COMPLETE DATA
-    res.json({
+
+    // ✅ FINAL RESPONSE - SENDS COMPLETE DATA WITH EXPLICIT RETURN
+    return res.json({
       success: true,
       message: 'Admin login successful',
       token: token,
@@ -395,28 +445,34 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       }
     });
 
+
   } catch (error) {
     console.error('\n❌ Admin login error:', error.message);
     console.error('Stack:', error.stack);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error during login'
     });
   }
 });
+
 
 // ============================================
 // ROUTE 3: USER REGISTRATION - SECURITY ENHANCED
 // ============================================
 
+
 router.post('/register', apiLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+
     const sanitizedName = sanitizeInput(name);
     const sanitizedEmail = sanitizeInput(email);
 
+
     console.log('\n📝 Registration attempt:', sanitizedEmail);
+
 
     // Input validation
     if (!sanitizedName || !sanitizedEmail || !password) {
@@ -426,12 +482,14 @@ router.post('/register', apiLimiter, async (req, res) => {
       });
     }
 
+
     if (!validateEmail(sanitizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email format'
       });
     }
+
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
@@ -441,6 +499,7 @@ router.post('/register', apiLimiter, async (req, res) => {
       });
     }
 
+
     if (sanitizedName.length > 100) {
       return res.status(400).json({
         success: false,
@@ -448,11 +507,13 @@ router.post('/register', apiLimiter, async (req, res) => {
       });
     }
 
+
     // Check if user exists
     const existingUser = await pool.query(
       'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
       [sanitizedEmail]
     );
+
 
     if (existingUser.rows && existingUser.rows.length > 0) {
       return res.status(400).json({
@@ -461,16 +522,20 @@ router.post('/register', apiLimiter, async (req, res) => {
       });
     }
 
+
     // Hash password with enhanced security (12 rounds)
     const hashedPassword = await bcrypt.hash(password, 12);
 
+
     // Insert user
     await pool.query(
-      'INSERT INTO users (name, email, password, is_approved, is_admin, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
+      'INSERT INTO users (name, email, password, is_approved, is_admin, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())',
       [sanitizedName, sanitizedEmail, hashedPassword, false, false]
     );
 
+
     console.log('✅ User registered:', sanitizedEmail);
+
 
     // Send admin notification
     await sendEmail(
@@ -490,31 +555,38 @@ router.post('/register', apiLimiter, async (req, res) => {
       `
     );
 
-    res.status(201).json({
+
+    return res.status(201).json({
       success: true,
       message: 'Registration successful! Your account is pending admin approval. You will be notified via email once approved.'
     });
 
+
   } catch (error) {
-    console.error('❌ Registration error:', error);
-    res.status(500).json({
+    console.error('❌ Registration error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Registration failed'
     });
   }
 });
 
+
 // ============================================
 // ROUTE 4: USER LOGIN - SECURITY ENHANCED
 // ============================================
+
 
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
+
     const sanitizedEmail = sanitizeInput(email);
 
+
     console.log('\n🔐 User login attempt:', sanitizedEmail);
+
 
     // Input validation
     if (!sanitizedEmail || !password) {
@@ -524,12 +596,14 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
+
     if (!validateEmail(sanitizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email format'
       });
     }
+
 
     // Check login attempts
     const attemptCheck = checkLoginAttempts(sanitizedEmail);
@@ -541,13 +615,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
-    // Get user
+
+    // Get user - CASE-INSENSITIVE
     const result = await pool.query(
       'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
       [sanitizedEmail]
     );
 
+
     const users = result.rows;
+
 
     if (!users || users.length === 0) {
       return res.status(401).json({
@@ -556,7 +633,9 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
+
     const user = users[0];
+
 
     // Check if approved (allow if admin or approved)
     if (!user.is_approved && !user.is_admin) {
@@ -566,6 +645,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
+
     // Check if account is locked
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       return res.status(403).json({
@@ -574,8 +654,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -584,8 +666,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
+
     // Reset login attempts on successful login
     resetLoginAttempts(sanitizedEmail);
+
 
     // Generate token
     const token = jwt.sign(
@@ -599,9 +683,11 @@ router.post('/login', loginLimiter, async (req, res) => {
       { expiresIn: '7d' }
     );
 
+
     console.log('✅ User login successful:', sanitizedEmail);
 
-    res.json({
+
+    return res.json({
       success: true,
       token: token,
       user: {
@@ -611,18 +697,21 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     });
 
+
   } catch (error) {
-    console.error('❌ User login error:', error);
-    res.status(500).json({
+    console.error('❌ User login error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Login failed'
     });
   }
 });
 
+
 // ============================================
 // ROUTE 5: GET CURRENT USER
 // ============================================
+
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
@@ -631,7 +720,9 @@ router.get('/me', authMiddleware, async (req, res) => {
       [req.user.id]
     );
 
+
     const users = result.rows;
+
 
     if (!users || users.length === 0) {
       return res.status(404).json({
@@ -640,29 +731,35 @@ router.get('/me', authMiddleware, async (req, res) => {
       });
     }
 
+
     const user = users[0];
 
-    res.json({
+
+    return res.json({
       success: true,
       user: user
     });
 
+
   } catch (error) {
-    console.error('❌ Get user error:', error);
-    res.status(500).json({
+    console.error('❌ Get user error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Server error'
     });
   }
 });
 
+
 // ============================================
 // ROUTE 6: CONTACT FORM - SECURITY ENHANCED
 // ============================================
 
+
 router.post('/contact', apiLimiter, async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
+
 
     const sanitizedName = sanitizeInput(name);
     const sanitizedEmail = sanitizeInput(email);
@@ -670,7 +767,9 @@ router.post('/contact', apiLimiter, async (req, res) => {
     const sanitizedSubject = sanitizeInput(subject);
     const sanitizedMessage = sanitizeInput(message);
 
+
     console.log('📧 Contact form submission from:', sanitizedEmail);
+
 
     // Input validation
     if (!sanitizedName || !sanitizedEmail || !sanitizedSubject || !sanitizedMessage) {
@@ -680,12 +779,14 @@ router.post('/contact', apiLimiter, async (req, res) => {
       });
     }
 
+
     if (!validateEmail(sanitizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email format'
       });
     }
+
 
     if (sanitizedName.length > 100 || sanitizedSubject.length > 200 || sanitizedMessage.length > 5000) {
       return res.status(400).json({
@@ -694,13 +795,16 @@ router.post('/contact', apiLimiter, async (req, res) => {
       });
     }
 
+
     // Save to database
     await pool.query(
       'INSERT INTO contacts (name, email, phone, subject, message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
       [sanitizedName, sanitizedEmail, sanitizedPhone, sanitizedSubject, sanitizedMessage]
     );
 
+
     console.log('✅ Contact form saved');
+
 
     // Send email to admin
     const emailSent = await sendEmail(
@@ -721,31 +825,37 @@ router.post('/contact', apiLimiter, async (req, res) => {
       `
     );
 
+
     if (!emailSent) {
       console.warn('⚠️  Email notification failed, but contact saved to database');
     }
 
-    res.json({
+
+    return res.json({
       success: true,
       message: 'Thank you for contacting us! We will get back to you soon.'
     });
 
+
   } catch (error) {
-    console.error('❌ Contact error:', error);
-    res.status(500).json({
+    console.error('❌ Contact error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Failed to save your message'
     });
   }
 });
 
+
 // ============================================
 // ADMIN ROUTE 1: GET STATS - SECURITY ENHANCED
 // ============================================
 
+
 router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📊 Loading admin stats...');
+
 
     const pending = await pool.query(
       'SELECT COUNT(*) as count FROM users WHERE is_approved = $1 AND is_admin = $2',
@@ -763,9 +873,11 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
       'SELECT COUNT(*) as count FROM contacts'
     );
 
+
     console.log('✅ Stats loaded');
 
-    res.json({
+
+    return res.json({
       success: true,
       stats: {
         pending: parseInt(pending.rows[0].count),
@@ -775,81 +887,101 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
       }
     });
 
+
   } catch (error) {
-    console.error('❌ Stats error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Stats error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 2: PENDING USERS
 // ============================================
 
+
 router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📋 Loading pending users...');
+
 
     const result = await pool.query(
       'SELECT id, name, email, created_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY created_at DESC',
       [false, false]
     );
 
+
     console.log('✅ Pending users loaded:', result.rows.length);
 
-    res.json({ success: true, users: result.rows });
+
+    return res.json({ success: true, users: result.rows });
+
 
   } catch (error) {
-    console.error('❌ Pending users error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Pending users error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 3: APPROVED USERS
 // ============================================
 
+
 router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('✅ Loading approved users...');
+
 
     const result = await pool.query(
       'SELECT id, name, email, approved_at FROM users WHERE is_approved = $1 AND is_admin = $2 ORDER BY approved_at DESC',
       [true, false]
     );
 
+
     console.log('✅ Approved users loaded:', result.rows.length);
 
-    res.json({ success: true, users: result.rows });
+
+    return res.json({ success: true, users: result.rows });
+
 
   } catch (error) {
-    console.error('❌ Approved users error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Approved users error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 4: APPROVE USER - SECURITY ENHANCED
 // ============================================
 
+
 router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = req.params.id;
+
 
     // Validate ID
     if (!validator.isNumeric(userId)) {
       return res.status(400).json({ success: false, message: 'Invalid user ID' });
     }
 
+
     const result = await pool.query(
       'SELECT name, email FROM users WHERE id = $1',
       [userId]
     );
 
+
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+
     const user = result.rows[0];
+
 
     // Update approval with audit trail
     await pool.query(
@@ -857,11 +989,13 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
       [true, req.user.id, userId]
     );
 
+
     // Log admin action
     await pool.query(
       'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
       [req.user.id, 'APPROVE_USER', userId, req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
     // Send approval email
     await sendEmail(
@@ -882,39 +1016,49 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
       `
     );
 
+
     console.log('✅ User approved:', user.email);
 
-    res.json({ success: true, message: 'User approved and notified via email' });
+
+    return res.json({ success: true, message: 'User approved and notified via email' });
+
 
   } catch (error) {
-    console.error('❌ Approve user error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Approve user error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 5: REJECT USER - SECURITY ENHANCED
 // ============================================
 
+
 router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = req.params.id;
+
 
     // Validate ID
     if (!validator.isNumeric(userId)) {
       return res.status(400).json({ success: false, message: 'Invalid user ID' });
     }
 
+
     const result = await pool.query(
       'SELECT name, email FROM users WHERE id = $1 AND is_admin = $2',
       [userId, false]
     );
 
+
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+
     const user = result.rows[0];
+
 
     // Delete user
     await pool.query(
@@ -922,11 +1066,13 @@ router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (
       [userId, false]
     );
 
+
     // Log admin action
     await pool.query(
       'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
       [req.user.id, 'REJECT_USER', userId, req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
     // Send rejection email
     await sendEmail(
@@ -946,39 +1092,49 @@ router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (
       `
     );
 
+
     console.log('✅ User rejected:', user.email);
 
-    res.json({ success: true, message: 'User rejected and notified via email' });
+
+    return res.json({ success: true, message: 'User rejected and notified via email' });
+
 
   } catch (error) {
-    console.error('❌ Reject user error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Reject user error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 6: REVOKE USER ACCESS - SECURITY ENHANCED
 // ============================================
 
+
 router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = req.params.id;
+
 
     // Validate ID
     if (!validator.isNumeric(userId)) {
       return res.status(400).json({ success: false, message: 'Invalid user ID' });
     }
 
+
     const result = await pool.query(
       'SELECT name, email FROM users WHERE id = $1',
       [userId]
     );
 
+
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+
     const user = result.rows[0];
+
 
     // Revoke approval
     await pool.query(
@@ -986,11 +1142,13 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
       [false, userId]
     );
 
+
     // Log admin action
     await pool.query(
       'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
       [req.user.id, 'REVOKE_USER', userId, req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
     // Send revocation email
     await sendEmail(
@@ -1011,48 +1169,61 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
       `
     );
 
+
     console.log('✅ User access revoked:', user.email);
 
-    res.json({ success: true, message: 'User access revoked and notified via email' });
+
+    return res.json({ success: true, message: 'User access revoked and notified via email' });
+
 
   } catch (error) {
-    console.error('❌ Revoke user error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Revoke user error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ADMIN ROUTE 7: GET CONTACTS
 // ============================================
 
+
 router.get('/admin/contacts', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📞 Loading contacts...');
+
 
     const result = await pool.query(
       'SELECT * FROM contacts ORDER BY created_at DESC LIMIT 500'
     );
 
+
     console.log('✅ Contacts loaded:', result.rows.length);
 
-    res.json({ success: true, contacts: result.rows });
+
+    return res.json({ success: true, contacts: result.rows });
+
 
   } catch (error) {
-    console.error('❌ Contacts error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Contacts error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ============================================
 // ROUTE 7: CHANGE PASSWORD - SECURITY ENHANCED
 // ============================================
+
 
 router.post('/change-password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
+
     console.log('🔐 Password change request - User:', userId);
+
 
     // Input validation
     if (!currentPassword || !newPassword) {
@@ -1062,12 +1233,14 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
+
     if (currentPassword === newPassword) {
       return res.status(400).json({
         success: false,
         message: 'New password must be different from current password'
       });
     }
+
 
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.valid) {
@@ -1077,11 +1250,13 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
+
     // Get user
     const result = await pool.query(
       'SELECT id, email, password FROM users WHERE id = $1',
       [userId]
     );
+
 
     if (!result.rows || result.rows.length === 0) {
       return res.status(401).json({
@@ -1090,10 +1265,13 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
+
     const user = result.rows[0];
+
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -1102,8 +1280,10 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
+
     // Hash new password with enhanced security
     const hashedPassword = await bcrypt.hash(newPassword, 12);
+
 
     // Update password
     await pool.query(
@@ -1111,29 +1291,35 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       [hashedPassword, user.id]
     );
 
+
     console.log('✅ Password changed successfully for user:', user.email);
 
-    res.json({
+
+    return res.json({
       success: true,
       message: 'Password changed successfully'
     });
 
+
   } catch (error) {
-    console.error('❌ Change password error:', error);
-    res.status(500).json({
+    console.error('❌ Change password error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Error changing password'
     });
   }
 });
 
+
 // ============================================
 // ROUTE 8: LOGOUT - SECURITY ENHANCED
 // ============================================
 
+
 router.get('/logout', authMiddleware, async (req, res) => {
   try {
     console.log('🔐 Logout request - User:', req.user.id);
+
 
     // Log logout action for audit trail
     await pool.query(
@@ -1141,18 +1327,21 @@ router.get('/logout', authMiddleware, async (req, res) => {
       [req.user.id, 'LOGOUT', req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
 
-    res.json({
+
+    return res.json({
       success: true,
       message: 'Logged out successfully'
     });
 
+
   } catch (error) {
-    console.error('❌ Logout error:', error);
-    res.status(500).json({
+    console.error('❌ Logout error:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Error during logout'
     });
   }
 });
+
 
 module.exports = router;
