@@ -5,6 +5,7 @@
 // Email: Mailjet SMTP (Port 2525)
 // Security: Session timeout, Activity tracking, Rate limiting
 // Updated: Dec 2, 2025
+// ✅ FIXED: All routes have proper callback functions
 // ============================================
 
 const express = require('express');
