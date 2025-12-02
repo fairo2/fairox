@@ -226,7 +226,7 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(135deg, #00ffff, #ff00ff, #00dfff);
-            animation: fillProgress 3s ease-in forwards 1.6s;
+            animation: fillProgress 4.5s ease-in forwards 1.6s;
             border-radius: 4px;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 0 0 25px rgba(255, 0, 255, 0.6);
         }
@@ -397,10 +397,13 @@
             taglineContainer.appendChild(span);
         }
 
-        // Automatic redirect after ~3.5 seconds
+        // Automatic redirect AFTER progress bar reaches 100%
+        // Progress bar animation: starts at 1.6s and takes 4.5s to complete
+        // Total time: 1.6s + 4.5s = 6.1s
+        // Adding 500ms buffer for completion animation
         setTimeout(() => {
             window.location.href = '/index.html';
-        }, 3500);
+        }, 6600);
     </script>
 </body>
 </html>
