@@ -55,7 +55,7 @@ function createTransporter() {
     
     const config = {
         host: 'in-v3.mailjet.com',
-        port: 587,
+        port: 465,
         secure: false,  // false for port 587 (TLS), true for 465 (SSL)
         auth: {
             user: process.env.MAILJET_API_KEY,
