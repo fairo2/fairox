@@ -38,15 +38,24 @@ console.log('✅ Auth routes loaded');
 
 function createTransporter() {
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    secure: process.env.EMAIL_SECURE === 'true',
+    host: 'in-v3.mailjet.com',    // ✅ Mailjet
+    port: 2525,                    // ✅ Port 2525 (works!)
+    secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
+      user: process.env.MAILJET_API_KEY,       // ✅ Mailjet API Key
+      pass: process.env.MAILJET_SECRET_KEY     // ✅ Mailjet Secret
+    },
+    tls: {
+      ciphers: 'SSLv3',
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 20000,
+    socketTimeout: 20000
   });
 }
+// ============================================
+// SEND EMAIL FUNCTION
+// ============================================
 
 async function sendEmail(to, subject, html) {
   try {
