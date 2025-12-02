@@ -235,6 +235,7 @@ router.get('/test', (req, res) => {
 
 // ============================================
 // ROUTE 2: ADMIN LOGIN - SECURITY ENHANCED
+// ✅ FULLY CORRECTED WITH sessionId
 // ============================================
 
 router.post('/admin-login', loginLimiter, async (req, res) => {
@@ -355,6 +356,22 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     console.log('   ✅ Token generated');
     console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
 
+    // ✅ STEP 6: Generate session ID (NEW - CRITICAL FIX)
+    console.log('\n[STEP 6] Generating session ID...');
+    const crypto = require('crypto');
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    console.log('   ✅ Session ID generated');
+    console.log('   Session ID (first 32 chars):', sessionId.substring(0, 32) + '...');
+
+    // Optional: Store session in database for tracking
+    // Uncomment if you want to store sessions in database
+    /*
+    await pool.query(
+      'INSERT INTO admin_sessions (admin_id, session_id, created_at, expires_at, is_active) VALUES ($1, $2, NOW(), NOW() + INTERVAL \'24 HOURS\', true)',
+      [admin.id, sessionId]
+    ).catch(err => console.warn('Session storage failed:', err.message));
+    */
+
     // Log admin login for audit trail
     await pool.query(
       'INSERT INTO admin_logs (admin_id, action, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, NOW())',
@@ -363,10 +380,12 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
 
     console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
 
+    // ✅ CORRECTED RESPONSE - NOW INCLUDES sessionId
     res.json({
       success: true,
       message: 'Admin login successful',
       token: token,
+      sessionId: sessionId,  // ✅ ADDED - CRITICAL!
       admin: {
         id: admin.id,
         name: admin.name,
@@ -377,6 +396,7 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
 
   } catch (error) {
     console.error('\n❌ Admin login error:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error'
