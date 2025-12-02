@@ -378,21 +378,30 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
       [admin.id, 'LOGIN', req.ip, req.get('user-agent')]
     ).catch(err => console.warn('Audit log failed:', err.message));
 
-    console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
+    console.log('\n🔍 DEBUG: About to send response');
+console.log('   Token:', token ? token.substring(0, 20) + '...' : 'UNDEFINED');
+console.log('   SessionId:', sessionId ? sessionId.substring(0, 20) + '...' : 'UNDEFINED');
+console.log('   Admin ID:', admin.id);
 
-    // ✅ CORRECTED RESPONSE - NOW INCLUDES sessionId
-    res.json({
-      success: true,
-      message: 'Admin login successful',
-      token: token,
-      sessionId: sessionId,  // ✅ ADDED - CRITICAL!
-      admin: {
+console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
+
+console.log('📤 Sending response now...');
+
+res.json({
+    success: true,
+    message: 'Admin login successful',
+    token: token,
+    sessionId: sessionId,
+    admin: {
         id: admin.id,
         name: admin.name,
         email: admin.email,
         is_admin: true
-      }
-    });
+    }
+});
+
+console.log('✅ Response sent!');
+
 
   } catch (error) {
     console.error('\n❌ Admin login error:', error.message);
