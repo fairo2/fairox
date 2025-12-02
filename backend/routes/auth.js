@@ -5,7 +5,7 @@
 // Email: Mailjet SMTP (Port 2525)
 // Security: Session timeout, Activity tracking, Rate limiting
 // Updated: Dec 2, 2025
-// ✅ FIXED: All routes have proper callback functions
+// ✅ FIXED v2: ALL routes properly defined with callbacks
 // ============================================
 
 const express = require('express');
@@ -26,10 +26,10 @@ const router = express.Router();
 const activeSessions = new Map();
 const rateLimitMap = new Map();
 
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
-const WARNING_TIME = 9 * 60 * 1000;        // 9 minutes
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000;
+const WARNING_TIME = 9 * 60 * 1000;
 const RATE_LIMIT_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000;  // 15 minutes
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
 
 // ============================================
 // VERIFY DATABASE CONNECTION
@@ -232,7 +232,6 @@ router.post('/admin-login', async (req, res) => {
     console.log('Email:', email);
     console.log('Password received:', !!password);
 
-    // Validation
     if (!email || !password) {
       console.log('❌ Missing email or password');
       return res.status(400).json({
@@ -241,7 +240,6 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    // Step 1: Query database
     console.log('\n[STEP 1] Querying database...');
     const result = await pool.query(
       'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
@@ -261,10 +259,7 @@ router.post('/admin-login', async (req, res) => {
 
     const admin = users[0];
     console.log('   ✅ Admin found:', admin.email);
-    console.log('   is_approved:', admin.is_approved);
-    console.log('   is_admin:', admin.is_admin);
 
-    // Step 2: Check approval status
     console.log('\n[STEP 2] Checking approval status...');
     if (!admin.is_approved) {
       console.log('   ❌ Admin not approved');
@@ -275,7 +270,6 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ Admin is approved');
 
-    // Step 3: Verify password
     console.log('\n[STEP 3] Verifying password...');
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     console.log('   Password match:', isPasswordValid);
@@ -289,7 +283,6 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ Password correct');
 
-    // Step 4: Check JWT_SECRET
     console.log('\n[STEP 4] Checking JWT_SECRET...');
     if (!process.env.JWT_SECRET) {
       console.error('   ❌ JWT_SECRET not set in environment!');
@@ -300,12 +293,10 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ JWT_SECRET is set');
 
-    // Step 5: Generate session ID
     console.log('\n[STEP 5] Creating session...');
     const sessionId = createSession(admin.id, admin.email, true);
     console.log('   ✅ Session created');
 
-    // Step 6: Generate token
     console.log('\n[STEP 6] Generating JWT token...');
     const token = jwt.sign(
       {
@@ -318,7 +309,6 @@ router.post('/admin-login', async (req, res) => {
       { expiresIn: '24h' }
     );
     console.log('   ✅ Token generated');
-    console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
 
     console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
 
@@ -361,7 +351,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
@@ -374,10 +363,8 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
     await pool.query(
       'INSERT INTO users (name, email, password, is_approved, is_admin) VALUES ($1, $2, $3, $4, $5)',
       [name, email, hashedPassword, false, false]
@@ -385,33 +372,10 @@ router.post('/register', async (req, res) => {
 
     console.log('✅ User registered:', email);
 
-    // Send admin notification
     await sendEmail(
       process.env.EMAIL_FROM,
       'New User Registration - Admin Review',
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0; font-size: 24px;">New User Registration</h2>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 24px;">
-            <p style="margin: 0 0 16px 0; color: #333;">A new user has registered and is pending your approval:</p>
-            
-            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
-              <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 8px 0;"><strong>Registration Date:</strong> ${new Date().toLocaleString()}</p>
-            </div>
-            
-            <p style="margin: 16px 0; color: #666;">Please login to the admin panel to approve or reject this user.</p>
-            
-            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #999;">This is an automated message from Fairox Management System</p>
-            </div>
-          </div>
-        </div>
-      `
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;"><h2 style="margin: 0; font-size: 24px;">New User Registration</h2></div><div style="background: #f8f9fa; padding: 24px;"><p style="margin: 0 0 16px 0; color: #333;">A new user has registered and is pending your approval:</p><div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;"><p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p><p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p><p style="margin: 8px 0;"><strong>Registration Date:</strong> ${new Date().toLocaleString()}</p></div><p style="margin: 16px 0; color: #666;">Please login to the admin panel to approve or reject this user.</p><div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;"><p style="margin: 0; font-size: 12px; color: #999;">This is an automated message from Fairox Management System</p></div></div></div>`
     );
 
     res.status(201).json({
@@ -445,7 +409,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Get user
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
@@ -462,7 +425,6 @@ router.post('/login', async (req, res) => {
 
     const user = users[0];
 
-    // Check if approved
     if (!user.is_approved && !user.is_admin) {
       return res.status(403).json({
         success: false,
@@ -470,7 +432,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -480,7 +441,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
     const token = jwt.sign(
       {
         id: user.id,
@@ -565,7 +525,6 @@ router.post('/contact', async (req, res) => {
       });
     }
 
-    // Save to database
     await pool.query(
       'INSERT INTO contacts (name, email, phone, subject, message) VALUES ($1, $2, $3, $4, $5)',
       [name, email, phone || null, subject, message]
@@ -573,35 +532,10 @@ router.post('/contact', async (req, res) => {
 
     console.log('✅ Contact form saved');
 
-    // Send email to admin
     const emailSent = await sendEmail(
       process.env.EMAIL_FROM,
       `New Contact Form Submission: ${subject}`,
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0; font-size: 24px;">New Contact Form</h2>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 24px;">
-            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
-              <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 8px 0;"><strong>Phone:</strong> ${phone || 'Not provided'}</p>
-              <p style="margin: 8px 0;"><strong>Subject:</strong> ${subject}</p>
-            </div>
-            
-            <h3 style="color: #333; margin: 20px 0 10px 0;">Message:</h3>
-            <div style="background: white; padding: 16px; border-radius: 4px; line-height: 1.6; color: #333;">
-              ${message}
-            </div>
-            
-            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #999;">Received: ${new Date().toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      `
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;"><h2 style="margin: 0; font-size: 24px;">New Contact Form</h2></div><div style="background: #f8f9fa; padding: 24px;"><div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;"><p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p><p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p><p style="margin: 8px 0;"><strong>Phone:</strong> ${phone || 'Not provided'}</p><p style="margin: 8px 0;"><strong>Subject:</strong> ${subject}</p></div><h3 style="color: #333; margin: 20px 0 10px 0;">Message:</h3><div style="background: white; padding: 16px; border-radius: 4px; line-height: 1.6; color: #333;">${message}</div><div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;"><p style="margin: 0; font-size: 12px; color: #999;">Received: ${new Date().toLocaleString()}</p></div></div></div>`
     );
 
     if (!emailSent) {
@@ -739,46 +673,15 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
 
     const user = result.rows[0];
 
-    // Update approval
     await pool.query(
       'UPDATE users SET is_approved = $1, approved_by = $2, approved_at = NOW() WHERE id = $3',
       [true, req.user.id, req.params.id]
     );
 
-    // Send approval email
     await sendEmail(
       user.email,
       'Your Fairox Account is Now Active',
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 32px 24px; border-radius: 8px 8px 0 0; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px;">Welcome to Fairox</h1>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 32px 24px;">
-            <p style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Hi ${user.name},</p>
-            
-            <p style="margin: 0 0 20px 0; font-size: 15px; color: #555; line-height: 1.6;">
-              Great news! Your account has been approved by our admin team. You can now access all features of Fairox Management System.
-            </p>
-            
-            <div style="background: white; padding: 20px; border-left: 4px solid #208c84; border-radius: 4px; margin: 20px 0;">
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Email:</strong> ${user.email}</p>
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Status:</strong> <span style="color: #208c84; font-weight: bold;">ACTIVE</span></p>
-            </div>
-            
-            <div style="text-align: center; margin: 24px 0;">
-              <a href="https://fairox.co.in/login" style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Login to Dashboard</a>
-            </div>
-            
-            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666;">If you have any questions, feel free to contact our support team at <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p>
-            
-            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      `
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 32px 24px; border-radius: 8px 8px 0 0; text-align: center;"><h1 style="margin: 0; font-size: 28px;">Welcome to Fairox</h1></div><div style="background: #f8f9fa; padding: 32px 24px;"><p style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Hi ${user.name},</p><p style="margin: 0 0 20px 0; font-size: 15px; color: #555; line-height: 1.6;">Great news! Your account has been approved by our admin team. You can now access all features of Fairox Management System.</p><div style="background: white; padding: 20px; border-left: 4px solid #208c84; border-radius: 4px; margin: 20px 0;"><p style="margin: 8px 0; font-size: 14px;"><strong>Email:</strong> ${user.email}</p><p style="margin: 8px 0; font-size: 14px;"><strong>Status:</strong> <span style="color: #208c84; font-weight: bold;">ACTIVE</span></p></div><div style="text-align: center; margin: 24px 0;"><a href="https://fairox.co.in/login" style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Login to Dashboard</a></div><p style="margin: 20px 0 0 0; font-size: 14px; color: #666;">If you have any questions, feel free to contact our support team at <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p><div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;"><p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p></div></div></div>`
     );
 
     console.log('✅ User approved:', user.email);
@@ -805,39 +708,12 @@ router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (
 
     const user = result.rows[0];
 
-    // Delete user
     await pool.query('DELETE FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
 
-    // Send rejection email
     await sendEmail(
       user.email,
       'Registration Status Update - Fairox',
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0; font-size: 24px;">Registration Status Update</h2>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 24px;">
-            <p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p>
-            
-            <p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">
-              Thank you for your interest in Fairox. After reviewing your registration, we are unable to approve your account at this time.
-            </p>
-            
-            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
-              <p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #999;">Not Approved</span></p>
-            </div>
-            
-            <p style="margin: 16px 0; color: #666;">If you believe this is an error or would like to discuss further, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p>
-            
-            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      `
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;"><h2 style="margin: 0; font-size: 24px;">Registration Status Update</h2></div><div style="background: #f8f9fa; padding: 24px;"><p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p><p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">Thank you for your interest in Fairox. After reviewing your registration, we are unable to approve your account at this time.</p><div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;"><p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p><p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #999;">Not Approved</span></p></div><p style="margin: 16px 0; color: #666;">If you believe this is an error or would like to discuss further, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p><div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;"><p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p></div></div></div>`
     );
 
     console.log('✅ User rejected:', user.email);
@@ -864,44 +740,15 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
 
     const user = result.rows[0];
 
-    // Revoke approval
     await pool.query(
       'UPDATE users SET is_approved = $1, approved_by = NULL, approved_at = NULL WHERE id = $2',
       [false, req.params.id]
     );
 
-    // Send revocation email
     await sendEmail(
       user.email,
       'Account Access Status Change - Fairox',
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #c01530 0%, #8b0d23 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0; font-size: 24px;">Account Access Status</h2>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 24px;">
-            <p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p>
-            
-            <p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">
-              This is to inform you that your access to Fairox has been temporarily suspended by our admin team.
-            </p>
-            
-            <div style="background: #fff3cd; padding: 16px; border-left: 4px solid #c01530; border-radius: 4px; margin: 16px 0;">
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
-              <p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #c01530; font-weight: bold;">ACCESS SUSPENDED</span></p>
-            </div>
-            
-            <p style="margin: 16px 0; color: #666;">You will not be able to login until your account is re-approved by an administrator.</p>
-            
-            <p style="margin: 16px 0; color: #666;">If you have questions or concerns regarding this action, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #c01530; text-decoration: none;">support@fairox.co.in</a></p>
-            
-            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      `
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #c01530 0%, #8b0d23 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;"><h2 style="margin: 0; font-size: 24px;">Account Access Status</h2></div><div style="background: #f8f9fa; padding: 24px;"><p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p><p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">This is to inform you that your access to Fairox has been temporarily suspended by our admin team.</p><div style="background: #fff3cd; padding: 16px; border-left: 4px solid #c01530; border-radius: 4px; margin: 16px 0;"><p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p><p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #c01530; font-weight: bold;">ACCESS SUSPENDED</span></p></div><p style="margin: 16px 0; color: #666;">You will not be able to login until your account is re-approved by an administrator.</p><p style="margin: 16px 0; color: #666;">If you have questions or concerns regarding this action, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #c01530; text-decoration: none;">support@fairox.co.in</a></p><div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;"><p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p></div></div></div>`
     );
 
     console.log('✅ User access revoked:', user.email);
@@ -959,7 +806,6 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-    // Get user
     const result = await pool.query('SELECT id, email, password FROM users WHERE id = $1', [userId]);
 
     if (!result.rows || result.rows.length === 0) {
@@ -971,7 +817,6 @@ router.post('/change-password', authMiddleware, async (req, res) => {
 
     const user = result.rows[0];
 
-    // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
@@ -981,10 +826,8 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password
     await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, user.id]);
 
     console.log('✅ Password changed successfully for user:', user.email);
@@ -1049,6 +892,6 @@ setInterval(() => {
   if (cleaned > 0) {
     console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
   }
-}, 60000); // Check every minute
+}, 60000);
 
 module.exports = router;
