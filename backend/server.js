@@ -69,6 +69,7 @@ const exportRouter = require('./routes/export');
 const overviewRouter = require('./routes/overview');
 const adminRoutes = require('./routes/admin-routes');
 const testEmailRoutes = require('./routes/test-email');  // ← EMAIL DIAGNOSTIC ROUTES
+const advancedEmailDiag = require('./routes/advanced-email-test');
 
 // ============================================
 // MIDDLEWARE
@@ -155,6 +156,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/overview', overviewRouter);
 app.use('/api', adminRoutes);
 app.use('/test-email', testEmailRoutes);  // ← EMAIL DIAGNOSTIC ENDPOINTS
+app.use('/test-email-advanced', advancedEmailDiag);
 
 console.log('✅ All routes registered\n');
 
