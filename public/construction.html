@@ -777,7 +777,7 @@
             <p>Professional Architectural Design & Complete Construction Supervision in Tamil Nadu</p>
             <p class="hero-subtitle">From concept to completion - Expert design, municipal approvals, quality supervision, and seamless handover</p>
             <div class="hero-buttons">
-                <button class="btn-primary" onclick="window.location.href='index.html#contact'">Get Free Consultation</button>
+                <button class="btn-primary" onclick="redirectToContact()">Get Free Consultation</button>
                 <button class="btn-secondary" onclick="document.getElementById('portfolio').scrollIntoView({behavior: 'smooth'})">View Our Projects</button>
             </div>
         </div>
@@ -1007,7 +1007,7 @@
         <section class="cta-section">
             <h2>Ready to Build Your Dream Project?</h2>
             <p>Get in touch with our expert team for a free consultation and project assessment.</p>
-            <button class="cta-button" onclick="window.location.href='index.html#contact'">Schedule Your Consultation</button>
+            <button class="cta-button" onclick="redirectToContact()">Schedule Your Consultation</button>
         </section>
     </div>
 
@@ -1022,5 +1022,12 @@
             <a href="#privacy">Privacy Policy</a>
         </div>
     </footer>
+    <script>
+    function redirectToContact() {
+        // Set flag to redirect to contact
+        sessionStorage.setItem('redirectToContact', 'true');
+        window.location.href = 'index.html';
+    }
+</script>
 </body>
 </html>
