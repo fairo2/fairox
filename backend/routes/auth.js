@@ -1,26 +1,39 @@
 ﻿// ============================================
-// ✅ COMPLETE AUTH ROUTES - MAILJET FIXED
+// ✅ COMPLETE AUTH ROUTES - ENHANCED SECURITY
 // File: routes/auth.js
 // Database: PostgreSQL
 // Email: Mailjet SMTP (Port 2525)
+// Security: Session timeout, Activity tracking, Rate limiting
 // Updated: Dec 2, 2025
 // ============================================
-
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
-
-// ✅ FIXED: Import pool directly (NOT destructured)
+// ✅ Import pool directly
 const pool = require('../config/db');
-
 
 const router = express.Router();
 
+// ============================================
+// SESSION & RATE LIMITING STORAGE
+// ============================================
 
-// ✅ Verify database connection on startup
+const activeSessions = new Map();
+const rateLimitMap = new Map();
+
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const WARNING_TIME = 9 * 60 * 1000;        // 9 minutes
+const RATE_LIMIT_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000;  // 15 minutes
+
+// ============================================
+// VERIFY DATABASE CONNECTION
+// ============================================
+
 try {
   if (!pool || typeof pool.query !== 'function') {
     console.error('❌ FATAL: Database pool not properly initialized');
@@ -32,26 +45,121 @@ try {
   process.exit(1);
 }
 
+// ============================================
+// IMPORT AUTH MIDDLEWARE
+// ============================================
 
-// ✅ Import auth middleware - BOTH authMiddleware and adminMiddleware
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-
 
 console.log('✅ Auth routes loaded');
 
+// ============================================
+// SESSION MANAGEMENT FUNCTIONS
+// ============================================
+
+function generateSessionId() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function createSession(userId, email, isAdmin) {
+  const sessionId = generateSessionId();
+  const sessionKey = `${userId}_${sessionId}`;
+
+  activeSessions.set(sessionKey, {
+    userId,
+    email,
+    isAdmin,
+    sessionId,
+    createdAt: Date.now(),
+    lastActivity: Date.now(),
+    ip: '',
+    userAgent: ''
+  });
+
+  console.log(`✅ Session created: ${sessionId.substring(0, 10)}... for user ${email}`);
+  return sessionId;
+}
+
+function terminateSession(userId, sessionId) {
+  const sessionKey = `${userId}_${sessionId}`;
+  const session = activeSessions.get(sessionKey);
+
+  if (session) {
+    activeSessions.delete(sessionKey);
+    console.log(`✅ Session terminated: ${sessionId.substring(0, 10)}... for user ${userId}`);
+    return true;
+  }
+
+  return false;
+}
+
+function getSessionRemainingTime(userId, sessionId) {
+  const sessionKey = `${userId}_${sessionId}`;
+  const session = activeSessions.get(sessionKey);
+
+  if (!session) return 0;
+
+  const timeSinceLastActivity = Date.now() - session.lastActivity;
+  const remaining = Math.max(0, INACTIVITY_TIMEOUT - timeSinceLastActivity);
+
+  return Math.ceil(remaining / 1000);
+}
 
 // ============================================
-// EMAIL CONFIGURATION - MAILJET (PORT 2525) ✅
+// SECURITY HEADERS MIDDLEWARE
+// ============================================
+
+const securityHeaders = (req, res, next) => {
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-XSS-Protection', '1; mode=block');
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+};
+
+// ============================================
+// ACTIVITY TRACKING MIDDLEWARE
+// ============================================
+
+const activityTracker = (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const sessionId = req.headers['x-session-id'];
+
+    if (userId && sessionId) {
+      const sessionKey = `${userId}_${sessionId}`;
+
+      if (activeSessions.has(sessionKey)) {
+        activeSessions.set(sessionKey, {
+          ...activeSessions.get(sessionKey),
+          lastActivity: Date.now()
+        });
+      }
+
+      console.log(`[ACTIVITY] User: ${userId} | Route: ${req.path} | Method: ${req.method}`);
+    }
+
+    next();
+  } catch (error) {
+    console.error('Activity tracking error:', error.message);
+    next();
+  }
+};
+
+// ============================================
+// EMAIL CONFIGURATION - MAILJET (PORT 2525)
 // ============================================
 
 function createTransporter() {
   return nodemailer.createTransport({
-    host: 'in-v3.mailjet.com',      // ✅ Mailjet SMTP host
-    port: 2525,                      // ✅ Port 2525 (works on Render)
-    secure: false,                   // ✅ False for port 2525
+    host: 'in-v3.mailjet.com',
+    port: 2525,
+    secure: false,
     auth: {
-      user: process.env.MAILJET_API_KEY,        // ✅ From Mailjet account
-      pass: process.env.MAILJET_SECRET_KEY      // ✅ From Mailjet account
+      user: process.env.MAILJET_API_KEY,
+      pass: process.env.MAILJET_SECRET_KEY
     },
     tls: {
       ciphers: 'SSLv3',
@@ -61,7 +169,6 @@ function createTransporter() {
     socketTimeout: 20000
   });
 }
-
 
 async function sendEmail(to, subject, html) {
   try {
@@ -74,7 +181,11 @@ async function sendEmail(to, subject, html) {
       from: process.env.EMAIL_FROM,
       to: to,
       subject: subject,
-      html: html
+      html: html,
+      headers: {
+        'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal'
+      }
     });
     
     console.log(`✅ Email sent successfully to ${to}`);
@@ -87,11 +198,16 @@ async function sendEmail(to, subject, html) {
   }
 }
 
+// ============================================
+// APPLY GLOBAL SECURITY MIDDLEWARE
+// ============================================
+
+router.use(securityHeaders);
+router.use(activityTracker);
 
 // ============================================
 // TEST ROUTE
 // ============================================
-
 
 router.get('/test', (req, res) => {
   res.json({
@@ -101,23 +217,19 @@ router.get('/test', (req, res) => {
   });
 });
 
-
 // ============================================
-// ADMIN LOGIN - ✅ FIXED VERSION
+// ADMIN LOGIN WITH SESSION
 // ============================================
-
 
 router.post('/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
 
     console.log('\n' + '='.repeat(60));
     console.log('🔐 ADMIN LOGIN ATTEMPT');
     console.log('='.repeat(60));
     console.log('Email:', email);
     console.log('Password received:', !!password);
-
 
     // Validation
     if (!email || !password) {
@@ -128,18 +240,15 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-
-    // ✅ Step 1: Query database
+    // Step 1: Query database
     console.log('\n[STEP 1] Querying database...');
     const result = await pool.query(
       'SELECT id, name, email, password, is_admin, is_approved FROM users WHERE email = $1 AND is_admin = $2',
       [email, true]
     );
 
-
     const users = result.rows;
     console.log('   Rows found:', users.length);
-
 
     if (!users || users.length === 0) {
       console.log('   ❌ No admin user found');
@@ -149,14 +258,12 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-
     const admin = users[0];
     console.log('   ✅ Admin found:', admin.email);
     console.log('   is_approved:', admin.is_approved);
     console.log('   is_admin:', admin.is_admin);
 
-
-    // ✅ Step 2: Check approval status
+    // Step 2: Check approval status
     console.log('\n[STEP 2] Checking approval status...');
     if (!admin.is_approved) {
       console.log('   ❌ Admin not approved');
@@ -167,12 +274,10 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ Admin is approved');
 
-
-    // ✅ Step 3: Verify password
+    // Step 3: Verify password
     console.log('\n[STEP 3] Verifying password...');
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     console.log('   Password match:', isPasswordValid);
-
 
     if (!isPasswordValid) {
       console.log('   ❌ Password incorrect');
@@ -183,8 +288,7 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ Password correct');
 
-
-    // ✅ Step 4: Check JWT_SECRET
+    // Step 4: Check JWT_SECRET
     console.log('\n[STEP 4] Checking JWT_SECRET...');
     if (!process.env.JWT_SECRET) {
       console.error('   ❌ JWT_SECRET not set in environment!');
@@ -195,9 +299,13 @@ router.post('/admin-login', async (req, res) => {
     }
     console.log('   ✅ JWT_SECRET is set');
 
+    // Step 5: Generate session ID
+    console.log('\n[STEP 5] Creating session...');
+    const sessionId = createSession(admin.id, admin.email, true);
+    console.log('   ✅ Session created');
 
-    // ✅ Step 5: Generate token
-    console.log('\n[STEP 5] Generating JWT token...');
+    // Step 6: Generate token
+    console.log('\n[STEP 6] Generating JWT token...');
     const token = jwt.sign(
       {
         id: admin.id,
@@ -211,14 +319,13 @@ router.post('/admin-login', async (req, res) => {
     console.log('   ✅ Token generated');
     console.log('   Token (first 50 chars):', token.substring(0, 50) + '...');
 
-
     console.log('\n✅ ADMIN LOGIN SUCCESSFUL\n');
-
 
     res.json({
       success: true,
       message: 'Admin login successful',
       token: token,
+      sessionId: sessionId,
       admin: {
         id: admin.id,
         name: admin.name,
@@ -226,7 +333,6 @@ router.post('/admin-login', async (req, res) => {
         is_admin: true
       }
     });
-
 
   } catch (error) {
     console.error('\n❌ Admin login error:', error.message);
@@ -237,19 +343,15 @@ router.post('/admin-login', async (req, res) => {
   }
 });
 
-
 // ============================================
 // USER REGISTRATION
 // ============================================
-
 
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-
     console.log('\n📝 Registration attempt:', email);
-
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -258,13 +360,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-
     // Check if user exists
     const existingUser = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
     );
-
 
     if (existingUser.rows && existingUser.rows.length > 0) {
       return res.status(400).json({
@@ -273,10 +373,8 @@ router.post('/register', async (req, res) => {
       });
     }
 
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
 
     // Insert user
     await pool.query(
@@ -284,34 +382,41 @@ router.post('/register', async (req, res) => {
       [name, email, hashedPassword, false, false]
     );
 
-
     console.log('✅ User registered:', email);
 
-
-    // Send admin notification (using updated Mailjet config)
+    // Send admin notification
     await sendEmail(
       process.env.EMAIL_FROM,
-      '🔔 New User Registration - Approval Required',
+      'New User Registration - Admin Review',
       `
-        <h2>New User Registration</h2>
-        <p>A new user has registered and is pending your approval:</p>
-        <ul>
-          <li><strong>Name:</strong> ${name}</li>
-          <li><strong>Email:</strong> ${email}</li>
-          <li><strong>Registration Date:</strong> ${new Date().toLocaleString()}</li>
-        </ul>
-        <p>Please login to the admin panel to approve or reject this user.</p>
-        <hr>
-        <p><em>This is an automated message from Fairox Management System</em></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 24px;">New User Registration</h2>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 24px;">
+            <p style="margin: 0 0 16px 0; color: #333;">A new user has registered and is pending your approval:</p>
+            
+            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
+              <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 8px 0;"><strong>Registration Date:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <p style="margin: 16px 0; color: #666;">Please login to the admin panel to approve or reject this user.</p>
+            
+            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #999;">This is an automated message from Fairox Management System</p>
+            </div>
+          </div>
+        </div>
       `
     );
-
 
     res.status(201).json({
       success: true,
       message: 'Registration successful! Your account is pending admin approval. You will be notified via email once approved.'
     });
-
 
   } catch (error) {
     console.error('❌ Registration error:', error);
@@ -322,19 +427,15 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // ============================================
 // USER LOGIN
 // ============================================
-
 
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-
     console.log('\n🔐 User login attempt:', email);
-
 
     if (!email || !password) {
       return res.status(400).json({
@@ -343,16 +444,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-
     // Get user
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
-
     const users = result.rows;
-
 
     if (!users || users.length === 0) {
       return res.status(401).json({
@@ -361,11 +459,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-
     const user = users[0];
 
-
-    // Check if approved (allow if admin or approved)
+    // Check if approved
     if (!user.is_approved && !user.is_admin) {
       return res.status(403).json({
         success: false,
@@ -373,10 +469,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
-
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -384,7 +478,6 @@ router.post('/login', async (req, res) => {
         message: 'Invalid credentials'
       });
     }
-
 
     // Generate token
     const token = jwt.sign(
@@ -397,9 +490,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-
     console.log('✅ User login successful:', email);
-
 
     res.json({
       success: true,
@@ -411,7 +502,6 @@ router.post('/login', async (req, res) => {
       }
     });
 
-
   } catch (error) {
     console.error('❌ User login error:', error);
     res.status(500).json({
@@ -421,11 +511,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-
 // ============================================
 // GET CURRENT USER
 // ============================================
-
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
@@ -434,9 +522,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       [req.user.id]
     );
 
-
     const users = result.rows;
-
 
     if (!users || users.length === 0) {
       return res.status(404).json({
@@ -445,15 +531,12 @@ router.get('/me', authMiddleware, async (req, res) => {
       });
     }
 
-
     const user = users[0];
-
 
     res.json({
       success: true,
       user: user
     });
-
 
   } catch (error) {
     console.error('❌ Get user error:', error);
@@ -464,19 +547,15 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ============================================
-// CONTACT FORM - WITH MAILJET EMAIL
+// CONTACT FORM WITH EMAIL
 // ============================================
-
 
 router.post('/contact', async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
 
-
     console.log('📧 Contact form submission from:', email);
-
 
     if (!name || !email || !subject || !message) {
       return res.status(400).json({
@@ -485,47 +564,53 @@ router.post('/contact', async (req, res) => {
       });
     }
 
-
     // Save to database
     await pool.query(
       'INSERT INTO contacts (name, email, phone, subject, message) VALUES ($1, $2, $3, $4, $5)',
       [name, email, phone || null, subject, message]
     );
 
-
     console.log('✅ Contact form saved');
 
-
-    // Send email to admin (using Mailjet)
+    // Send email to admin
     const emailSent = await sendEmail(
       process.env.EMAIL_FROM,
-      `📧 New Contact Form: ${subject}`,
+      `New Contact Form Submission: ${subject}`,
       `
-        <h2>New Contact Form Submission</h2>
-        <ul>
-          <li><strong>Name:</strong> ${name}</li>
-          <li><strong>Email:</strong> ${email}</li>
-          <li><strong>Phone:</strong> ${phone || 'Not provided'}</li>
-          <li><strong>Subject:</strong> ${subject}</li>
-        </ul>
-        <h3>Message:</h3>
-        <p>${message}</p>
-        <hr>
-        <p><em>Received: ${new Date().toLocaleString()}</em></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 24px;">New Contact Form</h2>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 24px;">
+            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
+              <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 8px 0;"><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+              <p style="margin: 8px 0;"><strong>Subject:</strong> ${subject}</p>
+            </div>
+            
+            <h3 style="color: #333; margin: 20px 0 10px 0;">Message:</h3>
+            <div style="background: white; padding: 16px; border-radius: 4px; line-height: 1.6; color: #333;">
+              ${message}
+            </div>
+            
+            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #999;">Received: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
       `
     );
 
-
     if (!emailSent) {
-      console.warn('⚠️  Email notification failed, but contact saved to database');
+      console.warn('⚠️ Email notification failed, but contact saved to database');
     }
-
 
     res.json({
       success: true,
       message: 'Thank you for contacting us! We will get back to you soon.'
     });
-
 
   } catch (error) {
     console.error('❌ Contact error:', error);
@@ -536,11 +621,35 @@ router.post('/contact', async (req, res) => {
   }
 });
 
+// ============================================
+// HEARTBEAT ENDPOINT - Keep session alive
+// ============================================
+
+router.post('/heartbeat', authMiddleware, (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    console.log(`💓 Heartbeat received from user ${req.user.id}`);
+    
+    res.json({
+      success: true,
+      message: 'Session alive',
+      sessionId: sessionId,
+      remainingTime: getSessionRemainingTime(req.user.id, sessionId)
+    });
+    
+  } catch (error) {
+    console.error('❌ Heartbeat error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
 
 // ============================================
 // ADMIN ROUTES - GET STATS
 // ============================================
-
 
 router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -551,9 +660,7 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
     const total = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = $1', [false]);
     const contacts = await pool.query('SELECT COUNT(*) as count FROM contacts');
 
-
     console.log('✅ Stats loaded');
-
 
     res.json({
       success: true,
@@ -565,18 +672,15 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
       }
     });
 
-
   } catch (error) {
     console.error('❌ Stats error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - PENDING USERS
 // ============================================
-
 
 router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -587,12 +691,9 @@ router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, 
       [false, false]
     );
 
-
     console.log('✅ Pending users loaded:', result.rows.length);
 
-
     res.json({ success: true, users: result.rows });
-
 
   } catch (error) {
     console.error('❌ Pending users error:', error);
@@ -600,11 +701,9 @@ router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, 
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - APPROVED USERS
 // ============================================
-
 
 router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -615,12 +714,9 @@ router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req,
       [true, false]
     );
 
-
     console.log('✅ Approved users loaded:', result.rows.length);
 
-
     res.json({ success: true, users: result.rows });
-
 
   } catch (error) {
     console.error('❌ Approved users error:', error);
@@ -628,24 +724,19 @@ router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req,
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - APPROVE USER
 // ============================================
-
 
 router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
 
-
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-
     const user = result.rows[0];
-
 
     // Update approval
     await pool.query(
@@ -653,32 +744,45 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
       [true, req.user.id, req.params.id]
     );
 
-
-    // Send approval email (using Mailjet)
+    // Send approval email
     await sendEmail(
       user.email,
-      '✅ Your Fairox Account Has Been Approved!',
+      'Your Fairox Account is Now Active',
       `
-        <h2>🎉 Welcome to Fairox!</h2>
-        <p>Hi ${user.name},</p>
-        <p>Great news! Your account has been approved by our admin team. You can now access all features of Fairox.</p>
-        <ul>
-          <li><strong>📧 Your Email:</strong> ${user.email}</li>
-          <li><strong>✅ Status:</strong> APPROVED</li>
-        </ul>
-        <p><a href="https://fairox.co.in" style="background-color: #2a8f8e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Login Now →</a></p>
-        <hr>
-        <p>If you have any questions, feel free to contact us at <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
-        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 32px 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to Fairox</h1>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 32px 24px;">
+            <p style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Hi ${user.name},</p>
+            
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #555; line-height: 1.6;">
+              Great news! Your account has been approved by our admin team. You can now access all features of Fairox Management System.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-left: 4px solid #208c84; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 8px 0; font-size: 14px;"><strong>Email:</strong> ${user.email}</p>
+              <p style="margin: 8px 0; font-size: 14px;"><strong>Status:</strong> <span style="color: #208c84; font-weight: bold;">ACTIVE</span></p>
+            </div>
+            
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="https://fairox.co.in/login" style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Login to Dashboard</a>
+            </div>
+            
+            <p style="margin: 20px 0 0 0; font-size: 14px; color: #666;">If you have any questions, feel free to contact our support team at <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p>
+            
+            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
       `
     );
 
-
     console.log('✅ User approved:', user.email);
 
-
     res.json({ success: true, message: 'User approved and notified via email' });
-
 
   } catch (error) {
     console.error('❌ Approve user error:', error);
@@ -686,53 +790,58 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - REJECT USER
 // ============================================
-
 
 router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
 
-
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-
     const user = result.rows[0];
-
 
     // Delete user
     await pool.query('DELETE FROM users WHERE id = $1 AND is_admin = $2', [req.params.id, false]);
 
-
-    // Send rejection email (using Mailjet)
+    // Send rejection email
     await sendEmail(
       user.email,
-      '❌ Fairox Account Registration - Update',
+      'Registration Status Update - Fairox',
       `
-        <h2>Account Registration Update</h2>
-        <p>Hi ${user.name},</p>
-        <p>Thank you for your interest in Fairox. Unfortunately, we are unable to approve your account registration at this time.</p>
-        <ul>
-          <li><strong>📧 Email:</strong> ${user.email}</li>
-          <li><strong>Status:</strong> NOT APPROVED</li>
-        </ul>
-        <p>If you believe this is an error or would like to discuss this further, please contact us at: <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
-        <hr>
-        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 24px;">Registration Status Update</h2>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 24px;">
+            <p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p>
+            
+            <p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">
+              Thank you for your interest in Fairox. After reviewing your registration, we are unable to approve your account at this time.
+            </p>
+            
+            <div style="background: white; padding: 16px; border-left: 4px solid #208c84; border-radius: 4px; margin: 16px 0;">
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
+              <p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #999;">Not Approved</span></p>
+            </div>
+            
+            <p style="margin: 16px 0; color: #666;">If you believe this is an error or would like to discuss further, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #208c84; text-decoration: none;">support@fairox.co.in</a></p>
+            
+            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
       `
     );
 
-
     console.log('✅ User rejected:', user.email);
 
-
     res.json({ success: true, message: 'User rejected and notified via email' });
-
 
   } catch (error) {
     console.error('❌ Reject user error:', error);
@@ -740,24 +849,19 @@ router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - REVOKE USER ACCESS
 // ============================================
-
 
 router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
 
-
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-
     const user = result.rows[0];
-
 
     // Revoke approval
     await pool.query(
@@ -765,32 +869,43 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
       [false, req.params.id]
     );
 
-
-    // Send revocation email (using Mailjet)
+    // Send revocation email
     await sendEmail(
       user.email,
-      '⚠️ Fairox Account Access Revoked',
+      'Account Access Status Change - Fairox',
       `
-        <h2>⚠️ Access Revoked</h2>
-        <p>Hi ${user.name},</p>
-        <p>This is to inform you that your access to Fairox has been temporarily revoked by our admin team.</p>
-        <ul>
-          <li><strong>📧 Your Email:</strong> ${user.email}</li>
-          <li><strong>Status:</strong> ACCESS REVOKED</li>
-        </ul>
-        <p>You will not be able to login until your account is re-approved by an administrator.</p>
-        <p>If you have any questions or concerns regarding this action, please contact our support team: <a href="mailto:support@fairox.co.in">support@fairox.co.in</a></p>
-        <hr>
-        <p><em>© ${new Date().getFullYear()} Fairox. All rights reserved.</em></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #c01530 0%, #8b0d23 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 24px;">Account Access Status</h2>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 24px;">
+            <p style="margin: 0 0 16px 0; color: #333;">Hi ${user.name},</p>
+            
+            <p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">
+              This is to inform you that your access to Fairox has been temporarily suspended by our admin team.
+            </p>
+            
+            <div style="background: #fff3cd; padding: 16px; border-left: 4px solid #c01530; border-radius: 4px; margin: 16px 0;">
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
+              <p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #c01530; font-weight: bold;">ACCESS SUSPENDED</span></p>
+            </div>
+            
+            <p style="margin: 16px 0; color: #666;">You will not be able to login until your account is re-approved by an administrator.</p>
+            
+            <p style="margin: 16px 0; color: #666;">If you have questions or concerns regarding this action, please contact our support team: <a href="mailto:support@fairox.co.in" style="color: #c01530; text-decoration: none;">support@fairox.co.in</a></p>
+            
+            <div style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Fairox. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
       `
     );
 
-
     console.log('✅ User access revoked:', user.email);
 
-
     res.json({ success: true, message: 'User access revoked and notified via email' });
-
 
   } catch (error) {
     console.error('❌ Revoke user error:', error);
@@ -798,11 +913,9 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
   }
 });
 
-
 // ============================================
 // ADMIN ROUTES - GET CONTACTS
 // ============================================
-
 
 router.get('/admin/contacts', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -814,27 +927,22 @@ router.get('/admin/contacts', authMiddleware, adminMiddleware, async (req, res) 
     
     res.json({ success: true, contacts: result.rows });
 
-
   } catch (error) {
     console.error('❌ Contacts error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-
 // ============================================
 // CHANGE PASSWORD
 // ============================================
-
 
 router.post('/change-password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
-
     console.log('🔐 Password change request - User:', userId);
-
 
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
@@ -843,7 +951,6 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-
     if (currentPassword === newPassword) {
       return res.status(400).json({
         success: false,
@@ -851,10 +958,8 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-
     // Get user
     const result = await pool.query('SELECT id, email, password FROM users WHERE id = $1', [userId]);
-
 
     if (!result.rows || result.rows.length === 0) {
       return res.status(401).json({
@@ -863,13 +968,10 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-
     const user = result.rows[0];
-
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -878,23 +980,18 @@ router.post('/change-password', authMiddleware, async (req, res) => {
       });
     }
 
-
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
 
     // Update password
     await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, user.id]);
 
-
     console.log('✅ Password changed successfully for user:', user.email);
-
 
     res.json({
       success: true,
       message: 'Password changed successfully'
     });
-
 
   } catch (error) {
     console.error('❌ Change password error:', error);
@@ -905,23 +1002,25 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ============================================
-// LOGOUT
+// LOGOUT WITH SESSION TERMINATION
 // ============================================
 
-
-router.get('/logout', authMiddleware, async (req, res) => {
+router.get('/logout', authMiddleware, (req, res) => {
   try {
-    console.log('🔐 Logout request - User:', req.user.id);
-
-
+    const sessionId = req.headers['x-session-id'];
+    
+    if (sessionId) {
+      terminateSession(req.user.id, sessionId);
+    }
+    
+    console.log(`🔐 User ${req.user.id} logged out`);
+    
     res.json({
       success: true,
       message: 'Logged out successfully'
     });
-
-
+    
   } catch (error) {
     console.error('❌ Logout error:', error);
     res.status(500).json({
@@ -931,5 +1030,24 @@ router.get('/logout', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// CLEANUP: Remove expired sessions periodically
+// ============================================
+
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [key, session] of activeSessions.entries()) {
+    if (now - session.lastActivity > INACTIVITY_TIMEOUT) {
+      activeSessions.delete(key);
+      cleaned++;
+    }
+  }
+
+  if (cleaned > 0) {
+    console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
+  }
+}, 60000); // Check every minute
 
 module.exports = router;

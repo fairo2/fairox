@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fairox Admin Panel</title>
+    <title>Admin Dashboard - Fairox Management System</title>
+    
+    <!-- Session Timeout Styles -->
+    <link rel="stylesheet" href="/css/sessionTimeout.css">
+    
     <style>
         * {
             margin: 0;
@@ -13,548 +17,690 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
+            color: #333;
         }
+
+        /* ============================================
+           LOGIN STYLES
+           ============================================ */
 
         .login-container {
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px;
+        }
+
+        .login-container.hidden {
+            display: none;
         }
 
         .login-box {
             background: white;
-            border-radius: 20px;
-            padding: 3rem;
-            max-width: 450px;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
         }
 
         .login-title {
-            font-size: 2rem;
-            color: #1e3c72;
-            margin-bottom: 0.5rem;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 5px;
             text-align: center;
+            color: #333;
         }
 
         .login-subtitle {
             text-align: center;
-            color: #666;
-            margin-bottom: 2rem;
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 30px;
         }
 
-        .form-group {
-            margin-bottom: 1.5rem;
+        .login-box .form-group {
+            margin-bottom: 20px;
         }
 
-        .form-group label {
+        .login-box label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
+            margin-bottom: 8px;
             font-weight: 600;
+            color: #333;
+            font-size: 14px;
         }
 
-        .form-group input {
+        .login-box input {
             width: 100%;
-            padding: 1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
         }
 
-        .form-group input:focus {
+        .login-box input:focus {
             outline: none;
-            border-color: #1e3c72;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .btn {
+        .login-box .btn {
             width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
+            border-radius: 8px;
             font-weight: 600;
+            font-size: 16px;
             cursor: pointer;
-            transition: transform 0.3s;
+            transition: all 0.3s ease;
         }
 
-        .btn:hover {
+        .login-box .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
 
         .message {
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
             display: none;
+            font-size: 14px;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid #ef4444;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
         }
 
         .message.active {
             display: block;
         }
 
-        .message.error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
+        /* ============================================
+           DASHBOARD STYLES
+           ============================================ */
 
-        .message.success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        /* Dashboard */
         .dashboard {
             display: none;
-            padding: 20px;
+            min-height: 100vh;
         }
 
         .dashboard.active {
             display: block;
         }
 
+        /* Header Styles */
         .dashboard-header {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%);
+            color: white;
+            padding: 20px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 15px;
         }
 
         .dashboard-title {
-            font-size: 2rem;
-            color: #1e3c72;
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
         }
 
         .dashboard-buttons {
             display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .logout-btn {
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: #d32f2f;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #1e3c72;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 1rem;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
         .tab-btn {
-            background: white;
+            padding: 10px 20px;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 10px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .tab-btn:hover {
+            background: white;
+            color: #208c84;
         }
 
         .tab-btn.active {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
+            background: white;
+            color: #208c84;
         }
 
+        .logout-btn {
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        /* Main Content Container */
+        .dashboard-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border-top: 4px solid #208c84;
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #208c84;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tabs .tab-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid transparent;
+        }
+
+        .tabs .tab-btn:hover {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .tabs .tab-btn.active {
+            background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%);
+            color: white;
+            border-color: #208c84;
+        }
+
+        /* Tab Content */
         .tab-content {
             display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .tab-content.active {
             display: block;
         }
 
+        /* Table Styles */
         .users-table {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            margin-top: 20px;
         }
 
-        table {
+        .users-table table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        thead {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
+        .users-table thead {
+            background: #f8f9fa;
+            border-top: 2px solid #208c84;
+            border-bottom: 2px solid #208c84;
         }
 
-        th, td {
-            padding: 1rem;
+        .users-table th {
+            padding: 16px;
             text-align: left;
-        }
-
-        tbody tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-
-        tbody tr:hover {
-            background: #f0f0f0;
-        }
-
-        .action-btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
             font-weight: 600;
-            margin-right: 0.5rem;
-            transition: all 0.3s;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .approve-btn {
-            background: #4caf50;
-            color: white;
+        .users-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            color: #555;
         }
 
-        .approve-btn:hover {
-            background: #45a049;
+        .users-table tbody tr:hover {
+            background: #f8f9fa;
         }
 
-        .reject-btn {
-            background: #f44336;
-            color: white;
-        }
-
-        .reject-btn:hover {
-            background: #d32f2f;
-        }
-
-        .revoke-btn {
-            background: #ff9800;
-            color: white;
-        }
-
-        .revoke-btn:hover {
-            background: #e68900;
-        }
-
-        .loading {
+        .users-table tr.loading {
             text-align: center;
-            padding: 3rem;
-            color: white;
-            font-size: 1.2rem;
+            color: #999;
         }
 
         .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid white;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            border-top-color: #208c84;
             animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
+            margin-right: 10px;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
         .empty-state {
             text-align: center;
-            padding: 3rem;
             color: #999;
+            padding: 40px;
+            font-style: italic;
         }
 
-        /* MODAL STYLES */
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .approve-btn {
+            background: #10b981;
+            color: white;
+        }
+
+        .approve-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .reject-btn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .reject-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .revoke-btn {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .revoke-btn:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           MODAL STYLES - CHANGE PASSWORD
+           ============================================ */
+
         .modal {
             display: none;
             position: fixed;
-            top: 0;
+            z-index: 1000;
             left: 0;
+            top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
         }
 
         .modal.show {
             display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
+            background-color: white;
+            padding: 0;
+            border-radius: 12px;
+            width: 100%;
             max-width: 500px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-height: 90vh;
-            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .modal-header {
+            background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%);
+            color: white;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 1rem;
+            border-radius: 12px 12px 0 0;
         }
 
         .modal-header h2 {
             margin: 0;
-            color: #1e3c72;
-            font-size: 1.5rem;
+            font-size: 20px;
         }
 
         .modal-close {
-            cursor: pointer;
-            font-size: 28px;
-            color: #999;
-            font-weight: bold;
             background: none;
             border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
             padding: 0;
-            line-height: 1;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
 
         .modal-close:hover {
-            color: #333;
-        }
-
-        .password-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .form-input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-input-group label {
-            color: #333;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .form-input-group input {
-            padding: 0.8rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-
-        .form-input-group input:focus {
-            outline: none;
-            border-color: #1e3c72;
-            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
-        }
-
-        .password-strength-container {
-            display: none;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .password-strength-bar {
-            display: flex;
-            gap: 0.25rem;
-        }
-
-        .strength-segment {
-            flex: 1;
-            height: 8px;
-            background: #ccc;
-            border-radius: 4px;
-        }
-
-        .password-requirements {
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        .requirement-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 0.25rem 0;
-        }
-
-        .requirement-item.met {
-            color: #4caf50;
-        }
-
-        .requirement-item.unmet {
-            color: #ff6384;
-        }
-
-        .password-match-message {
-            display: none;
-            font-size: 0.9rem;
-            padding: 0.5rem;
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        .password-match-message.match {
-            display: block;
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        .password-match-message.no-match {
-            display: block;
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
         }
 
         .modal-message {
-            padding: 1rem;
-            border-radius: 8px;
+            margin: 15px 20px 0;
+            padding: 12px;
+            border-radius: 6px;
             display: none;
-            font-weight: 600;
-        }
-
-        .modal-message.error {
-            background: #fee;
-            color: #c33;
-            border-left: 4px solid #c33;
-        }
-
-        .modal-message.success {
-            background: #efe;
-            color: #3c3;
-            border-left: 4px solid #3c3;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
         }
 
         .modal-message.show {
             display: block;
         }
 
+        .modal-message.error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid #ef4444;
+        }
+
+        .modal-message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .password-form {
+            padding: 20px;
+        }
+
+        .form-input-group {
+            margin-bottom: 18px;
+        }
+
+        .form-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input-group input:focus {
+            outline: none;
+            border-color: #208c84;
+            box-shadow: 0 0 0 3px rgba(32, 140, 132, 0.1);
+        }
+
+        /* Password Strength */
+        .password-strength-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .password-strength-bar {
+            display: flex;
+            gap: 8px;
+        }
+
+        .strength-segment {
+            flex: 1;
+            height: 6px;
+            background: #ccc;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .password-requirements {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .requirement-item {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            background: white;
+            color: #999;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .requirement-item.met {
+            color: #10b981;
+            background: #d1fae5;
+        }
+
+        .requirement-item.unmet {
+            color: #999;
+            background: white;
+        }
+
+        .password-match-message {
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .password-match-message.match {
+            display: block;
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 3px solid #10b981;
+        }
+
+        .password-match-message.no-match {
+            display: block;
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 3px solid #ef4444;
+        }
+
+        /* Modal Buttons */
         .modal-buttons {
             display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid #e8e8e8;
         }
 
-        .modal-buttons button {
+        .submit-btn {
             flex: 1;
-            padding: 0.8rem;
+            padding: 12px;
+            background: linear-gradient(135deg, #208c84 0%, #1a6b63 100%);
+            color: white;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
+            border-radius: 6px;
             font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .modal-buttons .submit-btn {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-        }
-
-        .modal-buttons .submit-btn:hover {
+        .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+            box-shadow: 0 5px 15px rgba(32, 140, 132, 0.3);
         }
 
-        .modal-buttons .cancel-btn {
-            background: #999;
-            color: white;
+        .cancel-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .modal-buttons .cancel-btn:hover {
-            background: #777;
+        .cancel-btn:hover {
+            background: #e0e0e0;
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
             .dashboard-header {
                 flex-direction: column;
-                gap: 1rem;
+                gap: 15px;
+                text-align: center;
             }
 
-            table {
-                font-size: 0.9rem;
+            .dashboard-buttons {
+                width: 100%;
+                justify-content: center;
             }
 
-            th, td {
-                padding: 0.7rem;
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
 
-            .action-btn {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.85rem;
+            .tabs {
+                flex-direction: column;
+            }
+
+            .users-table {
+                font-size: 12px;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 10px;
             }
 
             .modal-content {
-                max-width: 95%;
+                margin: 20px;
+                max-width: calc(100% - 40px);
+            }
+
+            .password-requirements {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
-<body>
+<body data-session-id="">
+
     <!-- Login Screen -->
     <div class="login-container" id="loginScreen">
         <div class="login-box">
@@ -566,11 +712,11 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" required>
+                    <input type="email" id="email" required placeholder="admin@example.com">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" required placeholder="Enter your password">
                 </div>
                 <button type="submit" class="btn">Login</button>
             </form>
@@ -582,9 +728,6 @@
         <div class="dashboard-header">
             <h1 class="dashboard-title">Admin Dashboard</h1>
             <div class="dashboard-buttons">
-                <button class="tab-btn" onclick="window.location.href = '/pfms.html'" style="background: #2196F3; color: white;">
-                    💰 PFMS
-                </button>
                 <button class="tab-btn" onclick="openChangePasswordModal()" style="background: #00d9ff; color: #000;">
                     🔐 Change Password
                 </button>
@@ -592,109 +735,111 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">⏳</div>
-                <div class="stat-value" id="statPending">0</div>
-                <div class="stat-label">Pending Approval</div>
+        <div class="dashboard-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-label">Pending Approval</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="statApproved">0</div>
+                    <div class="stat-label">Approved Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📧</div>
+                    <div class="stat-value" id="statContacts">0</div>
+                    <div class="stat-label">Contact Messages</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">✅</div>
-                <div class="stat-value" id="statApproved">0</div>
-                <div class="stat-label">Approved Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value" id="statTotal">0</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">📧</div>
-                <div class="stat-value" id="statContacts">0</div>
-                <div class="stat-label">Contact Messages</div>
-            </div>
-        </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('pending')">⏳ Pending Approval</button>
-            <button class="tab-btn" onclick="switchTab('approved')">✅ Approved Users</button>
-            <button class="tab-btn" onclick="switchTab('contacts')">📧 Contact Messages</button>
-        </div>
-
-        <!-- Pending Users Tab -->
-        <div id="pending" class="tab-content active">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Registered</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pendingUsersBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('pending')">⏳ Pending Approval</button>
+                <button class="tab-btn" onclick="switchTab('approved')">✅ Approved Users</button>
+                <button class="tab-btn" onclick="switchTab('contacts')">📧 Contact Messages</button>
             </div>
-        </div>
 
-        <!-- Approved Users Tab -->
-        <div id="approved" class="tab-content">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Approved At</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="approvedUsersBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Pending Users Tab -->
+            <div id="pending" class="tab-content active">
+                <div class="users-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Registered</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersBody">
+                            <tr class="loading">
+                                <td colspan="4">
+                                    <div class="spinner"></div>
+                                    Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Contacts Tab -->
-        <div id="contacts" class="tab-content">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Subject</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contactsBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Approved Users Tab -->
+            <div id="approved" class="tab-content">
+                <div class="users-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Approved At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvedUsersBody">
+                            <tr class="loading">
+                                <td colspan="4">
+                                    <div class="spinner"></div>
+                                    Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div id="contacts" class="tab-content">
+                <div class="users-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contactsBody">
+                            <tr class="loading">
+                                <td colspan="4">
+                                    <div class="spinner"></div>
+                                    Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ✅ CHANGE PASSWORD MODAL - COMPLETE -->
+    <!-- Change Password Modal -->
     <div id="changePasswordModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -755,20 +900,33 @@
         </div>
     </div>
 
+    <!-- Session Timeout Styles -->
+    <link rel="stylesheet" href="/css/sessionTimeout.css">
+    
+    <!-- Session Manager Script -->
+    <script src="/js/sessionManager.js"></script>
+
+    <!-- Complete Admin Dashboard Script with Login, Session & Password Management -->
     <script>
-        const API_URL = 'https://api.fairox.co.in/api';
+        const API_URL = '/api';
         let currentToken = null;
+        let sessionId = null;
         
         // ============================================
         // HELPER FUNCTIONS
         // ============================================
         
         function getAuthToken() {
-            return currentToken || localStorage.getItem('adminToken') || localStorage.getItem('token');
+            return currentToken || localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
+        }
+        
+        function getSessionId() {
+            return sessionId || localStorage.getItem('sessionId');
         }
         
         function apiCall(endpoint, options = {}) {
             const token = getAuthToken();
+            const session = getSessionId();
             
             const headers = {
                 'Content-Type': 'application/json',
@@ -777,6 +935,10 @@
             
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            if (session) {
+                headers['X-Session-ID'] = session;
             }
             
             return fetch(endpoint, {
@@ -809,14 +971,23 @@
                 if (data.success) {
                     console.log('✅ Login successful!');
                     console.log('   Token received:', data.token.substring(0, 20) + '...');
+                    console.log('   Session ID:', data.sessionId.substring(0, 20) + '...');
                     
                     currentToken = data.token;
+                    sessionId = data.sessionId;
+                    
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('sessionId', data.sessionId);
                     localStorage.setItem('adminToken', data.token);
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('adminId', data.admin.id);
                     localStorage.setItem('adminEmail', data.admin.email);
+                    localStorage.setItem('user', JSON.stringify(data.admin));
                     
-                    console.log('✅ Token stored');
+                    // Set session ID in data attribute
+                    document.documentElement.setAttribute('data-session-id', data.sessionId);
+                    
+                    console.log('✅ Token and session stored');
                     
                     showDashboard();
                 } else {
@@ -824,7 +995,7 @@
                 }
             } catch (error) {
                 console.error('❌ Login error:', error);
-                showMessage('loginMessage', 'Connection error', 'error');
+                showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
             }
         });
 
@@ -834,7 +1005,7 @@
         
         function showDashboard() {
             console.log('📊 Showing dashboard...');
-            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('dashboard').classList.add('active');
             loadStats();
             loadPendingUsers();
@@ -888,7 +1059,7 @@
                                 <td>${user.name}</td>
                                 <td>${user.email}</td>
                                 <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                                <td>
+                                <td class="action-buttons">
                                     <button class="action-btn approve-btn" onclick="approveUser(${user.id})">✓ Approve</button>
                                     <button class="action-btn reject-btn" onclick="rejectUser(${user.id})">✗ Reject</button>
                                 </td>
@@ -926,7 +1097,7 @@
                                 <td>${user.name}</td>
                                 <td>${user.email}</td>
                                 <td>${user.approved_at ? new Date(user.approved_at).toLocaleDateString() : 'N/A'}</td>
-                                <td>
+                                <td class="action-buttons">
                                     <button class="action-btn revoke-btn" onclick="revokeUser(${user.id})">⚠ Revoke Access</button>
                                 </td>
                             </tr>
@@ -996,6 +1167,7 @@
                     alert('User approved successfully!');
                 } else {
                     console.error('❌ Error:', data.message);
+                    alert(data.message || 'Failed to approve user');
                 }
             } catch (error) {
                 console.error('❌ Failed to approve user:', error);
@@ -1024,6 +1196,7 @@
                     alert('User rejected and deleted');
                 } else {
                     console.error('❌ Error:', data.message);
+                    alert(data.message || 'Failed to reject user');
                 }
             } catch (error) {
                 console.error('❌ Failed to reject user:', error);
@@ -1052,6 +1225,7 @@
                     alert('User access revoked');
                 } else {
                     console.error('❌ Error:', data.message);
+                    alert(data.message || 'Failed to revoke user');
                 }
             } catch (error) {
                 console.error('❌ Failed to revoke user:', error);
@@ -1066,7 +1240,7 @@
         function switchTab(tab) {
             console.log('📑 Switching tab to:', tab);
             
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
             event.target.classList.add('active');
@@ -1081,13 +1255,26 @@
         // LOGOUT
         // ============================================
         
-        function logout() {
+        async function logout() {
             console.log('🔐 Logging out...');
+            
+            try {
+                await apiCall(`${API_URL}/auth/logout`, {
+                    method: 'GET'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+
             currentToken = null;
+            sessionId = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('sessionId');
             localStorage.removeItem('adminToken');
             localStorage.removeItem('token');
             localStorage.removeItem('adminId');
             localStorage.removeItem('adminEmail');
+            localStorage.removeItem('user');
             location.reload();
         }
 
@@ -1326,14 +1513,19 @@
         // CHECK IF ALREADY LOGGED IN
         // ============================================
         
-        const savedToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
-        if (savedToken) {
-            console.log('✅ Found saved token, restoring session...');
+        const savedToken = localStorage.getItem('authToken') || localStorage.getItem('adminToken') || localStorage.getItem('token');
+        const savedSession = localStorage.getItem('sessionId');
+        
+        if (savedToken && savedSession) {
+            console.log('✅ Found saved token and session, restoring...');
             currentToken = savedToken;
+            sessionId = savedSession;
+            document.documentElement.setAttribute('data-session-id', savedSession);
             showDashboard();
         } else {
-            console.log('❌ No saved token found, showing login screen');
+            console.log('❌ No saved credentials found, showing login screen');
         }
     </script>
+
 </body>
 </html>
