@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Free Consultation - Fairox</title>
+    <style>
+        :root {
+            --color-primary: #2180C8;
+            --color-primary-dark: #1A6AA0;
+            --color-accent: #E67E22;
+            --color-text: #2C3E50;
+            --color-text-light: #7F8C8D;
+            --color-bg: #F8F9FA;
+            --color-surface: #FFFFFF;
+            --color-border: #E0E0E0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--color-text);
+            background-color: var(--color-bg);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1E3A5F 0%, #2C5AA0 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00D4FF;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-links a.active {
+            color: #00D4FF;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .contact-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            color: white;
+            border-radius: 12px;
+        }
+
+        .contact-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .form-container {
+            background: var(--color-surface);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(33, 128, 200, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #D4EDDA;
+            color: #155724;
+            border: 1px solid #C3E6CB;
+        }
+
+        .message.error {
+            background: #F8D7DA;
+            color: #721C24;
+            border: 1px solid #F5C6CB;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-submit:hover {
+            background: var(--color-primary-dark);
+        }
+
+        .btn-back {
+            background: #999;
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-back:hover {
+            background: #777;
+        }
+
+        footer {
+            background: #1E3A5F;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-buttons {
+                flex-direction: column;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="index.html" class="logo">🏢 Fairox</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="construction.html">Construction</a></li>
+                <li><a href="contact.html" class="active">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="contact-header">
+            <h1>📋 Get Free Consultation</h1>
+            <p>Fill out the form below and our team will contact you shortly!</p>
+        </div>
+
+        <div class="form-container">
+            <div id="contactMessage" class="message"></div>
+
+            <form id="contactForm" onsubmit="submitForm(event)">
+                <!-- Full Name -->
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                </div>
+
+                <!-- Email & Phone -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+91 98765 43210" required>
+                    </div>
+                </div>
+
+                <!-- City & Budget -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City/Location *</label>
+                        <input type="text" id="city" name="city" placeholder="e.g., Chennai, Bangalore" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="budget">Estimated Budget *</label>
+                        <select id="budget" name="budget" required>
+                            <option value="">Select budget range</option>
+                            <option value="below-25L">Below 25 Lakhs</option>
+                            <option value="25L-50L">25L - 50L</option>
+                            <option value="50L-1Cr">50L - 1 Crore</option>
+                            <option value="1Cr-2Cr">1Cr - 2 Crore</option>
+                            <option value="above-2Cr">Above 2 Crore</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Project Type -->
+                <div class="form-group">
+                    <label for="projectType">Project Type *</label>
+                    <select id="projectType" name="projectType" required>
+                        <option value="">Select project type</option>
+                        <option value="residential">Residential (Villa/House)</option>
+                        <option value="apartment">Apartment</option>
+                        <option value="commercial">Commercial Space</option>
+                        <option value="industrial">Industrial</option>
+                        <option value="renovation">Renovation/Remodeling</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Project Description -->
+                <div class="form-group">
+                    <label for="description">Project Description *</label>
+                    <textarea id="description" name="description" placeholder="Tell us about your project idea, requirements, timeline, etc." required></textarea>
+                </div>
+
+                <!-- Services Interested -->
+                <div class="form-group">
+                    <label>Services Interested In: *</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" name="services" value="design"> Architectural Design
+                        </label>
+                        <label>
+                            <input type="checkbox" name="services" value="approvals"> Approvals & Compliance
+                        </label>
+                        <label>
+                            <input type="checkbox" name="services" value="supervision"> Construction Supervision
+                        </label>
+                        <label>
+                            <input type="checkbox" name="services" value="handover"> Handover & Support
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="form-group">
+                    <label for="timeline">Project Timeline *</label>
+                    <select id="timeline" name="timeline" required>
+                        <option value="">Select timeline</option>
+                        <option value="immediate">Immediate (Next 1-2 months)</option>
+                        <option value="3-6months">3-6 Months</option>
+                        <option value="6-12months">6-12 Months</option>
+                        <option value="planning">Just Planning</option>
+                    </select>
+                </div>
+
+                <!-- Preferred Contact Method -->
+                <div class="form-group">
+                    <label for="contactMethod">Preferred Contact Method *</label>
+                    <select id="contactMethod" name="contactMethod" required>
+                        <option value="">Select preference</option>
+                        <option value="phone">Phone Call</option>
+                        <option value="email">Email</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="any">Any</option>
+                    </select>
+                </div>
+
+                <!-- Additional Comments -->
+                <div class="form-group">
+                    <label for="comments">Additional Comments (Optional)</label>
+                    <textarea id="comments" name="comments" placeholder="Any other information you'd like to share..."></textarea>
+                </div>
+
+                <!-- Form Buttons -->
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-submit">🚀 Submit & Get Free Consultation</button>
+                    <a href="javascript:history.back()" class="btn btn-back">← Go Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Fairox - Modern Business Solutions. All rights reserved.</p>
+        <p>Professional Construction & Architecture Services in Tamil Nadu</p>
+    </footer>
+
+    <script>
+        const API_URL = 'https://api.fairox.co.in/api';
+
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.getElementById('contactMessage');
+            messageDiv.textContent = message;
+            messageDiv.className = `message show ${type}`;
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                budget: document.getElementById('budget').value,
+                projectType: document.getElementById('projectType').value,
+                description: document.getElementById('description').value.trim(),
+                services: Array.from(document.querySelectorAll('input[name="services"]:checked')).map(cb => cb.value),
+                timeline: document.getElementById('timeline').value,
+                contactMethod: document.getElementById('contactMethod').value,
+                comments: document.getElementById('comments').value.trim()
+            };
+
+            // Validation
+            if (!formData.name) {
+                showMessage('❌ Please enter your name', 'error');
+                return;
+            }
+            if (!formData.email) {
+                showMessage('❌ Please enter your email', 'error');
+                return;
+            }
+            if (!formData.phone) {
+                showMessage('❌ Please enter your phone number', 'error');
+                return;
+            }
+            if (formData.services.length === 0) {
+                showMessage('❌ Please select at least one service', 'error');
+                return;
+            }
+
+            // Disable button
+            const submitBtn = document.querySelector('.btn-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Sending...';
+
+            try {
+                console.log('📤 Submitting consultation request...', formData);
+
+                const response = await fetch(`${API_URL}/contact/consultation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Consultation request submitted successfully');
+                    showMessage('✅ Thank you! We\'ll contact you shortly. Please check your email for confirmation.', 'success');
+                    document.getElementById('contactForm').reset();
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                } else {
+                    console.error('❌ Error:', data.message);
+                    showMessage(`❌ Error: ${data.message || 'Failed to submit request'}`, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 Submit & Get Free Consultation';
+                }
+            } catch (error) {
+                console.error('❌ Submission error:', error);
+                showMessage(`❌ Error: ${error.message}`, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Submit & Get Free Consultation';
+            }
+        }
+
+        // Phone number formatting
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 10) value = value.slice(0, 10);
+                    if (value.length > 5) {
+                        e.target.value = value.slice(0, 5) + ' ' + value.slice(5);
+                    } else {
+                        e.target.value = value;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

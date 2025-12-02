@@ -14,20 +14,6 @@
             }
         });
 
-       
-    // Auto-scroll to contact when page loads with hash
-    window.addEventListener('load', function() {
-        const hash = window.location.hash;
-        if (hash === '#contact') {
-            const contactSection = document.getElementById('contact');
-            if (contactSection) {
-                setTimeout(() => {
-                    contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 200);
-            }
-        }
-    });
-
 
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1306,32 +1292,6 @@
         }
 
     </script>
-    <script>
-    // Handle hash navigation - scroll to section
-    function scrollToSection() {
-        const hash = window.location.hash;
-        if (hash) {
-            const element = document.querySelector(hash);
-            if (element) {
-                setTimeout(() => {
-                    element.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                }, 100);
-            }
-        }
-    }
-
-    // Run on page load
-    window.addEventListener('load', scrollToSection);
-    
-    // Run when hash changes
-    window.addEventListener('hashchange', scrollToSection);
-    
-    // Also run immediately if hash exists
-    document.addEventListener('DOMContentLoaded', scrollToSection);
-</script>
 
 </body>
 </html>
