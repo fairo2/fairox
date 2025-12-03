@@ -568,22 +568,35 @@
         // HELPER FUNCTIONS
         // ============================================
         
-        // Get token from storage
+        // Get token from storage - UPDATED TO USE BOTH SOURCES
         function getAuthToken() {
-            return currentToken || localStorage.getItem('authToken') || localStorage.getItem('token');
+            const token = currentToken || 
+                         localStorage.getItem('authToken') || 
+                         localStorage.getItem('token') ||
+                         sessionStorage.getItem('token');
+            
+            console.log('🔑 getAuthToken() called:', token ? '✅ Token found' : '❌ Token missing');
+            return token;
         }
         
-        // Make authenticated API calls
+        // ✅ FIXED: Make authenticated API calls with CORRECT headers
         function apiCall(endpoint, options = {}) {
             const token = getAuthToken();
+            
+            console.log('📡 API Call:', endpoint);
+            console.log('   Token available:', !!token);
             
             const headers = {
                 'Content-Type': 'application/json',
                 ...options.headers
             };
             
+            // ✅ CRITICAL: Add authorization header if token exists
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
+                console.log('   Authorization header set: Bearer ' + token.substring(0, 20) + '...');
+            } else {
+                console.warn('   ⚠️  WARNING: No token for API call!');
             }
             
             return fetch(endpoint, {
@@ -643,9 +656,22 @@
         function showDashboard() {
             console.log('📊 Showing dashboard...');
             document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
             document.getElementById('dashboard').classList.add('active');
             loadStats();
             loadPendingUsers();
+        }
+        
+        // ============================================
+        // HIDE DASHBOARD - Show login
+        // ============================================
+        
+        function showLoginPage() {
+            console.log('📍 Showing login page...');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('loginMessage').textContent = '';
         }
 
         // ============================================
@@ -886,17 +912,57 @@
         }
 
         // ============================================
-        // LOGOUT
+        // ✅ LOGOUT - COMPLETELY FIXED
         // ============================================
         
         function logout() {
-            console.log('🔐 Logging out...');
+            console.log('\n' + '='.repeat(60));
+            console.log('🔐 LOGOUT INITIATED');
+            console.log('='.repeat(60));
+            
+            const token = getAuthToken();
+            
+            // ✅ Step 1: Clear everything immediately
+            console.log('\n[STEP 1] Clearing session data...');
             currentToken = null;
             localStorage.removeItem('authToken');
             localStorage.removeItem('token');
+            localStorage.removeItem('sessionId');
             localStorage.removeItem('adminId');
             localStorage.removeItem('adminEmail');
-            location.reload();
+            localStorage.removeItem('user');
+            localStorage.removeItem('isAdmin');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('sessionId');
+            console.log('✅ All storage cleared');
+            
+            // ✅ Step 2: Destroy SessionManager if exists
+            console.log('\n[STEP 2] Destroying SessionManager...');
+            if (window.sessionManager) {
+                window.sessionManager.destroy();
+                delete window.sessionManager;
+                console.log('✅ SessionManager destroyed');
+            }
+            
+            // ✅ Step 3: Show login page
+            console.log('\n[STEP 3] Displaying login page...');
+            showLoginPage();
+            console.log('✅ Login page displayed');
+            
+            // ✅ Step 4: Notify server (async, doesn't block)
+            if (token) {
+                console.log('\n[STEP 4] Notifying server...');
+                fetch(`${API_URL}/api/auth/logout`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }).catch(err => {
+                    console.warn('⚠️  Server logout notification failed:', err.message);
+                });
+            }
+            
+            console.log('\n✅ LOGOUT COMPLETE - User on login page\n');
         }
 
         // ============================================
@@ -938,8 +1004,7 @@
             
             // ✅ DEFAULT: Show login page
             console.log('📍 Displaying login form\n');
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('dashboard').classList.remove('active');
+            showLoginPage();
         });
 
         // ============================================
@@ -1124,40 +1189,11 @@
                 
                 if (data.success) {
                     console.log('✅ Password changed successfully');
-                    showPasswordSuccess('✅ Password changed successfully! You will be logged out automatically.');
+                    showPasswordSuccess('✅ Password changed successfully! You will be logged out.');
                     
                     setTimeout(() => {
                         closeChangePasswordModal();
-                        
-                        console.log('🔐 Starting logout...');
-                        
-                        fetch('/logout')
-                            .then(res => res.json())
-                            .then(logoutData => {
-                                console.log('✅ Logout response:', logoutData);
-                                console.log('🔄 Clearing storage and redirecting...');
-                                
-                                currentToken = null;
-                                localStorage.clear();
-                                sessionStorage.clear();
-                                
-                                setTimeout(() => {
-                                    console.log('🔄 Redirecting to login page...');
-                                    window.location.href = '/index.html';
-                                }, 500);
-                            })
-                            .catch(error => {
-                                console.error('❌ Logout error:', error);
-                                console.log('🔄 Still redirecting to login...');
-                                
-                                currentToken = null;
-                                localStorage.clear();
-                                sessionStorage.clear();
-                                
-                                setTimeout(() => {
-                                    window.location.href = '/index.html';
-                                }, 500);
-                            });
+                        logout();
                     }, 2000);
                 } else {
                     console.log('❌ Password change failed');
