@@ -1,20 +1,24 @@
 // ============================================
-// ✅ COMPLETE BUDGET.JS - PRODUCTION READY
+// ✅ COMPLETE BUDGET.JS - WITH CATEGORIES ENDPOINT
 // File: src/backend/routes/budget.js
 // Database: PostgreSQL
-// Fixed: Dec 1, 2025
+// Fixed: Dec 3, 2025 - Added /categories endpoint
 // ============================================
+
 
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 
+
 console.log('✅ Budget routes loaded');
+
 
 // ============================================
 // SET BUDGET LIMIT (POST /api/budget/limits)
 // ============================================
+
 
 router.post('/limits', authMiddleware, async (req, res) => {
     try {
@@ -76,9 +80,11 @@ router.post('/limits', authMiddleware, async (req, res) => {
 });
 
 
+
 // ============================================
 // GET BUDGET STATUS (GET /api/budget/status)
 // ============================================
+
 
 router.get('/status', authMiddleware, async (req, res) => {
     try {
@@ -180,9 +186,67 @@ router.get('/status', authMiddleware, async (req, res) => {
 });
 
 
+
+// ============================================
+// GET CATEGORIES FOR BUDGET DROPDOWN (GET /api/budget/categories)
+// ============================================
+
+router.get('/categories', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { mode } = req.query;
+
+        console.log('📤 GET /api/budget/categories - Fetching for user:', userId);
+
+        let query = `
+            SELECT DISTINCT 
+                c.id, 
+                c.name, 
+                c.mode,
+                c.user_id
+            FROM categories c
+            WHERE c.user_id = $1
+        `;
+
+        const params = [userId];
+        let paramIndex = 2;
+
+        // Optional filter by mode
+        if (mode) {
+            query += ` AND c.mode = $${paramIndex}`;
+            params.push(mode);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY c.name ASC`;
+
+        const result = await db.query(query, params);
+        const categories = result.rows;
+
+        console.log('✅ Found:', categories.length, 'categories');
+
+        res.json({
+            success: true,
+            categories: categories,
+            total: categories.length
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching budget categories:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching budget categories',
+            error: error.message
+        });
+    }
+});
+
+
+
 // ============================================
 // GET BUDGET BY ID (GET /api/budget/:id)
 // ============================================
+
 
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
@@ -261,9 +325,11 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 
+
 // ============================================
 // UPDATE BUDGET LIMIT (PUT /api/budget/:id)
 // ============================================
+
 
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
@@ -334,9 +400,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
 });
 
 
+
 // ============================================
 // DELETE BUDGET LIMIT (DELETE /api/budget/:id)
 // ============================================
+
 
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
@@ -382,9 +450,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 
+
 // ============================================
 // GET BUDGET ALERTS (GET /api/budget/alerts)
 // ============================================
+
 
 router.get('/alerts/all', authMiddleware, async (req, res) => {
     try {
@@ -468,6 +538,7 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 
 module.exports = router;
