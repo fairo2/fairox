@@ -62,9 +62,8 @@ console.log('✅ Auth routes loaded\n');
 
 
 // ============================================
-// RATE LIMITING
+// RATE LIMITING - SECURITY ENHANCED
 // ============================================
-
 
 // Strict rate limit for login attempts
 const loginLimiter = rateLimit({
@@ -74,18 +73,35 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req, res) => {
-    // Don't apply to test endpoint
     return req.path === '/test';
   }
 });
 
+// General API rate limit
+const apiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: 500,                  // 500 requests per hour
+  message: 'Too many requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req, res) => {
+    return req.path.includes('/admin/') || req.path === '/test';
+  }
+});
 
-// ✅ NEW: Admin limiter (very generous)
+// ✅ Admin rate limit with proper key generation
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000,       // 1 minute
-  max: 1000,                 // 1000 requests/min
-  keyGenerator: (req) => req.user ? `admin_${req.user.id}` : req.ip
+  max: 1000,                 // 1000 requests per minute
+  message: 'Admin rate limit exceeded',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    // Use authenticated user ID
+    return req.user && req.user.id ? `admin_${req.user.id}` : 'admin_unknown';
+  }
 });
+
 
 
 
