@@ -1141,21 +1141,37 @@
         }
 
         function showDashboard() {
-    // Hide other sections
-    document.getElementById('home').style.display = 'none';
-    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-    document.getElementById('dashboard').classList.add('active');
+    try {
+        // Show dashboard safely
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) {
+            dashboard.style.display = 'block';
+            dashboard.classList.add('active');
+        }
 
-    // Load API data with DELAYS (staggered)
-    loadStats();                              // Load immediately
-    setTimeout(() => loadPendingUsers(), 300);   // Wait 300ms, then load
-    setTimeout(() => loadApprovedUsers(), 600);  // Wait 600ms, then load
-    setTimeout(() => loadContacts(), 900);       // Wait 900ms, then load
+        // Update user info
+        const userNameEl = document.getElementById('userName');
+        const userEmailEl = document.getElementById('userEmail');
+        
+        if (userNameEl && currentUser) {
+            userNameEl.textContent = currentUser.name || 'Admin';
+        }
+        
+        if (userEmailEl && currentUser) {
+            userEmailEl.textContent = currentUser.email || '';
+        }
 
-    // Update user info
-    document.getElementById('userName').textContent = currentUser.name || 'User';
-    document.getElementById('userEmail').textContent = currentUser.email;
-    document.getElementById('authBtn').textContent = 'Dashboard';
+        // Load data with delays (staggered)
+        loadStats();                           // Immediate
+        setTimeout(() => loadPendingUsers(), 300);   // Wait 300ms
+        setTimeout(() => loadApprovedUsers(), 600);  // Wait 600ms
+        setTimeout(() => loadContacts(), 900);       // Wait 900ms
+
+        console.log('✅ Dashboard ready');
+        
+    } catch (error) {
+        console.error('❌ Dashboard error:', error);
+    }
 }
 
 
