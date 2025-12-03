@@ -4,100 +4,254 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fairox Admin Panel</title>
-    
-    <!-- ✅ SessionManager script FIRST (ADDED) -->
-    <script src="/js/sessionManager.js"></script>
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #0f3460;
+            --secondary: #e94560;
+            --accent: #00d9ff;
+            --accent-light: #00f7ff;
+            --dark: #1a1a2e;
+            --darker: #0f1419;
+            --light: #ffffff;
+            --text: #1a2332;
+            --text-light: #666;
+            --text-lighter: #999;
+            --success: #4cd964;
+            --warning: #ffcc00;
+            --error: #ff3b30;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             min-height: 100vh;
         }
 
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-40px) rotate(5deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+            75% { transform: translateY(-50px) rotate(0deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(60px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.4); }
+            50% { box-shadow: 0 0 40px rgba(0, 217, 255, 0.8); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Login Container */
         .login-container {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 247, 255, 0.15), transparent);
+            border-radius: 50%;
+            top: -100px;
+            right: -200px;
+            animation: float 15s ease-in-out infinite;
+        }
+
+        .login-container::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(233, 69, 96, 0.15), transparent);
+            border-radius: 50%;
+            bottom: -100px;
+            left: -150px;
+            animation: float 12s ease-in-out infinite reverse;
         }
 
         .login-box {
-            background: white;
-            border-radius: 20px;
-            padding: 3rem;
-            max-width: 450px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 3.5rem;
+            max-width: 500px;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 1;
+            animation: slideInDown 1s ease-out;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
         }
 
         .login-title {
-            font-size: 2rem;
-            color: #1e3c72;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00f7ff 0%, #e94560 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 0.5rem;
-            text-align: center;
+            font-weight: 800;
+            letter-spacing: -1px;
         }
 
         .login-subtitle {
             text-align: center;
-            color: #666;
-            margin-bottom: 2rem;
+            color: var(--text-light);
+            font-size: 1rem;
+            font-weight: 500;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.8rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-            font-weight: 600;
+            margin-bottom: 0.7rem;
+            color: var(--text);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 1rem;
+            padding: 1.1rem;
             border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 1rem;
-            transition: all 0.3s;
+            transition: all var(--transition-normal);
+            font-family: inherit;
+            background: #f9f9f9;
+        }
+
+        .form-group input::placeholder {
+            color: #ccc;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #1e3c72;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.15);
+            transform: translateY(-2px);
         }
 
         .btn {
             width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
+            padding: 1.1rem;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            color: var(--light);
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 1.1rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.3s;
+            transition: all var(--transition-normal);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left var(--transition-normal);
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
         }
 
         .message {
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
             display: none;
+            font-weight: 500;
+            border-left: 4px solid transparent;
+            animation: slideUp 0.4s ease-out;
         }
 
         .message.active {
@@ -105,21 +259,84 @@
         }
 
         .message.error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+            background: rgba(255, 59, 48, 0.15);
+            border-color: #ff3b30;
+            color: #ff3b30;
         }
 
         .message.success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+            background: rgba(76, 217, 100, 0.15);
+            border-color: #4cd964;
+            color: #4cd964;
+        }
+
+        /* Dashboard Navigation */
+        .dashboard-nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 1rem 0;
+            z-index: 1000;
+            box-shadow: 0 2px 30px rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+            display: none;
+        }
+
+        .dashboard-nav.active {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .nav-logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00f7ff 0%, #e94560 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-title {
+            color: var(--light);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 0.65rem 1.8rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all var(--transition-normal);
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--light);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
         }
 
         /* Dashboard */
         .dashboard {
             display: none;
-            padding: 20px;
+            padding: 120px 2rem 2rem;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #f8f9fa 0%, #eef2f5 100%);
         }
 
         .dashboard.active {
@@ -127,65 +344,114 @@
         }
 
         .dashboard-header {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
+            max-width: 1400px;
+            margin: 0 auto 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            background: white;
+            padding: 2.5rem;
+            border-radius: 25px;
+            box-shadow: var(--shadow-md);
+            animation: fadeInUp 0.8s ease-out;
         }
 
         .dashboard-title {
             font-size: 2rem;
-            color: #1e3c72;
+            color: var(--dark);
+            font-weight: 800;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.8rem 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            color: var(--light);
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            box-shadow: 0 6px 20px rgba(0, 217, 255, 0.2);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.35);
         }
 
         .logout-btn {
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.2);
         }
 
-        .logout-btn:hover {
-            background: #d32f2f;
-        }
-
+        /* Stats Grid */
         .stats-grid {
+            max-width: 1400px;
+            margin: 0 auto 3rem;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
         }
 
         .stat-card {
             background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 2.5rem;
+            border-radius: 25px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: all var(--transition-normal);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
         }
 
         .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.2);
         }
 
         .stat-value {
             font-size: 2.5rem;
-            font-weight: bold;
-            color: #1e3c72;
+            font-weight: 800;
+            color: var(--dark);
             margin-bottom: 0.5rem;
         }
 
         .stat-label {
-            color: #666;
-            font-size: 1rem;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .tabs {
@@ -197,33 +463,44 @@
 
         .tab-btn {
             background: white;
-            border: none;
+            border: 2px solid #e0e0e0;
             padding: 1rem 2rem;
-            border-radius: 10px;
+            border-radius: 15px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            font-weight: 700;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
 
         .tab-btn.active {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
             color: white;
+            border-color: transparent;
+            box-shadow: 0 6px 20px rgba(0, 217, 255, 0.3);
         }
 
+        /* Tab Content */
         .tab-content {
             display: none;
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        .users-table {
+        /* Table Styles */
+        .table-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 25px;
             overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
+            animation: fadeInUp 0.8s ease-out;
         }
 
         table {
@@ -232,128 +509,284 @@
         }
 
         thead {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
 
-        th, td {
-            padding: 1rem;
+        th {
+            padding: 1.5rem;
             text-align: left;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
 
-        tbody tr:nth-child(even) {
-            background: #f9f9f9;
+        td {
+            padding: 1.5rem;
+            border-bottom: 1px solid #f0f0f0;
+            color: var(--text);
         }
 
         tbody tr:hover {
-            background: #f0f0f0;
+            background: #f9f9f9;
         }
 
-        .action-btn {
-            padding: 0.5rem 1rem;
+        .action-cell {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .table-btn {
+            padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            margin-right: 0.5rem;
-            transition: all 0.3s;
+            font-size: 0.85rem;
+            transition: all var(--transition-normal);
         }
 
         .approve-btn {
-            background: #4caf50;
-            color: white;
+            background: rgba(76, 217, 100, 0.15);
+            color: #4cd964;
+            border: 1px solid rgba(76, 217, 100, 0.3);
         }
 
         .approve-btn:hover {
-            background: #45a049;
+            background: rgba(76, 217, 100, 0.25);
+            transform: translateY(-2px);
         }
 
         .reject-btn {
-            background: #f44336;
-            color: white;
+            background: rgba(255, 59, 48, 0.15);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.3);
         }
 
         .reject-btn:hover {
-            background: #d32f2f;
+            background: rgba(255, 59, 48, 0.25);
+            transform: translateY(-2px);
         }
 
         .revoke-btn {
-            background: #ff9800;
-            color: white;
+            background: rgba(255, 204, 0, 0.15);
+            color: #ffcc00;
+            border: 1px solid rgba(255, 204, 0, 0.3);
         }
 
         .revoke-btn:hover {
-            background: #e68900;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            background: rgba(255, 204, 0, 0.25);
+            transform: translateY(-2px);
         }
 
         .empty-state {
             text-align: center;
             padding: 3rem;
-            color: #999;
+            color: var(--text-light);
         }
 
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%);
+            padding: 0;
+            border-radius: 30px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+
+        .modal-header h2 {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all var(--transition-normal);
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 2.5rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 217, 255, 0.2);
+            border-top: 4px solid #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
+            .login-box {
+                padding: 2rem;
+            }
+
             .dashboard-header {
                 flex-direction: column;
                 gap: 1rem;
             }
 
-            table {
-                font-size: 0.9rem;
+            .dashboard-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .dashboard-actions .nav-btn {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                width: 100%;
             }
 
             th, td {
-                padding: 0.7rem;
+                padding: 1rem;
+                font-size: 0.9rem;
             }
 
-            .action-btn {
-                padding: 0.4rem 0.8rem;
+            .action-cell {
+                flex-direction: column;
+            }
+
+            .table-btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 1.5rem;
+            }
+
+            .login-title {
+                font-size: 2rem;
+            }
+
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+
+            th, td {
+                padding: 0.8rem;
                 font-size: 0.85rem;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Dashboard Navigation -->
+    <nav class="dashboard-nav" id="dashboardNav">
+        <div class="nav-logo">Fairo-x</div>
+        <div class="nav-title">Admin Panel</div>
+        <div class="nav-actions">
+            <button class="nav-btn" onclick="openChangePasswordModal()">🔐 Change Password</button>
+            <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
     <!-- Login Screen -->
     <div class="login-container" id="loginScreen">
         <div class="login-box">
-            <h1 class="login-title">🛡️ Admin Panel</h1>
-            <p class="login-subtitle">Fairox Management System</p>
-            
+            <div class="login-header">
+                <h1 class="login-title">Fairo-x Admin</h1>
+                <p class="login-subtitle">Manage your business with ease</p>
+            </div>
             <div id="loginMessage" class="message"></div>
-            
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" required>
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="Enter your email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" placeholder="Enter your password" required>
                 </div>
-                <button type="submit" class="btn">Login</button>
+                <button type="submit" class="btn">
+                    <span id="loginBtnText">Login</span>
+                </button>
             </form>
         </div>
     </div>
@@ -361,265 +794,168 @@
     <!-- Dashboard -->
     <div class="dashboard" id="dashboard">
         <div class="dashboard-header">
-            <h1 class="dashboard-title">Admin Dashboard</h1>
-            <div style="display: flex; gap: 10px;">
-                <button class="tab-btn" onclick="window.location.href = '/pfms.html'">
-                    💰 Personal Finance (PFMS)
-                </button>
-                <!-- Change Password Button -->
-                <button onclick="openChangePasswordModal()" style="background: #00d9ff; border: none; color: #000; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    🔐 Change Password
-                </button>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+            <div>
+                <h1 class="dashboard-title">Admin Dashboard</h1>
+            </div>
+            <div class="dashboard-actions">
+                <button class="action-btn" onclick="openChangePasswordModal()">🔐 Change Password</button>
+                <button class="action-btn logout-btn" onclick="logout()">Logout</button>
             </div>
         </div>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">⏳</div>
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
                 <div class="stat-value" id="statPending">0</div>
                 <div class="stat-label">Pending Approval</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="stat-value" id="statApproved">0</div>
                 <div class="stat-label">Approved Users</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">👥</div>
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-value" id="statTotal">0</div>
                 <div class="stat-label">Total Users</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">📧</div>
+                <div class="stat-icon"><i class="fas fa-envelope"></i></div>
                 <div class="stat-value" id="statContacts">0</div>
                 <div class="stat-label">Contact Messages</div>
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('pending')">⏳ Pending Approval</button>
-            <button class="tab-btn" onclick="switchTab('approved')">✅ Approved Users</button>
-            <button class="tab-btn" onclick="switchTab('contacts')">📧 Contact Messages</button>
-        </div>
-
-        <!-- Pending Users Tab -->
-        <div id="pending" class="tab-content active">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Registered</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pendingUsersBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('pending')">📋 Pending Approval</button>
+                <button class="tab-btn" onclick="switchTab('approved')">✓ Approved Users</button>
+                <button class="tab-btn" onclick="switchTab('contacts')">💬 Contact Messages</button>
             </div>
-        </div>
 
-        <!-- Approved Users Tab -->
-        <div id="approved" class="tab-content">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Approved At</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="approvedUsersBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Pending Users Tab -->
+            <div id="pending" class="tab-content active">
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Registered</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersBody">
+                            <tr>
+                                <td colspan="4" class="loading active">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Loading pending users...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Contacts Tab -->
-        <div id="contacts" class="tab-content">
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Subject</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contactsBody">
-                        <tr>
-                            <td colspan="4" class="loading">
-                                <div class="spinner"></div>
-                                Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Approved Users Tab -->
+            <div id="approved" class="tab-content">
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Approved At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvedUsersBody">
+                            <tr>
+                                <td colspan="4" class="loading active">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Loading approved users...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div id="contacts" class="tab-content">
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contactsBody">
+                            <tr>
+                                <td colspan="4" class="loading active">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Loading contact messages...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ✅ Change Password Modal (ADDED) -->
-    <div id="changePasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 2rem; border-radius: 15px; max-width: 500px; width: 90%;">
-            <h2 style="color: #1e3c72; margin-bottom: 1.5rem;">Change Password</h2>
-            
-            <div id="passwordErrorMsg" style="display: none; background: #fee; color: #c33; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #fcc;"></div>
-            <div id="passwordSuccessMsg" style="display: none; background: #efe; color: #3c3; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #cfc;"></div>
-            
-            <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
-                <div class="form-group">
-                    <label for="currentPassword">Current Password</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="newPassword">New Password</label>
-                    <input type="password" id="newPassword" onkeyup="checkPasswordStrength()" required>
-                </div>
-                
-                <div id="passwordStrengthContainer" style="display: none; margin-bottom: 1rem;">
-                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Password Strength: <span id="strengthText">-</span></div>
-                    <div style="display: flex; gap: 5px;">
-                        <div id="strength1" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
-                        <div id="strength2" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
-                        <div id="strength3" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
-                        <div id="strength4" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Change Password</h2>
+                <button class="modal-close" onclick="closeChangePasswordModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="passwordErrorMsg" class="message error"></div>
+                <div id="passwordSuccessMsg" class="message success"></div>
+                <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" required>
                     </div>
-                    <div style="font-size: 0.85rem; margin-top: 1rem; color: #666;">
-                        <div id="req1" style="color: #ff6384;">✕ At least 8 characters</div>
-                        <div id="req2" style="color: #ff6384;">✕ One uppercase letter</div>
-                        <div id="req3" style="color: #ff6384;">✕ One number</div>
-                        <div id="req4" style="color: #ff6384;">✕ One special character (!@#$%^&*)</div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" onkeyup="checkPasswordStrength()" required>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" onkeyup="checkPasswordMatch()" required>
-                    <div id="passwordMatchMsg" style="display: none; font-size: 0.9rem; margin-top: 0.5rem;"></div>
-                </div>
-                
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button type="submit" style="flex: 1; padding: 1rem; background: #1e3c72; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Change Password</button>
-                    <button type="button" onclick="closeChangePasswordModal()" style="flex: 1; padding: 1rem; background: #ccc; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancel</button>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" onkeyup="checkPasswordMatch()" required>
+                    </div>
+                    <button type="submit" class="btn">Change Password</button>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // ✅ FIXED: Correct API URL (changed from /api to just domain)
-        const API_URL = 'https://api.fairox.co.in';
+        const API_URL = 'https://api.fairox.co.in/api';
         let currentToken = null;
-        
-        // ============================================
-        // ✅ SECURITY: Verify session before loading admin features
-        // ============================================
-        
-        function verifyAdminSession() {
-          const token = localStorage.getItem('authToken') || sessionStorage.getItem('token');
-          const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
-          
-          console.log('🔐 Verifying admin session...');
-          console.log('   Token present:', !!token);
-          console.log('   SessionId present:', !!sessionId);
-          console.log('   SessionManager instance:', !!window.sessionManager);
-          
-          if (!token || !sessionId || !window.sessionManager) {
-            console.error('❌ No valid session found - Keeping on login page');
-            return false;
-          }
-          
-          console.log('✅ Session verified\n');
-          return true;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
         }
-        
-        // ✅ FIXED: Check if user has valid session in storage
-        function hasValidSession() {
-          const token = localStorage.getItem('authToken') || sessionStorage.getItem('token');
-          const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
-          
-          console.log('🔍 Checking for existing session...');
-          console.log('   Token:', token ? '✅ Found' : '❌ Missing');
-          console.log('   SessionId:', sessionId ? '✅ Found' : '❌ Missing');
-          
-          return !!(token && sessionId);
-        }
-        
-        // ============================================
-        // HELPER FUNCTIONS
-        // ============================================
-        
-        // Get token from storage - UPDATED TO USE BOTH SOURCES
-        function getAuthToken() {
-            const token = currentToken || 
-                         localStorage.getItem('authToken') || 
-                         localStorage.getItem('token') ||
-                         sessionStorage.getItem('token');
-            
-            console.log('🔑 getAuthToken() called:', token ? '✅ Token found' : '❌ Token missing');
-            return token;
-        }
-        
-        // ✅ FIXED: Make authenticated API calls with CORRECT headers
-        function apiCall(endpoint, options = {}) {
-            const token = getAuthToken();
-            
-            console.log('📡 API Call:', endpoint);
-            console.log('   Token available:', !!token);
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-            
-            // ✅ CRITICAL: Add authorization header if token exists
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-                console.log('   Authorization header set: Bearer ' + token.substring(0, 20) + '...');
-            } else {
-                console.warn('   ⚠️  WARNING: No token for API call!');
-            }
-            
-            return fetch(endpoint, {
-                ...options,
-                headers
-            });
-        }
-        
-        // ============================================
-        // ✅ LOGIN (UPDATED WITH SESSION MANAGER)
-        // ============================================
-        
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+
+        async function handleLogin(e) {
             e.preventDefault();
-            
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            console.log('\n🔐 Attempting admin login...');
-
             try {
-                // ✅ FIXED: Correct endpoint path
-                const response = await fetch(`${API_URL}/api/auth/admin-login`, {
+                const response = await fetch(`${API_URL}/auth/admin-login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -627,282 +963,197 @@
 
                 const data = await response.json();
 
-                if (data.success) {
-                    console.log('\n✅ Admin login successful');
-                    console.log('   Token:', data.token.substring(0, 20) + '...');
-                    console.log('   SessionId:', data.sessionId.substring(0, 20) + '...\n');
-                    
-                    // ✅ USE SessionManager.createFromLoginResponse
-                    SessionManager.createFromLoginResponse(data);
-                    
-                    // ✅ Wait for SessionManager to initialize, then show dashboard
-                    setTimeout(() => {
-                        console.log('🔄 Showing dashboard...\n');
-                        showDashboard();
-                    }, 500);
+                if (data.success && data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('token', data.token);
+                    currentToken = data.token;
+                    showDashboard();
                 } else {
-                    showMessage('loginMessage', data.message, 'error');
+                    showMessage('loginMessage', data.message || 'Login failed', 'error');
                 }
             } catch (error) {
-                console.error('❌ Login error:', error);
-                showMessage('loginMessage', 'Connection error', 'error');
+                showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
             }
-        });
+        }
 
-        // ============================================
-        // SHOW DASHBOARD
-        // ============================================
-        
+        function checkAuth() {
+            const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+            if (token) {
+                currentToken = token;
+                showDashboard();
+            }
+        }
+
         function showDashboard() {
-            console.log('📊 Showing dashboard...');
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
             document.getElementById('dashboard').classList.add('active');
+            document.getElementById('dashboardNav').classList.add('active');
             loadStats();
             loadPendingUsers();
         }
-        
-        // ============================================
-        // HIDE DASHBOARD - Show login
-        // ============================================
-        
+
         function showLoginPage() {
-            console.log('📍 Showing login page...');
-            document.getElementById('dashboard').style.display = 'none';
-            document.getElementById('dashboard').classList.remove('active');
             document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('loginMessage').textContent = '';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('dashboardNav').classList.remove('active');
         }
 
-        // ============================================
-        // LOAD STATISTICS
-        // ============================================
-        
         async function loadStats() {
-            console.log('📊 Loading stats...');
-            
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/stats`);
+                const response = await fetch(`${API_URL}/auth/admin/stats`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
                 const data = await response.json();
-
                 if (data.success) {
-                    console.log('✅ Stats loaded');
-                    document.getElementById('statPending').textContent = data.stats.pending;
-                    document.getElementById('statApproved').textContent = data.stats.approved;
-                    document.getElementById('statTotal').textContent = data.stats.total;
-                    document.getElementById('statContacts').textContent = data.stats.contacts;
-                } else {
-                    console.error('❌ Error:', data.message);
+                    document.getElementById('statPending').textContent = data.stats.pending || 0;
+                    document.getElementById('statApproved').textContent = data.stats.approved || 0;
+                    document.getElementById('statTotal').textContent = data.stats.total || 0;
+                    document.getElementById('statContacts').textContent = data.stats.contacts || 0;
                 }
             } catch (error) {
-                console.error('❌ Failed to load stats:', error);
+                console.error('Failed to load stats', error);
             }
         }
 
-        // ============================================
-        // LOAD PENDING USERS
-        // ============================================
-        
         async function loadPendingUsers() {
-            console.log('📋 Loading pending users...');
-            
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/pending-users`);
+                const response = await fetch(`${API_URL}/auth/admin/pending-users`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
                 const data = await response.json();
+                const tbody = document.getElementById('pendingUsersBody');
 
-                if (data.success) {
-                    console.log('✅ Pending users loaded:', data.users?.length || 0);
-                    const tbody = document.getElementById('pendingUsersBody');
-                    
-                    if (!data.users || data.users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No pending users</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.users.map(user => `
-                            <tr>
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
-                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                                <td>
-                                    <button class="action-btn approve-btn" onclick="approveUser(${user.id})">✓ Approve</button>
-                                    <button class="action-btn reject-btn" onclick="rejectUser(${user.id})">✗ Reject</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
+                if (data.success && data.users && data.users.length > 0) {
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                            <td>
+                                <div class="action-cell">
+                                    <button class="table-btn approve-btn" onclick="approveUser('${user.id}')">✓ Approve</button>
+                                    <button class="table-btn reject-btn" onclick="rejectUser('${user.id}')">✕ Reject</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
                 } else {
-                    console.error('❌ Error:', data.message);
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No pending users</td></tr>';
                 }
             } catch (error) {
-                console.error('❌ Failed to load pending users:', error);
+                console.error('Failed to load pending users', error);
             }
         }
 
-        // ============================================
-        // LOAD APPROVED USERS
-        // ============================================
-        
         async function loadApprovedUsers() {
-            console.log('✅ Loading approved users...');
-            
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/approved-users`);
+                const response = await fetch(`${API_URL}/auth/admin/approved-users`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
                 const data = await response.json();
+                const tbody = document.getElementById('approvedUsersBody');
 
-                if (data.success) {
-                    console.log('✅ Approved users loaded:', data.users?.length || 0);
-                    const tbody = document.getElementById('approvedUsersBody');
-                    
-                    if (!data.users || data.users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No approved users</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.users.map(user => `
-                            <tr>
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
-                                <td>${user.approved_at ? new Date(user.approved_at).toLocaleDateString() : 'N/A'}</td>
-                                <td>
-                                    <button class="action-btn revoke-btn" onclick="revokeUser(${user.id})">⚠ Revoke Access</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
+                if (data.success && data.users && data.users.length > 0) {
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${user.approvedAt ? new Date(user.approvedAt).toLocaleDateString() : 'N/A'}</td>
+                            <td>
+                                <button class="table-btn revoke-btn" onclick="revokeUser('${user.id}')">⚠ Revoke Access</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 } else {
-                    console.error('❌ Error:', data.message);
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No approved users</td></tr>';
                 }
             } catch (error) {
-                console.error('❌ Failed to load approved users:', error);
+                console.error('Failed to load approved users', error);
             }
         }
 
-        // ============================================
-        // LOAD CONTACTS
-        // ============================================
-        
         async function loadContacts() {
-            console.log('📞 Loading contacts...');
-            
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/contacts`);
+                const response = await fetch(`${API_URL}/auth/admin/contacts`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
                 const data = await response.json();
+                const tbody = document.getElementById('contactsBody');
 
-                if (data.success) {
-                    console.log('✅ Contacts loaded:', data.contacts?.length || 0);
-                    const tbody = document.getElementById('contactsBody');
-                    
-                    if (!data.contacts || data.contacts.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No contact messages</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.contacts.map(contact => `
-                            <tr>
-                                <td>${contact.name}</td>
-                                <td>${contact.email}</td>
-                                <td>${contact.subject}</td>
-                                <td>${new Date(contact.created_at).toLocaleDateString()}</td>
-                            </tr>
-                        `).join('');
-                    }
+                if (data.success && data.contacts && data.contacts.length > 0) {
+                    tbody.innerHTML = data.contacts.map(contact => `
+                        <tr>
+                            <td>${contact.name}</td>
+                            <td>${contact.email}</td>
+                            <td>${contact.subject}</td>
+                            <td>${new Date(contact.createdAt).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
                 } else {
-                    console.error('❌ Error:', data.message);
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No contact messages</td></tr>';
                 }
             } catch (error) {
-                console.error('❌ Failed to load contacts:', error);
+                console.error('Failed to load contacts', error);
             }
         }
 
-        // ============================================
-        // APPROVE USER
-        // ============================================
-        
         async function approveUser(userId) {
             if (!confirm('Approve this user?')) return;
-
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/approve-user/${userId}`, {
-                    method: 'POST'
+                const response = await fetch(`${API_URL}/auth/admin/approve-user/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    console.log('✅ User approved');
+                    alert('User approved successfully!');
                     loadStats();
                     loadPendingUsers();
-                    alert('User approved successfully!');
-                } else {
-                    console.error('❌ Error:', data.message);
                 }
             } catch (error) {
-                console.error('❌ Failed to approve user:', error);
                 alert('Failed to approve user');
             }
         }
 
-        // ============================================
-        // REJECT USER
-        // ============================================
-        
         async function rejectUser(userId) {
             if (!confirm('Reject and delete this user?')) return;
-
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/reject-user/${userId}`, {
-                    method: 'DELETE'
+                const response = await fetch(`${API_URL}/auth/admin/reject-user/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    console.log('✅ User rejected');
+                    alert('User rejected successfully!');
                     loadStats();
                     loadPendingUsers();
-                    alert('User rejected and deleted');
-                } else {
-                    console.error('❌ Error:', data.message);
                 }
             } catch (error) {
-                console.error('❌ Failed to reject user:', error);
                 alert('Failed to reject user');
             }
         }
 
-        // ============================================
-        // REVOKE USER
-        // ============================================
-        
         async function revokeUser(userId) {
             if (!confirm('Revoke access for this user?')) return;
-
             try {
-                const response = await apiCall(`${API_URL}/api/auth/admin/revoke-user/${userId}`, {
-                    method: 'POST'
+                const response = await fetch(`${API_URL}/auth/admin/revoke-user/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    console.log('✅ User access revoked');
+                    alert('User access revoked!');
                     loadStats();
                     loadApprovedUsers();
-                    alert('User access revoked');
-                } else {
-                    console.error('❌ Error:', data.message);
                 }
             } catch (error) {
-                console.error('❌ Failed to revoke user:', error);
-                alert('Failed to revoke user');
+                alert('Failed to revoke access');
             }
         }
 
-        // ============================================
-        // SWITCH TAB
-        // ============================================
-        
         function switchTab(tab) {
-            console.log('📑 Switching tab to:', tab);
-            
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
             event.target.classList.add('active');
             document.getElementById(tab).classList.add('active');
 
@@ -911,322 +1162,75 @@
             if (tab === 'pending') loadPendingUsers();
         }
 
-        // ============================================
-        // ✅ LOGOUT - COMPLETELY FIXED
-        // ============================================
-        
-        function logout() {
-            console.log('\n' + '='.repeat(60));
-            console.log('🔐 LOGOUT INITIATED');
-            console.log('='.repeat(60));
-            
-            const token = getAuthToken();
-            
-            // ✅ Step 1: Clear everything immediately
-            console.log('\n[STEP 1] Clearing session data...');
-            currentToken = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('sessionId');
-            localStorage.removeItem('adminId');
-            localStorage.removeItem('adminEmail');
-            localStorage.removeItem('user');
-            localStorage.removeItem('isAdmin');
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('sessionId');
-            console.log('✅ All storage cleared');
-            
-            // ✅ Step 2: Destroy SessionManager if exists
-            console.log('\n[STEP 2] Destroying SessionManager...');
-            if (window.sessionManager) {
-                window.sessionManager.destroy();
-                delete window.sessionManager;
-                console.log('✅ SessionManager destroyed');
-            }
-            
-            // ✅ Step 3: Show login page
-            console.log('\n[STEP 3] Displaying login page...');
-            showLoginPage();
-            console.log('✅ Login page displayed');
-            
-            // ✅ Step 4: Notify server (async, doesn't block)
-            if (token) {
-                console.log('\n[STEP 4] Notifying server...');
-                fetch(`${API_URL}/api/auth/logout`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }).catch(err => {
-                    console.warn('⚠️  Server logout notification failed:', err.message);
-                });
-            }
-            
-            console.log('\n✅ LOGOUT COMPLETE - User on login page\n');
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('active');
         }
 
-        // ============================================
-        // SHOW MESSAGE
-        // ============================================
-        
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+        }
+
+        async function submitChangePassword(e) {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                showMessage('passwordErrorMsg', 'New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('passwordSuccessMsg', 'Password changed successfully!', 'success');
+                    setTimeout(() => {
+                        closeChangePasswordModal();
+                        logout();
+                    }, 2000);
+                } else {
+                    showMessage('passwordErrorMsg', data.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showMessage('passwordErrorMsg', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
+            currentToken = null;
+            showLoginPage();
+            document.getElementById('loginForm').reset();
+        }
+
         function showMessage(id, message, type) {
             const el = document.getElementById(id);
             el.textContent = message;
             el.className = `message ${type} active`;
         }
 
-        // ============================================
-        // ✅ PAGE LOAD - INIT LOGIC COMPLETELY REWRITTEN
-        // ============================================
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('\n' + '='.repeat(60));
-            console.log('📄 Admin Page Loaded');
-            console.log('='.repeat(60) + '\n');
-            
-            // ✅ CHECK IF USER HAS VALID SESSION
-            if (hasValidSession()) {
-                console.log('✅ User has valid session in storage\n');
-                
-                // ✅ VERIFY WITH SESSION MANAGER
-                if (verifyAdminSession()) {
-                    console.log('✅ SessionManager verified - showing dashboard\n');
-                    showDashboard();
-                    return;
-                } else {
-                    console.log('⚠️  Session verification failed - showing login\n');
-                    // Fall through to show login
-                }
-            } else {
-                console.log('❌ No valid session found - showing login page\n');
-                // Fall through to show login
-            }
-            
-            // ✅ DEFAULT: Show login page
-            console.log('📍 Displaying login form\n');
-            showLoginPage();
-        });
-
-        // ============================================
-        // CHANGE PASSWORD MODAL - ALL FUNCTIONS
-        // ============================================
-
-        function openChangePasswordModal() {
-            document.getElementById('changePasswordModal').style.display = 'flex';
-            document.getElementById('currentPassword').focus();
-            clearPasswordForm();
-        }
-
-        function closeChangePasswordModal() {
-            document.getElementById('changePasswordModal').style.display = 'none';
-            clearPasswordForm();
-        }
-
-        function clearPasswordForm() {
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('passwordErrorMsg').style.display = 'none';
-            document.getElementById('passwordSuccessMsg').style.display = 'none';
-            document.getElementById('passwordMatchMsg').style.display = 'none';
-            document.getElementById('passwordStrengthContainer').style.display = 'none';
-            resetPasswordRequirements();
-        }
-
         function checkPasswordStrength() {
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (password) {
-                document.getElementById('passwordStrengthContainer').style.display = 'block';
-            }
-            
-            let strength = 0;
-            const req1 = password.length >= 8;
-            const req2 = /[A-Z]/.test(password);
-            const req3 = /[0-9]/.test(password);
-            const req4 = /[!@#$%^&*]/.test(password);
-            
-            updateRequirement('req1', req1);
-            updateRequirement('req2', req2);
-            updateRequirement('req3', req3);
-            updateRequirement('req4', req4);
-            
-            if (req1) strength++;
-            if (req2) strength++;
-            if (req3) strength++;
-            if (req4) strength++;
-            
-            updateStrengthBars(strength);
-            
-            if (confirmPassword) {
-                checkPasswordMatch();
-            }
+            // Optional: Add password strength indicator
         }
 
         function checkPasswordMatch() {
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const matchMsg = document.getElementById('passwordMatchMsg');
-            
-            if (confirmPassword) {
-                if (password === confirmPassword) {
-                    matchMsg.textContent = '✓ Passwords match';
-                    matchMsg.style.color = '#66bb6a';
-                    matchMsg.style.display = 'block';
-                } else {
-                    matchMsg.textContent = '✕ Passwords do not match';
-                    matchMsg.style.color = '#ff6384';
-                    matchMsg.style.display = 'block';
-                }
-            }
-        }
-
-        function updateRequirement(id, met) {
-            const el = document.getElementById(id);
-            if (met) {
-                el.style.color = '#66bb6a';
-                el.textContent = el.textContent.replace('✕', '✓');
-            } else {
-                el.style.color = '#ff6384';
-                el.textContent = el.textContent.replace('✓', '✕');
-            }
-        }
-
-        function updateStrengthBars(strength) {
-            let colors = ['#666', '#666', '#666', '#666'];
-            let strengthTexts = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-            
-            if (strength >= 1) colors = ['#ff6384', '#666', '#666', '#666'];
-            if (strength >= 2) colors = ['#ff6384', '#ffce56', '#666', '#666'];
-            if (strength >= 3) colors = ['#ff6384', '#ffce56', '#66bb6a', '#666'];
-            if (strength >= 4) colors = ['#00d9ff', '#00d9ff', '#00d9ff', '#00d9ff'];
-            
-            for (let i = 1; i <= 4; i++) {
-                document.getElementById(`strength${i}`).style.background = colors[i - 1];
-            }
-            
-            document.getElementById('strengthText').textContent = strengthTexts[strength];
-        }
-
-        function resetPasswordRequirements() {
-            updateRequirement('req1', false);
-            updateRequirement('req2', false);
-            updateRequirement('req3', false);
-            updateRequirement('req4', false);
-        }
-
-        // ============================================
-        // CHANGE PASSWORD - SUBMIT
-        // ============================================
-
-        async function submitChangePassword(event) {
-            event.preventDefault();
-            
-            const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            document.getElementById('passwordErrorMsg').style.display = 'none';
-            document.getElementById('passwordSuccessMsg').style.display = 'none';
-            
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showPasswordError('All fields are required');
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showPasswordError('New passwords do not match');
-                return;
-            }
-            
-            if (newPassword.length < 8) {
-                showPasswordError('Password must be at least 8 characters');
-                return;
-            }
-            
-            if (!/[A-Z]/.test(newPassword)) {
-                showPasswordError('Password must contain uppercase letter');
-                return;
-            }
-            
-            if (!/[0-9]/.test(newPassword)) {
-                showPasswordError('Password must contain number');
-                return;
-            }
-            
-            if (!/[!@#$%^&*]/.test(newPassword)) {
-                showPasswordError('Password must contain special character (!@#$%^&*)');
-                return;
-            }
-            
-            try {
-                console.log('🔐 Sending change password request...');
-                
-                const token = getAuthToken();
-                
-                if (!token) {
-                    console.error('❌ Token not found!');
-                    showPasswordError('Session expired. Please log in again.');
-                    return;
-                }
-                
-                console.log('✅ Using token:', token.substring(0, 50) + '...');
-                
-                // ✅ FIXED: Use correct API endpoint
-                const response = await apiCall(`${API_URL}/api/auth/change-password`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        currentPassword: currentPassword,
-                        newPassword: newPassword
-                    })
-                });
-                
-                console.log('📡 Response status:', response.status);
-                
-                const data = await response.json();
-                console.log('📊 Response data:', data);
-                
-                if (data.success) {
-                    console.log('✅ Password changed successfully');
-                    showPasswordSuccess('✅ Password changed successfully! You will be logged out.');
-                    
-                    setTimeout(() => {
-                        closeChangePasswordModal();
-                        logout();
-                    }, 2000);
-                } else {
-                    console.log('❌ Password change failed');
-                    showPasswordError(data.message || 'Failed to change password');
-                }
-                
-            } catch (error) {
-                console.error('❌ Error changing password:', error);
-                showPasswordError('Error changing password: ' + error.message);
+            if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+                console.log('Passwords do not match');
             }
         }
-
-        function showPasswordError(message) {
-            const errorEl = document.getElementById('passwordErrorMsg');
-            errorEl.textContent = '❌ ' + message;
-            errorEl.style.display = 'block';
-        }
-
-        function showPasswordSuccess(message) {
-            const successEl = document.getElementById('passwordSuccessMsg');
-            successEl.textContent = '✅ ' + message;
-            successEl.style.display = 'block';
-        }
-
-        // Close modal when clicking outside
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('changePasswordModal');
-            if (event.target === modal) {
-                closeChangePasswordModal();
-            }
-        });
-
     </script>
-
 </body>
 </html>
