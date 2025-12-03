@@ -1661,26 +1661,60 @@ setTimeout(() => {
     loadBudgetStatus();
 }, 600);
 
-function loadBudgetCategories() {
+async function loadBudgetCategories() {
     try {
-        const budgetCategorySelect = document.getElementById('budgetCategory');
-        if (!budgetCategorySelect) return;
+        console.log('📥 Fetching budget categories from backend...');
         
-        budgetCategorySelect.innerHTML = '<option value="">Select Category</option>';
-        
-        if (allCategories && allCategories.length > 0) {
-            allCategories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                budgetCategorySelect.appendChild(option);
-            });
-            console.log('✅ Budget categories loaded:', allCategories.length);
+        const token = getAuthToken();
+        if (!token) {
+            console.error('❌ No auth token found');
+            return;
         }
+
+        const response = await fetch(`${BUDGET_API_URL}/categories`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Failed to fetch categories:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+        
+        if (!data.success || !data.categories) {
+            console.warn('⚠️ No categories returned from API');
+            return;
+        }
+
+        console.log('✅ Categories fetched:', data.categories.length);
+
+        const budgetCategorySelect = document.getElementById('budgetCategory');
+        if (!budgetCategorySelect) {
+            console.error('❌ budgetCategory select element not found');
+            return;
+        }
+
+        budgetCategorySelect.innerHTML = '<option value="">Select Category</option>';
+
+        data.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = `${category.name} (${category.mode})`;
+            budgetCategorySelect.appendChild(option);
+        });
+
+        console.log('✅ Budget categories dropdown populated:', data.categories.length);
+
     } catch (error) {
         console.error('❌ Error loading budget categories:', error);
+        showMessage('Error loading categories', 'error');
     }
 }
+
 
 // ============================================
 // EXPORT TO EXCEL
