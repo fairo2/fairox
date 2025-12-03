@@ -1106,31 +1106,50 @@
         }
 
         async function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
 
-            try {
-                const response = await fetch(`${API_URL}/auth/admin-login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
+  try {
+    const response = await fetch(APIURL + '/auth/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
 
-                const data = await response.json();
+    const data = await response.json();
+    if (data.success) {
+      // ✅ Store token
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('token', data.token);
+      currentToken = data.token;
+      
+      // ✅ HIDE login page FIRST
+      const loginScreen = document.getElementById('loginScreen');
+      if (loginScreen) {
+        loginScreen.style.display = 'none';
+      }
+      
+      // ✅ SHOW dashboard navigation
+      const dashboardNav = document.getElementById('dashboardNav');
+      if (dashboardNav) {
+        dashboardNav.classList.add('active');
+      }
+      
+      // ✅ SHOW dashboard
+      showDashboard();
+      
+      // ✅ Clear login form
+      document.getElementById('loginForm').reset();
+      
+    } else {
+      showMessage('loginMessage', data.message, 'error');
+    }
+  } catch (error) {
+    showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
+  }
+}
 
-                if (data.success && data.token) {
-                    localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('token', data.token);
-                    currentToken = data.token;
-                    showDashboard();
-                } else {
-                    showMessage('loginMessage', data.message || 'Login failed', 'error');
-                }
-            } catch (error) {
-                showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
-            }
-        }
 
         function checkAuth() {
             const token = localStorage.getItem('authToken') || localStorage.getItem('token');
