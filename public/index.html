@@ -4,828 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fairox - Modern Business Solutions</title>
-    <!-- 🎬 ADD THIS SCRIPT FIRST -->
-    <script>
-        window.addEventListener('load', function() {
-            const splashShown = sessionStorage.getItem('splashShown');
-            if (!splashShown) {
-                sessionStorage.setItem('splashShown', 'true');
-                window.location.href = '/splash.html';
-            }
-        });
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* CSS Variables */
-        :root {
-            --primary: #0f3460;
-            --secondary: #e94560;
-            --accent: #00d9ff;
-            --dark: #1a1a2e;
-            --light: #ffffff;
-            --text: #333;
-            --text-light: #666;
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Reset & Base Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(26, 26, 46, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 0;
-            z-index: 1000;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s;
-        }
-
-        nav.scrolled {
-            background: rgba(26, 26, 46, 0.98);
-            box-shadow: 0 2px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--light);
-            text-decoration: none;
-            background: linear-gradient(45deg, var(--accent), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            cursor: pointer;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: var(--light);
-            text-decoration: none;
-            transition: all 0.3s;
-            position: relative;
-            padding: 0.5rem 0;
-            cursor: pointer;
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--accent), var(--secondary));
-            transition: width 0.3s;
-        }
-
-        .nav-links a:hover::after,
-        .nav-links a.active::after {
-            width: 100%;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .nav-btn {
-            padding: 0.6rem 1.5rem;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: none;
-            font-size: 0.95rem;
-        }
-
-        .nav-btn.login-btn {
-            background: var(--glass-bg);
-            color: var(--light);
-            border: 1px solid var(--glass-border);
-        }
-
-        .nav-btn.login-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .nav-btn.admin-btn {
-            background: linear-gradient(45deg, #e94560, #c13b52);
-            color: var(--light);
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-        }
-
-        .nav-btn.admin-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-        }
-
-        .menu-toggle {
-            display: none;
-            flex-direction: column;
-            cursor: pointer;
-            gap: 5px;
-        }
-
-        .menu-toggle span {
-            width: 25px;
-            height: 3px;
-            background: var(--light);
-            transition: all 0.3s;
-        }
-
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            position: relative;
-            overflow: hidden;
-            padding: 100px 2rem 2rem;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(0, 217, 255, 0.3), transparent);
-            border-radius: 50%;
-            top: -100px;
-            right: -100px;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(233, 69, 96, 0.3), transparent);
-            border-radius: 50%;
-            bottom: -50px;
-            left: -50px;
-            animation: float 8s ease-in-out infinite reverse;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-30px) rotate(10deg); }
-        }
-
-        .hero-content {
-            max-width: 1200px;
-            text-align: center;
-            z-index: 1;
-            animation: fadeInUp 1s ease;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            color: var(--light);
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .hero p {
-            font-size: 1.3rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 2rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            background: linear-gradient(45deg, var(--accent), var(--secondary));
-            color: var(--light);
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--light);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .scroll-indicator {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            animation: bounce 2s infinite;
-            font-size: 2rem;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
-            40% { transform: translateX(-50%) translateY(-20px); }
-            60% { transform: translateX(-50%) translateY(-10px); }
-        }
-
-        /* Section Styles */
-        .section {
-            display: none;
-            padding: 5rem 2rem;
-            min-height: 100vh;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        /* Features Section */
-        .features {
-            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .section-subtitle {
-            text-align: center;
-            color: var(--text-light);
-            margin-bottom: 3rem;
-            font-size: 1.1rem;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 20px;
-            text-align: center;
-            transition: all 0.4s;
-            border: 1px solid #e0e0e0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.1), transparent);
-            transition: left 0.5s;
-        }
-
-        .feature-card:hover::before {
-            left: 100%;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            border-color: var(--accent);
-        }
-
-        .feature-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1.5rem;
-            background: linear-gradient(135deg, var(--accent), var(--secondary));
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            color: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .feature-card p {
-            color: var(--text-light);
-            line-height: 1.8;
-        }
-
-        /* Contact Section */
-        .contact {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .contact-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .contact .section-title,
-        .contact .section-subtitle {
-            color: var(--light);
-        }
-
-        .contact-form {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            padding: 3rem;
-            border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--light);
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-            color: #999;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 150px;
-        }
-
-        .message {
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            display: none;
-        }
-
-        .message.active {
-            display: block;
-        }
-
-        .message.success {
-            background: rgba(76, 217, 100, 0.2);
-            border: 1px solid #4cd964;
-            color: white;
-        }
-
-        .message.error {
-            background: rgba(255, 59, 48, 0.2);
-            border: 1px solid #ff3b30;
-            color: white;
-        }
-
-        .message.pending {
-            background: rgba(255, 204, 0, 0.2);
-            border: 1px solid #ffcc00;
-            color: white;
-        }
-
-        /* Auth Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            backdrop-filter: blur(5px);
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 3rem;
-            border-radius: 20px;
-            max-width: 450px;
-            width: 90%;
-            position: relative;
-            animation: slideUp 0.3s;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 2rem;
-            cursor: pointer;
-            color: var(--text-light);
-            background: none;
-            border: none;
-            transition: color 0.3s;
-        }
-
-        .modal-close:hover {
-            color: var(--dark);
-        }
-
-        .modal h2 {
-            margin-bottom: 2rem;
-            color: var(--dark);
-            text-align: center;
-        }
-
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 2rem;
-            gap: 1rem;
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 0.8rem;
-            background: #f5f5f5;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .auth-tab.active {
-            background: linear-gradient(45deg, var(--accent), var(--secondary));
-            color: white;
-        }
-
-        .auth-form {
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
-        }
-
-        .modal-content .form-group label {
-            color: var(--dark);
-            font-weight: 600;
-        }
-
-        .modal-content .form-group input {
-            background: white;
-            border: 2px solid #e0e0e0;
-        }
-
-        .modal-content .form-group input:focus {
-            border-color: var(--accent);
-        }
-
-        .form-link {
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .form-link a {
-            color: var(--secondary);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        /* Dashboard */
-        .dashboard {
-            display: none;
-            padding: 100px 2rem 2rem;
-            min-height: 100vh;
-            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-        }
-
-        .dashboard.active {
-            display: block;
-        }
-
-        .dashboard-header {
-            max-width: 1200px;
-            margin: 0 auto 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .dashboard-stats {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .stat-card .feature-icon {
-            margin-bottom: 1rem;
-        }
-
-        .stat-card h3 {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-card p {
-            color: var(--text-light);
-            margin-top: 0.5rem;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--dark);
-            color: var(--light);
-            padding: 3rem 2rem 1rem;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: var(--light);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        .footer-links a:hover {
-            color: var(--accent);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .social-links a {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--light);
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .social-links a:hover {
-            background: var(--accent);
-            transform: translateY(-3px);
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 1rem;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .menu-toggle {
-                display: flex;
-            }
-
-            .nav-links {
-                position: fixed;
-                top: 70px;
-                left: -100%;
-                flex-direction: column;
-                background: rgba(26, 26, 46, 0.98);
-                width: 100%;
-                padding: 2rem;
-                transition: left 0.3s;
-                gap: 1rem;
-            }
-
-            .nav-links.active {
-                left: 0;
-            }
-
-            .nav-buttons {
-                flex-direction: column;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .hero p {
-                font-size: 1.1rem;
-            }
-
-            .section-title {
-                font-size: 2rem;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .contact-form {
-                padding: 2rem;
-            }
-
-            .modal-content {
-                padding: 2rem;
-            }
-
-            .dashboard-header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .footer-links {
-                flex-direction: column;
-                gap: 1rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Navigation -->
-    <nav id="navbar">
+    <nav>
         <div class="nav-container">
-            <a class="logo" onclick="showPage('home')">Fairo-x</a>
-            <ul class="nav-links" id="navLinks">
-                <li><a onclick="showPage('home')" class="active">Home</a></li>
-                <li><a onclick="showPage('features')">Features</a></li>
-                <li><a href="construction.html"> Construction Projects</a></li>
-                <li><a onclick="showPage('contact')">Contact</a></li>
+            <a href="/" class="logo">Fairox</a>
+            <ul class="nav-links">
+                <li><a href="#hero" class="nav-link">Home</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+                <li><a href="#" class="nav-link auth-trigger">Login</a></li>
             </ul>
-            <div class="nav-buttons">
-                <button class="nav-btn login-btn" id="authBtn" onclick="openModal()">Login</button>
-                <a href="https://fairox.co.in/admin.html" class="nav-btn admin-btn">🛡️ Admin</a>
-            </div>
-            <div class="menu-toggle" onclick="toggleMenu()">
+            <div class="menu-toggle">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -834,54 +26,58 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero" id="home">
-        <div class="hero-content">
-            <h1>Welcome to Fairo-x</h1>
-            <p>Your trusted partner for innovative solutions and exceptional service. Transform your business with cutting-edge technology and expert support.</p>
-            <div class="cta-buttons">
-                <button class="btn" onclick="showPage('features')">Explore Features</button>
-                <button class="btn btn-outline" onclick="showPage('contact')">Get in Touch</button>
-            </div>
-        </div>
+    <section class="hero" id="hero">
         <div class="scroll-indicator">
-            <i class="fas fa-chevron-down"></i>
+            <div>↓</div>
+        </div>
+        <div class="hero-content">
+            <h1>Your trusted partner for innovative solutions and exceptional service</h1>
+            <p>Transform your business with cutting-edge technology and expert support</p>
+            <button class="btn auth-trigger">Get Started</button>
+            <button class="btn btn-outline">Learn More</button>
         </div>
     </section>
 
     <!-- Features Section -->
-    <section class="section features" id="features">
+    <section class="features" id="features">
         <div class="container">
-            <h2 class="section-title">Our Features & Facilities</h2>
-            <p class="section-subtitle">Discover what makes us the perfect choice for your business</p>
+            <h2 class="section-title">Discover what makes us the perfect choice for your business</h2>
+            <p class="section-subtitle">Choose from our comprehensive range of solutions designed for growth</p>
+            
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-rocket"></i></div>
-                    <h3>Fast Performance</h3>
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning-fast Delivery</h3>
                     <p>Lightning-fast delivery and optimized solutions for your business needs with industry-leading technology.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
-                    <h3>Secure & Reliable</h3>
+                    <div class="feature-icon">🔒</div>
+                    <h3>Enterprise Security</h3>
                     <p>Enterprise-grade security with 99.9% uptime guarantee. Your data is protected with advanced encryption.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
-                    <h3>Innovation</h3>
+                    <div class="feature-icon">🎯</div>
+                    <h3>Creative Solutions</h3>
                     <p>Cutting-edge technology and creative solutions for modern challenges that drive your business forward.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-globe"></i></div>
-                    <h3>Global Reach</h3>
+                    <div class="feature-icon">🌍</div>
+                    <h3>Global Support</h3>
                     <p>Serving clients worldwide with 24/7 support and localized services in multiple languages.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
-                    <h3>Analytics & Insights</h3>
+                    <div class="feature-icon">📊</div>
+                    <h3>Advanced Analytics</h3>
                     <p>Comprehensive analytics to drive data-informed decisions with real-time reporting and visualization.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-handshake"></i></div>
-                    <h3>Dedicated Support</h3>
+                    <div class="feature-icon">👥</div>
+                    <h3>Expert Team</h3>
                     <p>Expert team ready to assist you at every step of your journey with personalized guidance.</p>
                 </div>
             </div>
@@ -889,63 +85,115 @@
     </section>
 
     <!-- Contact Section -->
-    <section class="section contact" id="contact">
+    <section class="contact" id="contact">
         <div class="contact-content">
             <h2 class="section-title">Get in Touch</h2>
             <p class="section-subtitle">We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
-            <div class="contact-form">
-                <div id="contactMessage" class="message"></div>
-                <form id="contactForm">
-                    <div class="form-group">
-                        <label for="contactName">Name</label>
-                        <input type="text" id="contactName" placeholder="Your full name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="contactEmail">Email</label>
-                        <input type="email" id="contactEmail" placeholder="your.email@example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="contactPhone">Phone (Optional)</label>
-                        <input type="tel" id="contactPhone" placeholder="+1 (555) 000-0000">
-                    </div>
-                    <div class="form-group">
-                        <label for="contactSubject">Subject</label>
-                        <input type="text" id="contactSubject" placeholder="How can we help?" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="contactMessageText">Message</label>
-                        <textarea id="contactMessageText" placeholder="Tell us more about your needs..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn">Send Message</button>
-                </form>
-            </div>
+            
+            <form class="contact-form" id="contactForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Your name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="subject">Subject</label>
+                    <input type="text" id="subject" name="subject" placeholder="How can we help?" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <textarea id="message" name="message" placeholder="Your message here..." required></textarea>
+                </div>
+                
+                <button type="submit" class="btn" style="width: 100%;">Send Message</button>
+                <div class="form-message" id="formMessage"></div>
+            </form>
         </div>
     </section>
+
+    <!-- Auth Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <h2>Welcome to Fairox</h2>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm" data-form="login">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+                <div class="form-group inline">
+                    <input type="checkbox" id="remember" name="remember">
+                    <label for="remember" style="margin: 0;">Remember me</label>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Login</button>
+                <div class="form-link">
+                    <a href="#" onclick="return false;">Forgot your password?</a>
+                </div>
+            </form>
+
+            <!-- Signup Form -->
+            <form class="auth-form" id="signupForm" data-form="signup">
+                <div class="form-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm">Confirm Password</label>
+                    <input type="password" id="signup-confirm" placeholder="••••••••" required>
+                </div>
+                <div class="form-group inline">
+                    <input type="checkbox" id="terms" name="terms" required>
+                    <label for="terms" style="margin: 0;">I agree to the terms and conditions</label>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Dashboard -->
     <div class="dashboard" id="dashboard">
         <div class="dashboard-header">
-            <div>
-                <h2>Welcome, <span id="userName"></span>!</h2>
-                <p id="userEmail"></p>
-            </div>
-            <button class="btn btn-outline" onclick="logout()">Logout</button>
+            <h2>Dashboard</h2>
+            <button class="btn btn-outline" id="logoutBtn" style="border-color: #333; color: #333;">Logout</button>
         </div>
+        
         <div class="dashboard-stats">
             <div class="stat-card">
-                <div class="feature-icon"><i class="fas fa-user"></i></div>
-                <h3>Profile</h3>
-                <p>Manage your account settings</p>
+                <h3>Manage your account settings</h3>
+                <div class="stat-value">⚙️</div>
             </div>
             <div class="stat-card">
-                <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
-                <h3>Dashboard</h3>
-                <p>View your activity</p>
+                <h3>View your activity</h3>
+                <div class="stat-value">📊</div>
             </div>
             <div class="stat-card">
-                <div class="feature-icon"><i class="fas fa-cog"></i></div>
-                <h3>Settings</h3>
-                <p>Configure preferences</p>
+                <h3>Configure preferences</h3>
+                <div class="stat-value">🎛️</div>
             </div>
         </div>
     </div>
@@ -954,342 +202,133 @@
     <footer>
         <div class="footer-content">
             <div class="footer-links">
-                <a href="#" onclick="showPage('home')">Home</a>
-                <a href="#" onclick="showPage('features')">Features</a>
-                <a href="#" onclick="showPage('contact')">Contact</a>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
+                <a href="#home">Home</a>
+                <a href="#features">Features</a>
+                <a href="#contact">Contact</a>
+                <a href="#privacy">Privacy Policy</a>
             </div>
+            
             <div class="social-links">
-                <a href="#"><i class="fab fa-facebook-f"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#" title="Twitter">𝕏</a>
+                <a href="#" title="LinkedIn">in</a>
+                <a href="#" title="Facebook">f</a>
+                <a href="#" title="Instagram">📷</a>
             </div>
-            <p>&copy; 2025 Fairox. All rights reserved.</p>
+            
+            <p>&copy; 2024 Fairox - Modern Business Solutions. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Auth Modal -->
-    <div class="modal" id="authModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            <h2>Welcome Back</h2>
-            
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
-                <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
-            </div>
-
-            <div id="authMessage" class="message"></div>
-
-            <!-- Login Form -->
-            <form id="loginForm" class="auth-form active">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="Enter your email" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter your password" required>
-                </div>
-                <button type="submit" class="btn">
-                    <span id="loginBtnText">Login</span>
-                    <div class="loading" id="loginLoading"><div class="spinner"></div></div>
-                </button>
-                <div class="form-link">
-                    <a href="#">Forgot Password?</a>
-                </div>
-            </form>
-
-            <!-- Register Form -->
-            <form id="registerForm" class="auth-form">
-                <div class="form-group">
-                    <label for="registerName">Full Name</label>
-                    <input type="text" id="registerName" placeholder="Enter your name" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="Enter your email" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Password</label>
-                    <input type="password" id="registerPassword" placeholder="Create a password" required>
-                </div>
-                <button type="submit" class="btn">
-                    <span id="registerBtnText">Register</span>
-                    <div class="loading" id="registerLoading"><div class="spinner"></div></div>
-                </button>
-            </form>
-        </div>
-    </div>
-
     <script>
-        const API_URL = 'https://api.fairox.co.in/api';
-        let currentUser = null;
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-            setupEventListeners();
-            setupScrollEffects();
-        });
-
-        function setupEventListeners() {
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
-            document.getElementById('registerForm').addEventListener('submit', handleRegister);
-            document.getElementById('contactForm').addEventListener('submit', handleContact);
-        }
-
-        function setupScrollEffects() {
-            window.addEventListener('scroll', () => {
-                const navbar = document.getElementById('navbar');
-                if (window.scrollY > 50) {
-                    navbar.classList.add('scrolled');
-                } else {
-                    navbar.classList.remove('scrolled');
-                }
-            });
-        }
-
-        // Navigation
-        function showPage(page) {
-            // Hide all sections
-            document.querySelectorAll('.hero, .section').forEach(el => {
-                el.classList.remove('active');
-                el.style.display = 'none';
-            });
-
-            // Update nav links
-            document.querySelectorAll('.nav-links a').forEach(link => {
-                link.classList.remove('active');
-            });
-
-            // Show selected page
-            if (page === 'home') {
-                document.getElementById('home').style.display = 'flex';
+        // Navigation scroll effect
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
             } else {
-                const section = document.getElementById(page);
-                section.style.display = 'block';
-                section.classList.add('active');
+                nav.classList.remove('scrolled');
             }
-
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Close mobile menu
-            document.getElementById('navLinks').classList.remove('active');
-        }
-
-        function toggleMenu() {
-            document.getElementById('navLinks').classList.toggle('active');
-        }
-
-        // Modal
-        function openModal() {
-            document.getElementById('authModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('authModal').classList.remove('active');
-            clearMessage('authMessage');
-        }
-
-        function switchAuthTab(tab) {
-            document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
-
-            event.target.classList.add('active');
-            document.getElementById(tab + 'Form').classList.add('active');
-            clearMessage('authMessage');
-        }
-
-        // Authentication
-        async function handleLogin(e) {
-    if (e) e.preventDefault();
-    
-    console.clear();
-    console.log('%c=== LOGIN ATTEMPT ===', 'color: blue; font-weight: bold; font-size: 14px');
-    console.log('🔐 [1] handleLogin function called');
-    
-    try {
-        const email = document.getElementById('loginEmail')?.value;
-        const password = document.getElementById('loginPassword')?.value;
-        
-        console.log('🔐 [2] Email:', email);
-        console.log('🔐 [3] Password length:', password?.length || 0);
-        
-        if (!email || !password) {
-            console.error('❌ Missing email or password');
-            alert('Please enter both email and password');
-            return;
-        }
-        
-        console.log('🔐 [4] Sending request to:', `${API_URL}/auth/login`);
-        
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
         });
-        
-        console.log('🔐 [5] Response status:', response.status);
-        const data = await response.json();
-        console.log('🔐 [6] Response:', { success: data.success, hasToken: !!data.token });
-        
-        if (!data.success || !data.token) {
-            console.error('❌ Login failed');
-            showMessage('authMessage', data.message, 'error');
-            return;
-        }
-        
-        console.log('✅ [7] Token received! Saving to storage...');
-        
-        // Save to ALL locations
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('token', data.token);
-        sessionStorage.setItem('authToken', data.token);
-        
-        console.log('✅ [8] Verification:', {
-            ls_authToken: localStorage.getItem('authToken') ? '✅' : '❌',
-            ls_token: localStorage.getItem('token') ? '✅' : '❌',
-            ss_authToken: sessionStorage.getItem('authToken') ? '✅' : '❌'
+
+        // Mobile menu toggle
+        const menuToggle = document.querySelector('.menu-toggle');
+        const navLinks = document.querySelector('.nav-links');
+        menuToggle.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
         });
-        
-        localStorage.setItem('user', JSON.stringify(data.user));
-        currentUser = data.user;
-        
-        console.log('✅ [9] Login complete! Redirecting to dashboard...');
-        showDashboard();
-        closeModal();
-        
-    } catch (error) {
-        console.error('❌ Error:', error);
-        showMessage('authMessage', 'Error: ' + error.message, 'error');
-    }
-}
 
+        // Close mobile menu when link clicked
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+            });
+        });
 
+        // Auth Modal
+        const authModal = document.getElementById('authModal');
+        const authTriggers = document.querySelectorAll('.auth-trigger');
+        const modalClose = document.getElementById('modalClose');
+        const dashboard = document.getElementById('dashboard');
 
+        authTriggers.forEach(trigger => {
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                authModal.classList.add('active');
+            });
+        });
 
-        async function handleRegister(e) {
+        modalClose.addEventListener('click', () => {
+            authModal.classList.remove('active');
+        });
+
+        authModal.addEventListener('click', (e) => {
+            if (e.target === authModal) {
+                authModal.classList.remove('active');
+            }
+        });
+
+        // Auth Tabs
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const formId = tab.getAttribute('data-tab') === 'login' ? 'loginForm' : 'signupForm';
+                document.getElementById(formId).classList.add('active');
+            });
+        });
+
+        // Login Form
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
+            authModal.classList.remove('active');
+            dashboard.classList.add('active');
+        });
 
-            showLoading('registerLoading', 'registerBtnText');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
-                });
-
-                const data = await response.json();
-                hideLoading('registerLoading', 'registerBtnText', 'Register');
-
-                if (data.success) {
-                    showMessage('authMessage', data.message, 'pending');
-                    document.getElementById('registerForm').reset();
-                } else {
-                    showMessage('authMessage', data.message, 'error');
-                }
-            } catch (error) {
-                hideLoading('registerLoading', 'registerBtnText', 'Register');
-                showMessage('authMessage', 'Connection error. Please try again.', 'error');
+        // Signup Form
+        document.getElementById('signupForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const signup = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
+            
+            if (signup === confirm) {
+                authModal.classList.remove('active');
+                dashboard.classList.add('active');
+            } else {
+                alert('Passwords do not match!');
             }
-        }
+        });
 
-        function checkAuth() {
-    const token = localStorage.getItem('authToken');  // ✅ Changed from 'token' to 'authToken'
-    const user = localStorage.getItem('user');
-
-    if (token && user) {
-        currentUser = JSON.parse(user);
-        showDashboard();
-    }
-}
-
-
-        function showDashboard() {
-            document.getElementById('home').style.display = 'none';
-            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-            document.getElementById('dashboard').classList.add('active');
-            document.getElementById('userName').textContent = currentUser.name;
-            document.getElementById('userEmail').textContent = currentUser.email;
-            document.getElementById('authBtn').textContent = 'Dashboard';
-            document.getElementById('authBtn').onclick = () => {
-                document.getElementById('dashboard').classList.add('active');
-            };
-        }
-
-        function logout() {
-    localStorage.removeItem('authToken');  // ✅ Changed from 'token' to 'authToken'
-    localStorage.removeItem('user');
-    currentUser = null;
-    document.getElementById('dashboard').classList.remove('active');
-    document.getElementById('home').style.display = 'flex';
-    document.getElementById('authBtn').textContent = 'Login';
-    document.getElementById('authBtn').onclick = openModal;
-}
-
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            dashboard.classList.remove('active');
+            authModal.classList.add('active');
+        });
 
         // Contact Form
-        async function handleContact(e) {
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = document.getElementById('contactName').value;
-            const email = document.getElementById('contactEmail').value;
-            const phone = document.getElementById('contactPhone').value;
-            const subject = document.getElementById('contactSubject').value;
-            const message = document.getElementById('contactMessageText').value;
+            const message = document.getElementById('formMessage');
+            message.textContent = 'Message sent successfully! We will contact you soon.';
+            message.classList.add('success');
+            message.style.display = 'block';
+            
+            setTimeout(() => {
+                message.style.display = 'none';
+                document.getElementById('contactForm').reset();
+            }, 3000);
+        });
 
-            try {
-                const response = await fetch(`${API_URL}/auth/contact`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, phone, subject, message })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage('contactMessage', data.message, 'success');
-                    document.getElementById('contactForm').reset();
-                } else {
-                    showMessage('contactMessage', data.message, 'error');
+        // Active nav link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if (!link.classList.contains('auth-trigger')) {
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
                 }
-            } catch (error) {
-                showMessage('contactMessage', 'Failed to send message. Please try again.', 'error');
-            }
-        }
-
-        // Helpers
-        function showMessage(id, message, type) {
-            const el = document.getElementById(id);
-            el.textContent = message;
-            el.className = `message ${type} active`;
-        }
-
-        function clearMessage(id) {
-            const el = document.getElementById(id);
-            el.className = 'message';
-        }
-
-        function showLoading(loadingId, textId) {
-            document.getElementById(loadingId).classList.add('active');
-            document.getElementById(textId).style.display = 'none';
-        }
-
-        function hideLoading(loadingId, textId, text) {
-            document.getElementById(loadingId).classList.remove('active');
-            const textEl = document.getElementById(textId);
-            textEl.textContent = text;
-            textEl.style.display = 'inline';
-        }
-
+            });
+        });
     </script>
-
 </body>
 </html>
