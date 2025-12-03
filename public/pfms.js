@@ -7,12 +7,16 @@ const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
 const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
 const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
 
-// ✅ Get auth token - SIMPLE
+// ✅ Checks multiple keys like admin page does
 function getAuthToken() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken') ||      // Check admin token
+                 localStorage.getItem('token') ||            // Check user token
+                 sessionStorage.getItem('token');             // Check session token
+    
     if (!token || !token.startsWith('eyJ')) return null;
     return token;
 }
+
 
 let allTransactions = [];
 let allAccounts = [];
