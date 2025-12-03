@@ -82,12 +82,16 @@ const loginLimiter = rateLimit({
 
 // General API rate limit
 const apiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // 100 requests per hour
+  windowMs: 60 * 60 * 1000,
+  max: 500,  // ✅ CHANGE: 100 → 500
   message: 'Too many requests from this IP',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req, res) => {  // ✅ ADD: Skip for admin
+    return req.path.includes('/admin/');
+  }
 });
+
 
 
 // ============================================
