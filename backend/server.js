@@ -1,9 +1,10 @@
 // ============================================
 // ✅ ENHANCED SERVER.JS - PRODUCTION READY
 // Render-ready with PostgreSQL & Email Config
-// FIXED: Middleware order corrected
+// FIXED: Trust Proxy + Rate Limiting for Admin
 // Updated: December 3, 2025
 // ============================================
+
 
 const express = require('express');
 const cors = require('cors');
@@ -15,12 +16,15 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+
 // Load environment variables
 dotenv.config();
+
 
 // ============================================
 // DEBUG - Check environment
 // ============================================
+
 
 console.log('=====================================');
 console.log('📧 MAILJET EMAIL CONFIGURATION CHECK:');
@@ -45,21 +49,35 @@ console.log('CLIENT_URL:', process.env.CLIENT_URL || 'https://fairox.co.in');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ NOT SET');
 console.log('=====================================\n');
 
+
 // ============================================
 // INITIALIZE EXPRESS APP
 // ============================================
 
+
 const app = express();
 
+
 // ============================================
-// SECURITY MIDDLEWARE (First)
+// ✅ TRUST PROXY - MUST BE FIRST (For Render)
 // ============================================
 
+
+app.set('trust proxy', 1);
+
+
+// ============================================
+// SECURITY MIDDLEWARE
+// ============================================
+
+
 app.use(helmet()); // Security headers
+
 
 // ============================================
 // IMPORT CONFIG & MIDDLEWARE
 // ============================================
+
 
 // ✅ Import email config with error handling
 let sendEmail, emailTemplates;
@@ -74,15 +92,19 @@ try {
   emailTemplates = {};
 }
 
+
 // ✅ Import database for connection checks
 const db = require('./config/db');
+
 
 // ✅ Import auth middleware (only for protected routes)
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
+
 // ============================================
 // IMPORT ROUTES (CORRECT WAY)
 // ============================================
+
 
 // ✅ Import route ROUTER objects (not middleware)
 const authRoutes = require('./routes/auth');
@@ -96,9 +118,11 @@ const adminRoutes = require('./routes/admin-routes');
 const testEmailRoutes = require('./routes/test-email');
 const advancedEmailDiag = require('./routes/advanced-email-test');
 
+
 // ============================================
 // CORS CONFIGURATION
 // ============================================
+
 
 app.use(cors({
   origin: process.env.CLIENT_URL || 'https://fairox.co.in',
@@ -107,9 +131,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID']
 }));
 
+
 // ============================================
 // REQUEST LOGGING MIDDLEWARE
 // ============================================
+
 
 if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined')); // Detailed logging in production
@@ -117,95 +143,32 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('dev')); // Concise logging in development
 }
 
+
 // ============================================
 // REQUEST TIMEOUT MIDDLEWARE
 // ============================================
+
 
 app.use((req, res, next) => {
   req.setTimeout(30000); // 30 second timeout
   next();
 });
 
-// ============================================
-// RATE LIMITING MIDDLEWARE
-// ============================================
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  skip: (req) => {
-    // Skip rate limiting for health checks and test endpoints
-    return req.path === '/api/health' || req.path === '/api/db-check';
-  }
-});
-
-app.use('/api/', limiter);
 
 // ============================================
 // BODY PARSING MIDDLEWARE
 // ============================================
 
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-console.log('✅ Middleware initialized\n');
-
-// ============================================
-// STATIC FILES
-// ============================================
-
-// Serve static files from public folder
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Explicit HTML routes
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin.html'));
-});
-
-app.get('/pfms.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/pfms.html'));
-});
-
-app.get('/dashboard.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/dashboard.html'));
-});
-
-// Root redirect
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// ============================================
-// API ROUTES - CORRECT USAGE
-// ============================================
-
-console.log('🔗 Registering routes...');
-
-// ✅ CORRECT: Pass route ROUTER (not middleware)
-app.use('/api/auth', authRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/pfms', pfmsRoutes);
-app.use('/api/recurring', recurringRoutes);
-app.use('/api/budget', budgetRoutes);
-app.use('/api/export', exportRouter);
-app.use('/api/overview', overviewRouter);
-app.use('/api', adminRoutes);
-app.use('/test-email', testEmailRoutes);
-app.use('/test-email-advanced', advancedEmailDiag);
-
-console.log('✅ All routes registered\n');
 
 // ============================================
 // JWT TOKEN EXTRACTION (for optional auth)
-// ✅ FIXED: Moved AFTER routes (was before, causing login failure)
+// Must be BEFORE rate limiter so we can check is_admin
 // ============================================
+
 
 const attachUserFromToken = (req, res, next) => {
   try {
@@ -222,11 +185,101 @@ const attachUserFromToken = (req, res, next) => {
   next();
 };
 
+
 app.use(attachUserFromToken);
+
+
+// ============================================
+// ✅ RATE LIMITING MIDDLEWARE - ADMIN FRIENDLY
+// ============================================
+
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: (req, res) => {
+    // Allow 100 requests for admin, 100 for general API
+    return 100;
+  },
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and test endpoints
+    return req.path === '/api/health' || req.path === '/api/db-check';
+  }
+});
+
+
+app.use('/api/', limiter);
+
+
+console.log('✅ Middleware initialized\n');
+
+
+// ============================================
+// STATIC FILES
+// ============================================
+
+
+// Serve static files from public folder
+app.use(express.static(path.join(__dirname, '../public')));
+
+
+// Explicit HTML routes
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
+});
+
+
+app.get('/pfms.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/pfms.html'));
+});
+
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
+
+// Root redirect
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+
+// ============================================
+// API ROUTES - CORRECT USAGE
+// ============================================
+
+
+console.log('🔗 Registering routes...');
+
+
+// ✅ CORRECT: Pass route ROUTER (not middleware)
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/pfms', pfmsRoutes);
+app.use('/api/recurring', recurringRoutes);
+app.use('/api/budget', budgetRoutes);
+app.use('/api/export', exportRouter);
+app.use('/api/overview', overviewRouter);
+app.use('/api', adminRoutes);
+app.use('/test-email', testEmailRoutes);
+app.use('/test-email-advanced', advancedEmailDiag);
+
+
+console.log('✅ All routes registered\n');
+
 
 // ============================================
 // DIRECT LOGOUT ENDPOINT
 // ============================================
+
 
 app.get('/logout', (req, res) => {
   try {
@@ -244,9 +297,11 @@ app.get('/logout', (req, res) => {
   }
 });
 
+
 // ============================================
 // HEALTH CHECK ENDPOINT
 // ============================================
+
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -262,9 +317,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
 // ============================================
 // DATABASE CONNECTION CHECK
 // ============================================
+
 
 app.get('/api/db-check', async (req, res) => {
   try {
@@ -285,12 +342,15 @@ app.get('/api/db-check', async (req, res) => {
   }
 });
 
+
 // ============================================
 // AUTO-INITIALIZE ADMIN USER ON STARTUP
 // FIXED: Only creates admin once, never resets password
 // ============================================
 
+
 let adminInitializing = false;
+
 
 async function initializeAdmin() {
   if (adminInitializing) {
@@ -300,16 +360,19 @@ async function initializeAdmin() {
   
   adminInitializing = true;
 
+
   try {
     const bcrypt = require('bcryptjs');
     
     console.log('\n📋 Initializing admin user...\n');
+
 
     // Check if admin exists
     const adminCheck = await db.query(
       'SELECT id, email, password FROM users WHERE email = $1 AND is_admin = $2',
       ['admin@fairox.co.in', true]
     );
+
 
     if (adminCheck.rows.length === 0) {
       // Admin doesn't exist - create it ONLY ONCE with default password
@@ -321,6 +384,7 @@ async function initializeAdmin() {
         'INSERT INTO users (name, email, password, is_approved, is_admin, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())',
         ['Admin User', 'admin@fairox.co.in', hashedPassword, true, true]
       );
+
 
       console.log('✅ Admin created successfully!');
       console.log('   Email: admin@fairox.co.in');
@@ -340,10 +404,12 @@ async function initializeAdmin() {
   }
 }
 
+
 // ============================================
 // CRON JOB - Auto-generate recurring transactions
 // With proper error handling and timeout
 // ============================================
+
 
 cron.schedule('0 0 * * *', async () => {
   try {
@@ -371,9 +437,11 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
+
 // ============================================
 // 404 ERROR HANDLER
 // ============================================
+
 
 app.use((req, res) => {
   // Try to serve HTML files
@@ -387,6 +455,7 @@ app.use((req, res) => {
       });
     });
   }
+
 
   // API 404
   res.status(404).json({
@@ -410,14 +479,17 @@ app.use((req, res) => {
   });
 });
 
+
 // ============================================
 // GLOBAL ERROR HANDLER
 // ============================================
+
 
 app.use((err, req, res, next) => {
   console.error('🔴 Global error handler:', err);
   console.error('   Message:', err.message);
   console.error('   Stack:', err.stack);
+
 
   res.status(err.status || 500).json({
     success: false,
@@ -426,12 +498,15 @@ app.use((err, req, res, next) => {
   });
 });
 
+
 // ============================================
 // SERVER STARTUP - RENDER COMPATIBLE
 // ============================================
 
+
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0'; // ✅ CRITICAL: Listen on 0.0.0.0 for Render
+
 
 const server = app.listen(PORT, HOST, async () => {
   console.log('\n╔════════════════════════════════════════════════╗');
@@ -442,7 +517,7 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`║  💚 Health: http://localhost:${PORT}/api/health${' '.repeat(13)}║`);
   console.log('║  📧 Email: Mailjet SMTP (Port 2525)             ║');
   console.log('║  🗄️  Database: PostgreSQL Connected            ║');
-  console.log('║  🔒 Security: Helmet + Rate Limiting            ║');
+  console.log('║  🔒 Security: Helmet + Trust Proxy              ║');
   console.log('║  ───────────────────────────────────────────────║');
   console.log('║  Routes:                                        ║');
   console.log('║  • POST   /api/auth/login                       ║');
@@ -453,6 +528,7 @@ const server = app.listen(PORT, HOST, async () => {
   console.log('║  • GET    /api/health                           ║');
   console.log('║  • GET    /api/db-check                         ║');
   console.log('╚════════════════════════════════════════════════╝\n');
+
 
   // Test database connection
   try {
@@ -469,9 +545,11 @@ const server = app.listen(PORT, HOST, async () => {
   }
 });
 
+
 // ============================================
 // GRACEFUL SHUTDOWN
 // ============================================
+
 
 process.on('SIGTERM', () => {
   console.log('\n🛑 SIGTERM received, closing server gracefully...');
@@ -481,6 +559,7 @@ process.on('SIGTERM', () => {
   });
 });
 
+
 process.on('SIGINT', () => {
   console.log('\n🛑 SIGINT received, closing server gracefully...');
   server.close(() => {
@@ -489,19 +568,23 @@ process.on('SIGINT', () => {
   });
 });
 
+
 // ============================================
 // ERROR HANDLERS
 // ============================================
+
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('🔴 Unhandled Rejection at:', promise);
   console.error('   Reason:', reason);
 });
 
+
 process.on('uncaughtException', (error) => {
   console.error('🔴 Uncaught Exception:', error.message);
   console.error('   Stack:', error.stack);
   process.exit(1);
 });
+
 
 module.exports = app;

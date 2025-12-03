@@ -421,10 +421,10 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     console.log('   Session ID (first 32 chars):', sessionId.substring(0, 32) + '...');
 
 
-    // Log admin login for audit trail
+        // Log admin login for audit trail
     await pool.query(
-      'INSERT INTO admin_logs (admin_id, action, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, NOW())',
-      [admin.id, 'LOGIN', req.ip, req.get('user-agent')]
+      'INSERT INTO admin_logs (admin_id, action, ip_address, created_at) VALUES ($1, $2, $3, NOW())',
+      [admin.id, 'LOGIN', req.ip]
     ).catch(err => console.warn('⚠️  Audit log failed:', err.message));
 
 
@@ -990,11 +990,12 @@ router.post('/admin/approve-user/:id', authMiddleware, adminMiddleware, async (r
     );
 
 
-    // Log admin action
+        // Log admin action
     await pool.query(
-      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
-      [req.user.id, 'APPROVE_USER', userId, req.ip, req.get('user-agent')]
+      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, created_at) VALUES ($1, $2, $3, $4, NOW())',
+      [req.user.id, 'APPROVE_USER', userId, req.ip]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
 
     // Send approval email
@@ -1067,11 +1068,12 @@ router.delete('/admin/reject-user/:id', authMiddleware, adminMiddleware, async (
     );
 
 
-    // Log admin action
+        // Log admin action
     await pool.query(
-      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
-      [req.user.id, 'REJECT_USER', userId, req.ip, req.get('user-agent')]
+      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, created_at) VALUES ($1, $2, $3, $4, NOW())',
+      [req.user.id, 'REJECT_USER', userId, req.ip]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
 
     // Send rejection email
@@ -1143,11 +1145,12 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
     );
 
 
-    // Log admin action
+        // Log admin action
     await pool.query(
-      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, $5, NOW())',
-      [req.user.id, 'REVOKE_USER', userId, req.ip, req.get('user-agent')]
+      'INSERT INTO admin_logs (admin_id, action, target_user_id, ip_address, created_at) VALUES ($1, $2, $3, $4, NOW())',
+      [req.user.id, 'REVOKE_USER', userId, req.ip]
     ).catch(err => console.warn('Audit log failed:', err.message));
+
 
 
     // Send revocation email
@@ -1319,13 +1322,6 @@ router.post('/change-password', authMiddleware, async (req, res) => {
 router.get('/logout', authMiddleware, async (req, res) => {
   try {
     console.log('🔐 Logout request - User:', req.user.id);
-
-
-    // Log logout action for audit trail
-    await pool.query(
-      'INSERT INTO user_logs (user_id, action, ip_address, user_agent, timestamp) VALUES ($1, $2, $3, $4, NOW())',
-      [req.user.id, 'LOGOUT', req.ip, req.get('user-agent')]
-    ).catch(err => console.warn('Audit log failed:', err.message));
 
 
     return res.json({

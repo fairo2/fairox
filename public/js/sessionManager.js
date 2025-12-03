@@ -435,7 +435,7 @@ class SessionManager {
     }
     
     setInterval(() => {
-      fetch('/api/auth/heartbeat', {
+      fetch('/api/health', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.token}`,
@@ -466,11 +466,13 @@ class SessionManager {
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('sessionId');
+    localStorage.removeItem('isAdmin');  // ✅ Add this
+    console.log('✅ Cleared session storage');
     
     // Call server logout endpoint
     if (this.token && this.sessionId) {
-      fetch('/api/auth/logout', {
-        method: 'GET',
+      fetch('/logout', {  // ✅ Matches server.js route
+  method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.token}`,
           'X-Session-ID': this.sessionId
