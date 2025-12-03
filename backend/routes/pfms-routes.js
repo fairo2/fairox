@@ -1,8 +1,8 @@
 // ============================================
-// ✅ COMPLETE TRANSACTIONS.JS - FULLY UPDATED
-// File: src/backend/routes/transactions.js
+// ✅ COMPLETE PFMS-ROUTES.JS - FULLY FIXED
+// File: src/backend/routes/pfms-routes.js
 // Database: PostgreSQL
-// Updated: Dec 1, 2025 - Excel Import Fixed
+// Updated: Dec 3, 2025 - Duplicate Middleware REMOVED
 // ============================================
 
 const express = require('express');
@@ -13,6 +13,12 @@ const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
+
+// ✅ IMPORT auth middleware from shared location
+const { authMiddleware } = require('../middleware/auth');
+
+console.log('✅ PFMS routes loaded');
+
 
 // ============================================
 // ✅ PUBLIC ROUTES (NO AUTHENTICATION)
@@ -76,67 +82,14 @@ router.get('/transactions/template', (req, res) => {
     }
 });
 
+
 // ============================================
 // 🔒 AUTH MIDDLEWARE (Applied to all routes below)
 // ============================================
 
-const authMiddleware = (req, res, next) => {
-    try {
-        if (!process.env.JWT_SECRET) {
-            console.error('❌ FATAL: JWT_SECRET not configured in .env');
-            return res.status(500).json({
-                success: false,
-                message: 'Server configuration error'
-            });
-        }
-
-        const token = req.headers.authorization?.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Access denied. No token provided.' 
-            });
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id || decoded.userId || decoded.user_id;
-        
-        if (!userId) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid token: User ID not found' 
-            });
-        }
-        
-        req.user = decoded;
-        req.user.id = userId;
-        req.userId = userId;
-        next();
-    } catch (error) {
-        console.error('❌ Auth error:', error.message);
-        
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Token expired. Please login again.' 
-            });
-        } else if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid token.' 
-            });
-        }
-        
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Authentication failed.' 
-        });
-    }
-};
-
-// Apply auth middleware to all routes below
+// ✅ Apply middleware to all protected routes
 router.use(authMiddleware);
+
 
 // Configure multer for file uploads
 const upload = multer({
@@ -153,9 +106,11 @@ const upload = multer({
     }
 });
 
+
 // ============================================
 // ✅ PROTECTED ROUTES (WITH AUTHENTICATION)
 // ============================================
+
 
 // TRANSACTIONS ENDPOINTS
 
@@ -347,6 +302,7 @@ router.delete('/transactions/:id', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // IMPORT ENDPOINTS
 
@@ -612,6 +568,7 @@ router.post('/transactions/import', upload.single('file'), async (req, res) => {
     }
 });
 
+
 // ACCOUNTS ENDPOINTS
 
 router.get('/accounts', async (req, res) => {
@@ -706,6 +663,7 @@ router.delete('/accounts/:id', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // CATEGORIES ENDPOINTS
 
@@ -802,6 +760,7 @@ router.delete('/categories/:id', async (req, res) => {
     }
 });
 
+
 // STATISTICS ENDPOINTS
 
 router.get('/stats', async (req, res) => {
@@ -879,5 +838,10 @@ router.get('/stats', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+// ============================================
+// EXPORTS
+// ============================================
 
 module.exports = router;
