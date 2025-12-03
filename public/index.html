@@ -1398,10 +1398,17 @@
 
         /*legal info*/
         .legal-page {
+    display: none;  /* ✅ ADD THIS LINE */
     background: linear-gradient(180deg, #f8f9fa 0%, #eef2f5 100%);
     min-height: 100vh;
     padding: 120px 2rem 4rem !important;
 }
+
+.legal-page.active {  /* ✅ ADD THIS */
+    display: block !important;
+    animation: fadeInUp 0.8s ease-out;
+}
+
 
 .legal-content {
     background: white;
@@ -1823,34 +1830,45 @@
         loader.classList.add('fade-out');
     }
 
-    // Hide all sections (hero, section, AND legal-page)
-    const sections = document.querySelectorAll('.section, .legal-page, .hero');
-    sections.forEach(section => {
-        section.classList.remove('active');
-        section.style.display = 'none';
+    // Hide ALL sections (hero, section, dashboard, AND legal-page)
+    const allElements = document.querySelectorAll('.hero, .section, .legal-page, .dashboard');
+    allElements.forEach(el => {
+        el.classList.remove('active');
+        el.style.display = 'none';
     });
 
     // Show selected section
     const page = document.getElementById(pageId);
     if (page) {
-        page.style.display = page.id === 'home' ? 'flex' : 'block';
+        // Determine correct display value
+        if (pageId === 'home') {
+            page.style.display = 'flex';
+        } else if (pageId.includes('privacy') || pageId.includes('terms') || pageId.includes('copyright') || pageId.includes('disclaimer')) {
+            page.style.display = 'block';
+        } else if (pageId === 'dashboard') {
+            page.style.display = 'block';
+        } else {
+            page.style.display = 'block';
+        }
+        
         page.classList.add('active');
+        console.log('✅ Page shown:', pageId);
+    } else {
+        console.warn('❌ Page not found:', pageId);
     }
 
     // Update nav links
     const navLinks = document.querySelectorAll('.nav-links a');
     navLinks.forEach(link => link.classList.remove('active'));
-    
-    const activeLink = document.querySelector(`.nav-links a[onclick*="'${pageId}'"]`);
-    if (activeLink) activeLink.classList.add('active');
+
+    // Scroll to top
+    window.scrollTo(0, 0);
 
     // Close mobile menu if open
     const navLinksMenu = document.getElementById('navLinks');
     if (navLinksMenu) navLinksMenu.classList.remove('active');
-
-    // Scroll to top
-    window.scrollTo(0, 0);
 }
+
 
 
         function toggleMenu() {
