@@ -831,6 +831,7 @@
                 <button class="tab-btn active" onclick="switchTab('pending')">📋 Pending Approval</button>
                 <button class="tab-btn" onclick="switchTab('approved')">✓ Approved Users</button>
                 <button class="tab-btn" onclick="switchTab('contacts')">💬 Contact Messages</button>
+                <button class="tab-btn" onclick="window.location.href = '/pfms.html'">💰 Personal Finance (PFMS)</button>
             </div>
 
             <!-- Pending Users Tab -->
@@ -926,10 +927,26 @@
                         <label for="newPassword">New Password</label>
                         <input type="password" id="newPassword" onkeyup="checkPasswordStrength()" required>
                     </div>
+                    <div id="passwordStrengthContainer" style="display: none; margin-bottom: 1rem;">
+                        <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Password Strength: <span id="strengthText">-</span></div>
+                        <div style="display: flex; gap: 5px;">
+                            <div id="strength1" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
+                            <div id="strength2" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
+                            <div id="strength3" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
+                            <div id="strength4" style="flex: 1; height: 6px; background: #666; border-radius: 3px;"></div>
+                        </div>
+                        <div style="font-size: 0.85rem; margin-top: 1rem; color: #666;">
+                            <div id="req1" style="color: #ff6384;">✕ At least 8 characters</div>
+                            <div id="req2" style="color: #ff6384;">✕ One uppercase letter</div>
+                            <div id="req3" style="color: #ff6384;">✕ One number</div>
+                            <div id="req4" style="color: #ff6384;">✕ One special character (!@#$%^&*)</div>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label for="confirmPassword">Confirm Password</label>
                         <input type="password" id="confirmPassword" onkeyup="checkPasswordMatch()" required>
                     </div>
+                    <div id="passwordMatchMsg" style="display: none; font-size: 0.9rem; margin-top: 0.5rem;"></div>
                     <button type="submit" class="btn">Change Password</button>
                 </form>
             </div>
@@ -1221,15 +1238,75 @@
         }
 
         function checkPasswordStrength() {
-            // Optional: Add password strength indicator
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            if (password) {
+                document.getElementById('passwordStrengthContainer').style.display = 'block';
+                let strength = 0;
+                const req1 = password.length >= 8;
+                const req2 = /[A-Z]/.test(password);
+                const req3 = /[0-9]/.test(password);
+                const req4 = /[!@#$%^&*]/.test(password);
+
+                updateRequirement('req1', req1);
+                updateRequirement('req2', req2);
+                updateRequirement('req3', req3);
+                updateRequirement('req4', req4);
+
+                if (req1) strength++;
+                if (req2) strength++;
+                if (req3) strength++;
+                if (req4) strength++;
+
+                updateStrengthBars(strength);
+                if (confirmPassword) checkPasswordMatch();
+            } else {
+                document.getElementById('passwordStrengthContainer').style.display = 'none';
+            }
         }
 
         function checkPasswordMatch() {
-            const newPassword = document.getElementById('newPassword').value;
+            const password = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            if (newPassword && confirmPassword && newPassword !== confirmPassword) {
-                console.log('Passwords do not match');
+            const matchMsg = document.getElementById('passwordMatchMsg');
+            if (confirmPassword) {
+                if (password === confirmPassword) {
+                    matchMsg.textContent = '✓ Passwords match';
+                    matchMsg.style.color = '#4cd964';
+                    matchMsg.style.display = 'block';
+                } else {
+                    matchMsg.textContent = '✕ Passwords do not match';
+                    matchMsg.style.color = '#ff3b30';
+                    matchMsg.style.display = 'block';
+                }
+            } else {
+                matchMsg.style.display = 'none';
             }
+        }
+
+        function updateRequirement(id, met) {
+            const el = document.getElementById(id);
+            if (met) {
+                el.style.color = '#4cd964';
+                el.textContent = el.textContent.replace('✕', '✓');
+            } else {
+                el.style.color = '#ff6384';
+                el.textContent = el.textContent.replace('✓', '✕');
+            }
+        }
+
+        function updateStrengthBars(strength) {
+            let colors = ['#666', '#666', '#666', '#666'];
+            let strengthTexts = ['-', 'Weak', 'Fair', 'Good', 'Strong'];
+            if (strength === 1) colors = ['#ff6384', '#666', '#666', '#666'];
+            if (strength === 2) colors = ['#ff6384', '#ffce56', '#666', '#666'];
+            if (strength === 3) colors = ['#ff6384', '#ffce56', '#4cd964', '#666'];
+            if (strength === 4) colors = ['#00d9ff', '#00d9ff', '#00d9ff', '#00d9ff'];
+            
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById('strength' + i).style.background = colors[i - 1];
+            }
+            document.getElementById('strengthText').textContent = strengthTexts[strength];
         }
     </script>
 </body>
