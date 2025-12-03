@@ -1141,12 +1141,23 @@
         }
 
         function showDashboard() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').classList.add('active');
-            document.getElementById('dashboardNav').classList.add('active');
-            loadStats();
-            loadPendingUsers();
-        }
+    // Hide other sections
+    document.getElementById('home').style.display = 'none';
+    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    document.getElementById('dashboard').classList.add('active');
+
+    // Load API data with DELAYS (staggered)
+    loadStats();                              // Load immediately
+    setTimeout(() => loadPendingUsers(), 300);   // Wait 300ms, then load
+    setTimeout(() => loadApprovedUsers(), 600);  // Wait 600ms, then load
+    setTimeout(() => loadContacts(), 900);       // Wait 900ms, then load
+
+    // Update user info
+    document.getElementById('userName').textContent = currentUser.name || 'User';
+    document.getElementById('userEmail').textContent = currentUser.email;
+    document.getElementById('authBtn').textContent = 'Dashboard';
+}
+
 
         function showLoginPage() {
             document.getElementById('loginScreen').style.display = 'flex';
