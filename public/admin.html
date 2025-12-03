@@ -754,6 +754,117 @@
                 font-size: 0.85rem;
             }
         }
+
+        
+        /* Session Warning Modal Styles */
+        .session-warning-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .session-warning-modal.active {
+            display: flex;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .session-warning-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            border: 2px solid #ffa726;
+        }
+
+        .session-warning-header {
+            margin-bottom: 20px;
+        }
+
+        .session-warning-header i {
+            font-size: 2.5rem;
+            color: #ff7043;
+            margin-bottom: 10px;
+        }
+
+        .session-warning-header h2 {
+            margin: 10px 0 0 0;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .session-warning-body {
+            margin-bottom: 25px;
+            color: #666;
+        }
+
+        .session-countdown {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff7043;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .session-warning-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .session-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .session-btn-primary {
+            background: #4caf50;
+            color: white;
+        }
+
+        .session-btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .session-btn-secondary {
+            background: #f44336;
+            color: white;
+        }
+
+        .session-btn-secondary:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -825,6 +936,34 @@
                 <div class="stat-label">Contact Messages</div>
             </div>
         </div>
+
+        <!-- ✅ ADD SESSION WARNING MODAL HERE (before </body>) -->
+    <!-- Session Warning Modal -->
+    <div id="sessionWarningModal" class="session-warning-modal">
+        <div class="session-warning-content">
+            <div class="session-warning-header">
+                <i class="fas fa-clock"></i>
+                <h2>⏱️ Session Expiring Soon</h2>
+            </div>
+            
+            <div class="session-warning-body">
+                <p>Your session will expire in:</p>
+                <div id="sessionWarningCountdown" class="session-countdown">5:00</div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+                    Click "Continue Session" to stay logged in, or your session will be automatically closed.
+                </p>
+            </div>
+            
+            <div class="session-warning-actions">
+                <button class="session-btn session-btn-primary" onclick="extendSession()">
+                    ✅ Continue Session
+                </button>
+                <button class="session-btn session-btn-secondary" onclick="logoutUser()">
+                    👋 Logout Now
+                </button>
+            </div>
+        </div>
+    </div>
 
         <div class="tabs-container">
             <div class="tabs">
@@ -1309,5 +1448,242 @@
             document.getElementById('strengthText').textContent = strengthTexts[strength];
         }
     </script>
+
+     <!-- ✅ ADD SESSION MANAGER SCRIPT HERE (before </body>) -->
+    <script>
+        // ============================================
+        // SESSION MANAGEMENT - COMPLETE SYSTEM
+        // ============================================
+
+        const SESSION_CONFIG = {
+            SESSION_TIMEOUT: 30 * 60 * 1000,      // 30 minutes
+            WARNING_TIME: 5 * 60 * 1000,          // 5 minutes
+            CHECK_INTERVAL: 30 * 1000,
+            HEARTBEAT_INTERVAL: 60 * 1000
+        };
+
+        let sessionTimeoutId = null;
+        let sessionWarningTimeoutId = null;
+        let heartbeatIntervalId = null;
+        let lastActivityTime = Date.now();
+        let sessionWarningShown = false;
+
+        function initializeSessionManager() {
+            console.log('✅ Initializing Session Manager...');
+            startSessionTimer();
+            startHeartbeat();
+            setupActivityTracking();
+            console.log('✅ Session Manager initialized');
+            console.log(`⏱️ Session Timeout: ${SESSION_CONFIG.SESSION_TIMEOUT / 1000 / 60} minutes`);
+        }
+
+        function setupActivityTracking() {
+            const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+            events.forEach(event => {
+                document.addEventListener(event, () => {
+                    resetSessionTimer();
+                }, true);
+            });
+            console.log('✅ Activity tracking enabled');
+        }
+
+        function startSessionTimer() {
+            console.log('⏱️ Session timer started');
+            lastActivityTime = Date.now();
+            sessionWarningShown = false;
+            
+            clearTimeout(sessionTimeoutId);
+            clearTimeout(sessionWarningTimeoutId);
+            
+            sessionWarningTimeoutId = setTimeout(() => {
+                showSessionWarningModal();
+            }, SESSION_CONFIG.SESSION_TIMEOUT - SESSION_CONFIG.WARNING_TIME);
+            
+            sessionTimeoutId = setTimeout(() => {
+                handleSessionTimeout();
+            }, SESSION_CONFIG.SESSION_TIMEOUT);
+        }
+
+        function resetSessionTimer() {
+            const now = Date.now();
+            const timeSinceLastReset = now - lastActivityTime;
+            
+            if (timeSinceLastReset < 5000) return;
+            
+            console.log('🔄 Session timer reset - User activity detected');
+            lastActivityTime = now;
+            sessionWarningShown = false;
+            
+            clearTimeout(sessionTimeoutId);
+            clearTimeout(sessionWarningTimeoutId);
+            
+            sessionWarningTimeoutId = setTimeout(() => {
+                showSessionWarningModal();
+            }, SESSION_CONFIG.SESSION_TIMEOUT - SESSION_CONFIG.WARNING_TIME);
+            
+            sessionTimeoutId = setTimeout(() => {
+                handleSessionTimeout();
+            }, SESSION_CONFIG.SESSION_TIMEOUT);
+            
+            hideSessionWarningModal();
+        }
+
+        function showSessionWarningModal() {
+            if (sessionWarningShown) return;
+            sessionWarningShown = true;
+            
+            const modal = document.getElementById('sessionWarningModal');
+            if (!modal) {
+                console.error('❌ sessionWarningModal element not found');
+                return;
+            }
+            
+            modal.classList.add('active');
+            console.log('⚠️ Session warning shown');
+            updateWarningCountdown();
+        }
+
+        function hideSessionWarningModal() {
+            const modal = document.getElementById('sessionWarningModal');
+            if (modal) {
+                modal.classList.remove('active');
+                console.log('✅ Session warning hidden');
+            }
+        }
+
+        function updateWarningCountdown() {
+            const countdownElement = document.getElementById('sessionWarningCountdown');
+            if (!countdownElement) return;
+            
+            let remainingTime = SESSION_CONFIG.WARNING_TIME;
+            
+            const interval = setInterval(() => {
+                remainingTime -= 1000;
+                
+                if (remainingTime <= 0) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                const minutes = Math.floor(remainingTime / 60000);
+                const seconds = Math.floor((remainingTime % 60000) / 1000);
+                
+                countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function extendSession() {
+            console.log('✅ Session extended');
+            hideSessionWarningModal();
+            resetSessionTimer();
+            sendKeepAliveToBackend();
+        }
+
+        function handleSessionTimeout() {
+            console.error('❌ Session timeout - Logging out');
+            
+            clearTimeout(sessionTimeoutId);
+            clearTimeout(sessionWarningTimeoutId);
+            clearInterval(heartbeatIntervalId);
+            
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('token');
+            
+            alert('❌ Your session has expired due to inactivity. Please login again.');
+            
+            setTimeout(() => {
+                window.location.href = '/admin.html';
+            }, 1000);
+        }
+
+        function startHeartbeat() {
+            heartbeatIntervalId = setInterval(() => {
+                sendKeepAliveToBackend();
+            }, SESSION_CONFIG.HEARTBEAT_INTERVAL);
+            
+            console.log('💓 Heartbeat started');
+        }
+
+        async function sendKeepAliveToBackend() {
+            try {
+                const token = localStorage.getItem('authToken') || localStorage.getItem('adminToken');
+                
+                if (!token) {
+                    console.warn('⚠️ No token found');
+                    return;
+                }
+                
+                const response = await fetch('https://api.fairox.co.in/api/auth/keep-alive', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Keep-alive sent');
+                } else if (response.status === 401) {
+                    console.error('❌ Token invalid');
+                    handleSessionTimeout();
+                }
+                
+            } catch (error) {
+                console.warn('⚠️ Keep-alive failed:', error.message);
+            }
+        }
+
+        function validateSession() {
+            const token = localStorage.getItem('authToken') || 
+                         localStorage.getItem('adminToken') || 
+                         localStorage.getItem('token') ||
+                         sessionStorage.getItem('token');
+            
+            if (!token) {
+                console.warn('❌ No valid token found');
+                window.location.href = '/admin.html';
+                return false;
+            }
+            
+            if (!token.startsWith('eyJ')) {
+                console.warn('❌ Invalid token format');
+                window.location.href = '/admin.html';
+                return false;
+            }
+            
+            console.log('✅ Session valid');
+            return true;
+        }
+
+        function logoutUser() {
+            console.log('👋 Logging out user...');
+            
+            clearTimeout(sessionTimeoutId);
+            clearTimeout(sessionWarningTimeoutId);
+            clearInterval(heartbeatIntervalId);
+            
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('token');
+            
+            window.location.href = '/admin.html';
+        }
+
+                document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 Page loaded - Initializing session manager...');
+            
+            if (validateSession()) {
+                initializeSessionManager();
+                console.log('✅ Session manager active');
+            } else {
+                console.log('⚠️ No valid session - redirecting to login');
+            }
+        });
+    </script>
+
+
 </body>
 </html>
