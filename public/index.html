@@ -1395,6 +1395,48 @@
                 font-size: 1.5rem;
             }
         }
+
+        /*legal info*/
+        .legal-page {
+    background: linear-gradient(180deg, #f8f9fa 0%, #eef2f5 100%);
+    min-height: 100vh;
+    padding: 120px 2rem 4rem !important;
+}
+
+.legal-content {
+    background: white;
+    padding: 3.5rem;
+    border-radius: 25px;
+    box-shadow: var(--shadow-md);
+    margin-top: 2rem;
+    line-height: 1.8;
+}
+
+.legal-content h3 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    border-left: 4px solid var(--accent);
+    padding-left: 1rem;
+}
+
+.legal-content p {
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.legal-content ul {
+    margin-left: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.legal-content li {
+    margin-bottom: 0.8rem;
+    color: var(--text);
+}
     </style>
 </head>
 <body>
@@ -1645,8 +1687,10 @@
                 <a href="#" onclick="showPage('home'); return false;">Home</a>
                 <a href="#" onclick="showPage('features'); return false;">Features</a>
                 <a href="#" onclick="showPage('contact'); return false;">Contact</a>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
+                <a onclick="showPage('privacy')">Privacy Policy</a>
+            <a onclick="showPage('terms')">Terms of Service</a>
+            <a onclick="showPage('copyright')">Copyright</a>
+            <a onclick="showPage('disclaimer')">Disclaimer</a>
             </div>
             <div class="social-links">
                 <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
@@ -1772,39 +1816,42 @@
             });
         }
 
-        function showPage(page) {
-            // Hide loader if visible
-            const loader = document.getElementById('loaderScreen');
-            if (loader && !loader.classList.contains('fade-out')) {
-                loader.classList.add('fade-out');
-            }
+        function showPage(pageId) {
+    // Hide loader if visible
+    const loader = document.getElementById('loaderScreen');
+    if (loader && !loader.classList.contains('fade-out')) {
+        loader.classList.add('fade-out');
+    }
 
-            document.querySelectorAll('.hero, .section').forEach(el => {
-                el.classList.remove('active');
-                el.style.display = 'none';
-            });
+    // Hide all sections (hero, section, AND legal-page)
+    const sections = document.querySelectorAll('.section, .legal-page, .hero');
+    sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
 
-            // Update nav links
-            document.querySelectorAll('.nav-links a').forEach(link => {
-                link.classList.remove('active');
-                if (link.textContent.toLowerCase().includes(page.toLowerCase())) {
-                    link.classList.add('active');
-                }
-            });
+    // Show selected section
+    const page = document.getElementById(pageId);
+    if (page) {
+        page.style.display = page.id === 'home' ? 'flex' : 'block';
+        page.classList.add('active');
+    }
 
-            if (page === 'home') {
-                document.getElementById('home').style.display = 'flex';
-            } else {
-                const section = document.getElementById(page);
-                if (section) {
-                    section.style.display = 'block';
-                    section.classList.add('active');
-                }
-            }
+    // Update nav links
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach(link => link.classList.remove('active'));
+    
+    const activeLink = document.querySelector(`.nav-links a[onclick*="'${pageId}'"]`);
+    if (activeLink) activeLink.classList.add('active');
 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('navLinks').classList.remove('active');
-        }
+    // Close mobile menu if open
+    const navLinksMenu = document.getElementById('navLinks');
+    if (navLinksMenu) navLinksMenu.classList.remove('active');
+
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
 
         function toggleMenu() {
             document.getElementById('navLinks').classList.toggle('active');
@@ -1976,5 +2023,30 @@
             textEl.style.display = 'inline';
         }
     </script>
+    <!-- Privacy Policy -->
+<section class="section legal-page" id="privacy">
+    <div class="container">
+        <h2 class="section-title">Privacy Policy</h2>
+        <div class="legal-content">
+            <!-- content inside -->
+        </div>
+    </div>
+</section>
+
+<!-- Terms of Service -->
+<section class="section legal-page" id="terms">
+    <!-- content -->
+</section>
+
+<!-- Copyright Policy -->
+<section class="section legal-page" id="copyright">
+    <!-- content -->
+</section>
+
+<!-- Disclaimer -->
+<section class="section legal-page" id="disclaimer">
+    <!-- content -->
+</section>
+
 </body>
 </html>
