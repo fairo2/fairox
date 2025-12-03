@@ -4,18 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fairox - Modern Business Solutions</title>
-    <script>
-        window.addEventListener('load', function() {
-            const splashShown = sessionStorage.getItem('splashShown');
-            if (!splashShown) {
-                sessionStorage.setItem('splashShown', 'true');
-                window.location.href = '/splash.html';
-            }
-        });
-    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Advanced CSS Variables & Design System */
         :root {
             --primary: #0f3460;
             --secondary: #e94560;
@@ -40,7 +30,6 @@
             --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Reset & Base */
         * {
             margin: 0;
             padding: 0;
@@ -61,7 +50,7 @@
             min-height: 100vh;
         }
 
-        /* Navigation - Premium */
+        /* Navigation */
         nav {
             position: fixed;
             top: 0;
@@ -100,7 +89,6 @@
             background-clip: text;
             cursor: pointer;
             transition: transform var(--transition-normal);
-            text-shadow: 0 2px 10px rgba(0, 217, 255, 0.2);
         }
 
         .logo:hover {
@@ -221,7 +209,7 @@
             border-radius: 2px;
         }
 
-        /* Hero Section - Advanced */
+        /* Hero Section */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -271,11 +259,15 @@
             50% { box-shadow: 0 0 40px rgba(0, 217, 255, 0.8); }
         }
 
-        .hero-content {
-            max-width: 1200px;
-            text-align: center;
-            z-index: 1;
-            animation: fadeInUp 1.2s ease-out;
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes fadeInUp {
@@ -289,6 +281,30 @@
             }
         }
 
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-25px); }
+            60% { transform: translateX(-50%) translateY(-15px); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        @keyframes wobble {
+            0%, 100% { transform: rotateZ(0deg); }
+            25% { transform: rotateZ(1deg); }
+            75% { transform: rotateZ(-1deg); }
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            text-align: center;
+            z-index: 1;
+            animation: fadeInUp 1.2s ease-out;
+        }
+
         .hero h1 {
             font-size: 4rem;
             color: var(--light);
@@ -298,17 +314,6 @@
             letter-spacing: -2px;
             line-height: 1.2;
             animation: slideInDown 1s ease-out;
-        }
-
-        @keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .hero p {
@@ -396,12 +401,6 @@
             cursor: pointer;
         }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
-            40% { transform: translateX(-50%) translateY(-25px); }
-            60% { transform: translateX(-50%) translateY(-15px); }
-        }
-
         /* Sections */
         .section {
             display: none;
@@ -414,7 +413,6 @@
             animation: fadeInUp 0.8s ease-out;
         }
 
-        /* Features Section */
         .features {
             background: linear-gradient(180deg, #f8f9fa 0%, #eef2f5 100%);
         }
@@ -447,6 +445,17 @@
             border-radius: 2px;
         }
 
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .section-subtitle {
             text-align: center;
             color: var(--text-light);
@@ -454,6 +463,210 @@
             margin-top: 2rem;
             font-size: 1.2rem;
             animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        /* Loading Screen Styles */
+        .loader-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+        }
+
+        .loader-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-content {
+            text-align: center;
+            z-index: 10000;
+        }
+
+        .loader-text {
+            font-size: 4.5rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin-bottom: 2rem;
+            height: 5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .gradient-char {
+            display: inline-block;
+            background: linear-gradient(135deg, #00f7ff 0%, #e94560 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: 0;
+            animation: charFade 1s ease-out forwards;
+            animation-delay: var(--delay);
+        }
+
+        @keyframes charFade {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader-spinner {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            margin: 0 auto 2rem;
+        }
+
+        .spinner-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+        }
+
+        .spinner-circle.progress {
+            border: 4px solid transparent;
+            border-top: 4px solid #00f7ff;
+            border-right: 4px solid #e94560;
+            animation: spinProgress 3s linear forwards;
+        }
+
+        @keyframes spinProgress {
+            0% {
+                transform: rotate(0deg);
+                border-top-color: #00f7ff;
+                border-right-color: #e94560;
+            }
+            50% {
+                border-top-color: #e94560;
+                border-right-color: #00f7ff;
+            }
+            100% {
+                transform: rotate(360deg);
+                border-top-color: #00f7ff;
+                border-right-color: #e94560;
+            }
+        }
+
+        .loader-percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .loader-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            font-weight: 500;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .loader-info {
+            margin-top: 3rem;
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 900px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideInUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .info-item:nth-child(1) { animation-delay: 0.6s; }
+        .info-item:nth-child(2) { animation-delay: 0.8s; }
+        .info-item:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 247, 255, 0.2);
+            border: 2px solid rgba(0, 247, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #00f7ff;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .info-item:nth-child(2) .info-icon {
+            animation-delay: 0.3s;
+        }
+
+        .info-item:nth-child(3) .info-icon {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(0, 247, 255, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(0, 247, 255, 0);
+                transform: scale(1.05);
+            }
+        }
+
+        .info-text {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.9rem;
+            font-weight: 500;
+            max-width: 120px;
+            line-height: 1.4;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: rgba(0, 247, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
         }
 
         .features-grid {
@@ -707,7 +920,7 @@
             color: white;
         }
 
-        /* Modal */
+        /* Advanced Modal with Creative Animation */
         .modal {
             display: none;
             position: fixed;
@@ -717,13 +930,19 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
             z-index: 2000;
-            backdrop-filter: blur(5px);
-            animation: fadeIn 0.3s;
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.4s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to {
+                opacity: 1;
+                backdrop-filter: blur(8px);
+            }
         }
 
         .modal.active {
@@ -733,14 +952,75 @@
         }
 
         .modal-content {
-            background: white;
-            padding: 3.5rem;
-            border-radius: 25px;
-            max-width: 480px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%);
+            padding: 0;
+            border-radius: 30px;
+            max-width: 500px;
             width: 90%;
             position: relative;
-            animation: slideUp 0.4s ease-out;
-            box-shadow: var(--shadow-lg);
+            animation: modalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        @keyframes modalPop {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) translateY(30px);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 247, 255, 0.15), transparent);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(233, 69, 96, 0.15), transparent);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        .modal-header h2 {
+            color: white;
+            font-size: 2rem;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .modal-body {
+            padding: 2.5rem;
         }
 
         .modal-close {
@@ -749,64 +1029,59 @@
             right: 1.5rem;
             font-size: 2rem;
             cursor: pointer;
-            color: var(--text-light);
-            background: none;
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
             border: none;
             transition: all var(--transition-normal);
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
+            z-index: 10;
         }
 
         .modal-close:hover {
-            background: rgba(0, 0, 0, 0.05);
-            color: var(--dark);
+            background: rgba(255, 255, 255, 0.35);
             transform: rotate(90deg);
-        }
-
-        .modal h2 {
-            margin-bottom: 2rem;
-            color: var(--dark);
-            text-align: center;
-            font-size: 1.8rem;
-            font-weight: 700;
         }
 
         .auth-tabs {
             display: flex;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             gap: 0.8rem;
+            border-bottom: 2px solid #e0e0e0;
         }
 
         .auth-tab {
             flex: 1;
-            padding: 1rem;
-            background: #f5f5f5;
+            padding: 1.2rem 1rem;
+            background: transparent;
             border: none;
-            border-radius: 12px;
+            border-bottom: 3px solid transparent;
             cursor: pointer;
             transition: all var(--transition-normal);
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             font-size: 0.85rem;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            position: relative;
         }
 
         .auth-tab.active {
-            background: linear-gradient(135deg, var(--accent), var(--secondary));
-            color: white;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            color: var(--accent);
+            border-bottom-color: var(--accent);
         }
 
         .auth-tab:hover:not(.active) {
-            background: #e8e8e8;
+            color: var(--text);
         }
 
         .auth-form {
             display: none;
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .auth-form.active {
@@ -815,32 +1090,57 @@
 
         .modal-content .form-group label {
             color: var(--dark);
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .modal-content .form-group input {
             background: white;
             border: 2px solid #e0e0e0;
+            padding: 0.95rem;
+            font-size: 0.95rem;
         }
 
         .modal-content .form-group input:focus {
             border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.1);
         }
 
         .form-link {
             text-align: center;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
         }
 
         .form-link a {
             color: var(--secondary);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             transition: all var(--transition-normal);
+            display: inline-block;
+            position: relative;
         }
 
-        .form-link a:hover {
-            color: var(--accent);
+        .form-link a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--secondary);
+            transition: width var(--transition-normal);
+        }
+
+        .form-link a:hover::after {
+            width: 100%;
+        }
+
+        .btn-submit {
+            width: 100%;
+            justify-content: center;
+            margin-top: 0.5rem;
         }
 
         /* Dashboard */
@@ -1044,7 +1344,15 @@
             }
 
             .modal-content {
-                padding: 2rem;
+                padding: 0;
+            }
+
+            .modal-header {
+                padding: 1.5rem;
+            }
+
+            .modal-body {
+                padding: 1.5rem;
             }
 
             .dashboard-header {
@@ -1081,12 +1389,59 @@
 
             .btn {
                 width: 100%;
-                justify-content: center;
+            }
+
+            .modal-header h2 {
+                font-size: 1.5rem;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loader-screen" id="loaderScreen">
+        <div class="loader-content">
+            <h1 class="loader-text">
+                <span class="gradient-char" style="--delay: 0s;">F</span>
+                <span class="gradient-char" style="--delay: 0.05s;">a</span>
+                <span class="gradient-char" style="--delay: 0.1s;">i</span>
+                <span class="gradient-char" style="--delay: 0.15s;">r</span>
+                <span class="gradient-char" style="--delay: 0.2s;">o</span>
+                <span class="gradient-char" style="--delay: 0.25s;">-</span>
+                <span class="gradient-char" style="--delay: 0.3s;">x</span>
+            </h1>
+            <div class="loader-spinner">
+                <div class="spinner-circle"></div>
+                <div class="spinner-circle progress"></div>
+                <div class="loader-percentage" id="loaderPercentage">0%</div>
+            </div>
+            <p class="loader-subtitle">Loading your experience...</p>
+            <div class="loader-info">
+                <div class="info-item">
+                    <div class="info-icon"><i class="fas fa-rocket"></i></div>
+                    <div class="info-text">
+                        <div class="info-label">Fast Deploy</div>
+                        <span>Lightning-quick solutions</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="info-text">
+                        <div class="info-label">Secure</div>
+                        <span>Enterprise-grade protection</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="info-text">
+                        <div class="info-label">Growth</div>
+                        <span>Scalable business tools</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav id="navbar">
         <div class="nav-container">
@@ -1113,7 +1468,7 @@
     <section class="hero" id="home">
         <div class="hero-content">
             <h1>Welcome to Fairo-x</h1>
-            <p>Your trusted partner for innovative business solutions, advanced construction projects, and exceptional service. Transform your vision into reality.</p>
+            <p>Your trusted partner for innovative business solutions and exceptional service</p>
             <div class="cta-buttons">
                 <button class="btn" onclick="showPage('features')">
                     <i class="fas fa-star"></i> Explore Features
@@ -1131,13 +1486,13 @@
     <!-- Features Section -->
     <section class="section features" id="features">
         <div class="container">
-            <h2 class="section-title">Premium Services & Capabilities</h2>
-            <p class="section-subtitle">Discover why businesses trust Fairo-x for their digital transformation</p>
+            <h2 class="section-title">Premium Services</h2>
+            <p class="section-subtitle">Discover world-class solutions built for your success</p>
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-bolt"></i></div>
                     <h3>Lightning Fast</h3>
-                    <p>Industry-leading performance with optimized infrastructure delivering results in milliseconds for maximum productivity.</p>
+                    <p>Industry-leading performance with optimized infrastructure delivering results in milliseconds.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
@@ -1147,84 +1502,82 @@
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
                     <h3>Innovation First</h3>
-                    <p>Cutting-edge AI-powered solutions and creative approaches that push boundaries and drive business growth.</p>
+                    <p>Cutting-edge AI-powered solutions and creative approaches that push boundaries.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-globe"></i></div>
                     <h3>Global Reach</h3>
-                    <p>Serving clients worldwide with 24/7 multilingual support and localized services across all continents.</p>
+                    <p>Serving clients worldwide with 24/7 multilingual support and localized services.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
                     <h3>Real-time Analytics</h3>
-                    <p>Comprehensive dashboards with advanced insights, AI predictions, and data-driven decision-making tools.</p>
+                    <p>Comprehensive dashboards with advanced insights and data-driven decision-making tools.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-handshake"></i></div>
                     <h3>Expert Support</h3>
-                    <p>Dedicated team of certified professionals ready to provide personalized guidance and strategic consultation.</p>
+                    <p>Dedicated team of certified professionals ready to provide personalized guidance.</p>
                 </div>
             </div>
         </div>
-    </section>
-
-    <!-- Construction Section -->
-    <section class="section features" id="construction" style="background: linear-gradient(180deg, #fff5f5 0%, #ffe8e8 100%);">
-        <div class="container">
-            <h2 class="section-title" style="color: var(--dark);">Construction Excellence in Tamil Nadu</h2>
-            <p class="section-subtitle" style="color: var(--text-light);">Premium architectural designs and complete house-building solutions</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f); color: white;">
-                        <i class="fas fa-home"></i>
+    </section>        <!-- Construction Section -->
+        <section class="section features" id="construction" style="background: linear-gradient(180deg, #fff5f5 0%, #ffe8e8 100%);">
+            <div class="container">
+                <h2 class="section-title" style="color: var(--dark);">Construction Excellence in Tamil Nadu</h2>
+                <p class="section-subtitle" style="color: var(--text-light);">Premium architectural designs and complete house-building solutions</p>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f); color: white;">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <h3>Residential Design</h3>
+                        <p>Modern, sustainable residential projects with contemporary architecture, premium finishes, and smart home integration for your family.</p>
                     </div>
-                    <h3>Residential Design</h3>
-                    <p>Modern, sustainable residential projects with contemporary architecture, premium finishes, and smart home integration for your family.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #4ecdc4, #44b3aa); color: white;">
-                        <i class="fas fa-building"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #4ecdc4, #44b3aa); color: white;">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <h3>Commercial Projects</h3>
+                        <p>State-of-the-art commercial spaces designed for functionality, aesthetics, and maximum ROI potential.</p>
                     </div>
-                    <h3>Commercial Projects</h3>
-                    <p>State-of-the-art commercial spaces designed for functionality, aesthetics, and maximum ROI potential.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #f9ca24, #f0932b); color: white;">
-                        <i class="fas fa-hammer"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #f9ca24, #f0932b); color: white;">
+                            <i class="fas fa-hammer"></i>
+                        </div>
+                        <h3>Quality Construction</h3>
+                        <p>Expert execution with premium materials, skilled workforce, and rigorous quality checks at every stage.</p>
                     </div>
-                    <h3>Quality Construction</h3>
-                    <p>Expert execution with premium materials, skilled workforce, and rigorous quality checks at every stage.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white;">
-                        <i class="fas fa-pencil-ruler"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white;">
+                            <i class="fas fa-pencil-ruler"></i>
+                        </div>
+                        <h3>Architectural Planning</h3>
+                        <p>Personalized designs aligned with your vision, local regulations, and sustainable building practices.</p>
                     </div>
-                    <h3>Architectural Planning</h3>
-                    <p>Personalized designs aligned with your vision, local regulations, and sustainable building practices.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #00b894, #27ae60); color: white;">
-                        <i class="fas fa-leaf"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #00b894, #27ae60); color: white;">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <h3>Eco-Friendly Solutions</h3>
+                        <p>Green building certifications, renewable energy integration, and sustainable materials for responsible development.</p>
                     </div>
-                    <h3>Eco-Friendly Solutions</h3>
-                    <p>Green building certifications, renewable energy integration, and sustainable materials for responsible development.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" style="background: linear-gradient(135deg, #fd79a8, #e84393); color: white;">
-                        <i class="fas fa-star"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #fd79a8, #e84393); color: white;">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h3>Premium Service</h3>
+                        <p>End-to-end project management with transparent communication, timely delivery, and lifetime after-sales support.</p>
                     </div>
-                    <h3>Premium Service</h3>
-                    <p>End-to-end project management with transparent communication, timely delivery, and lifetime after-sales support.</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Contact Section -->
-    <section class="section contact" id="contact">
-        <div class="contact-content">
-            <h2 class="section-title">Get in Touch</h2>
-            <p class="section-subtitle">We'd love to hear from you. Send us a message and we'll respond within 24 hours.</p>
+        <!-- Contact Section -->
+        <section class="section contact" id="contact">
+            <div class="contact-content">
+                <h2 class="section-title">Get in Touch</h2>
+                <p class="section-subtitle">We'd love to hear from you. Send us a message and we'll respond within 24 hours.</p>
             <div class="contact-form">
                 <div id="contactMessage" class="message"></div>
                 <form id="contactForm">
@@ -1248,7 +1601,7 @@
                         <label for="contactMessageText">Message</label>
                         <textarea id="contactMessageText" placeholder="Tell us more about your project..." required></textarea>
                     </div>
-                    <button type="submit" class="btn" style="width: 100%; justify-content: center;">
+                    <button type="submit" class="btn btn-submit">
                         <span id="contactBtnText">Send Message</span>
                         <div class="loading" id="contactLoading"><div class="spinner"></div></div>
                     </button>
@@ -1305,57 +1658,61 @@
         </div>
     </footer>
 
-    <!-- Auth Modal -->
+    <!-- Advanced Creative Auth Modal -->
     <div class="modal" id="authModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            <h2>Welcome Back</h2>
-            
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
-                <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+            <div class="modal-header">
+                <h2>Welcome Back</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
 
-            <div id="authMessage" class="message"></div>
+            <div class="modal-body">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                    <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+                </div>
 
-            <!-- Login Form -->
-            <form id="loginForm" class="auth-form active">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="Enter your email" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter your password" required>
-                </div>
-                <button type="submit" class="btn" style="width: 100%; justify-content: center;">
-                    <span id="loginBtnText">Login Now</span>
-                    <div class="loading" id="loginLoading"><div class="spinner"></div></div>
-                </button>
-                <div class="form-link">
-                    <a href="#">Forgot Password?</a>
-                </div>
-            </form>
+                <div id="authMessage" class="message"></div>
 
-            <!-- Register Form -->
-            <form id="registerForm" class="auth-form">
-                <div class="form-group">
-                    <label for="registerName">Full Name</label>
-                    <input type="text" id="registerName" placeholder="Enter your name" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="Enter your email" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Password</label>
-                    <input type="password" id="registerPassword" placeholder="Create a password" required>
-                </div>
-                <button type="submit" class="btn" style="width: 100%; justify-content: center;">
-                    <span id="registerBtnText">Create Account</span>
-                    <div class="loading" id="registerLoading"><div class="spinner"></div></div>
-                </button>
-            </form>
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-submit">
+                        <span id="loginBtnText">Login Now</span>
+                        <div class="loading" id="loginLoading"><div class="spinner"></div></div>
+                    </button>
+                    <div class="form-link">
+                        <a href="#">Forgot your password?</a>
+                    </div>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="registerName">Full Name</label>
+                        <input type="text" id="registerName" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email Address</label>
+                        <input type="email" id="registerEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" placeholder="Create a strong password" required>
+                    </div>
+                    <button type="submit" class="btn btn-submit">
+                        <span id="registerBtnText">Create Account</span>
+                        <div class="loading" id="registerLoading"><div class="spinner"></div></div>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -1363,13 +1720,40 @@
         const API_URL = 'https://api.fairox.co.in/api';
         let currentUser = null;
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            setupLoadingScreen();
             checkAuth();
             setupEventListeners();
             setupScrollEffects();
-            setupMenuToggle();
         });
+
+        function setupLoadingScreen() {
+            const loader = document.getElementById('loaderScreen');
+            const percentageDisplay = document.getElementById('loaderPercentage');
+            let progress = 0;
+
+            // Animate progress from 0 to 100 over 5 seconds
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 18;
+                if (progress > 100) progress = 100;
+                
+                percentageDisplay.textContent = Math.floor(progress) + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    percentageDisplay.textContent = '100%';
+                    
+                    // Add slight delay after reaching 100% then fade out
+                    setTimeout(() => {
+                        loader.classList.add('fade-out');
+                        // Show home page after loader fades out
+                        setTimeout(() => {
+                            showPage('home');
+                        }, 800);
+                    }, 500);
+                }
+            }, 150);
+        }
 
         function setupEventListeners() {
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
@@ -1388,19 +1772,24 @@
             });
         }
 
-        function setupMenuToggle() {
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.menu-toggle') && !e.target.closest('.nav-links')) {
-                    document.getElementById('navLinks').classList.remove('active');
-                }
-            });
-        }
-
-        // Navigation
         function showPage(page) {
+            // Hide loader if visible
+            const loader = document.getElementById('loaderScreen');
+            if (loader && !loader.classList.contains('fade-out')) {
+                loader.classList.add('fade-out');
+            }
+
             document.querySelectorAll('.hero, .section').forEach(el => {
                 el.classList.remove('active');
                 el.style.display = 'none';
+            });
+
+            // Update nav links
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.textContent.toLowerCase().includes(page.toLowerCase())) {
+                    link.classList.add('active');
+                }
             });
 
             if (page === 'home') {
@@ -1421,7 +1810,6 @@
             document.getElementById('navLinks').classList.toggle('active');
         }
 
-        // Modal Functions
         function openModal() {
             document.getElementById('authModal').classList.add('active');
         }
@@ -1439,7 +1827,6 @@
             clearMessage('authMessage');
         }
 
-        // Authentication Functions
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value;
@@ -1534,7 +1921,6 @@
             document.getElementById('authBtn').onclick = openModal;
         }
 
-        // Contact Form
         async function handleContact(e) {
             e.preventDefault();
             const name = document.getElementById('contactName').value;
@@ -1567,7 +1953,6 @@
             }
         }
 
-        // Helper Functions
         function showMessage(id, message, type) {
             const el = document.getElementById(id);
             el.textContent = message;
