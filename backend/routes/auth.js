@@ -1339,5 +1339,31 @@ router.get('/logout', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// ROUTE 9: KEEP-ALIVE ENDPOINT (SESSION HEARTBEAT) ✅ NEW
+// ============================================
+
+router.post('/keep-alive', authMiddleware, async (req, res) => {
+  try {
+    console.log('💓 Keep-alive request from user:', req.user.id);
+    
+    // Just return success - middleware already verified token is valid
+    res.json({
+      success: true,
+      message: 'Session keep-alive successful',
+      timestamp: new Date(),
+      userId: req.user.id
+    });
+    
+  } catch (error) {
+    console.error('❌ Keep-alive error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Keep-alive failed',
+      error: error.message
+    });
+  }
+});
+
 
 module.exports = router;
