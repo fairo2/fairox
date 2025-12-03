@@ -1635,27 +1635,32 @@
             }
         }
 
-        function validateSession() {
-            const token = localStorage.getItem('authToken') || 
-                         localStorage.getItem('adminToken') || 
-                         localStorage.getItem('token') ||
-                         sessionStorage.getItem('token');
-            
-            if (!token) {
-                console.warn('❌ No valid token found');
-                window.location.href = '/admin.html';
-                return false;
-            }
-            
-            if (!token.startsWith('eyJ')) {
-                console.warn('❌ Invalid token format');
-                window.location.href = '/admin.html';
-                return false;
-            }
-            
-            console.log('✅ Session valid');
-            return true;
-        }
+        // ============================================
+// VALIDATE SESSION - FIXED VERSION
+// ============================================
+
+function validateSession() {
+    const token = localStorage.getItem('authToken') || 
+                 localStorage.getItem('adminToken') || 
+                 localStorage.getItem('token') ||
+                 sessionStorage.getItem('token');
+    
+    if (!token) {
+        console.warn('❌ No valid token found - Showing login');
+        showLoginPage();  // ✅ CHANGED: Was window.location.href = '/admin.html'
+        return false;
+    }
+    
+    if (!token.startsWith('eyJ')) {
+        console.warn('❌ Invalid token format');
+        showLoginPage();  // ✅ CHANGED: Was window.location.href = '/admin.html'
+        return false;
+    }
+    
+    console.log('✅ Session valid');
+    return true;
+}
+
 
         function logoutUser() {
             console.log('👋 Logging out user...');
@@ -1672,16 +1677,20 @@
             window.location.href = '/admin.html';
         }
 
-                document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 Page loaded - Initializing session manager...');
-            
-            if (validateSession()) {
-                initializeSessionManager();
-                console.log('✅ Session manager active');
-            } else {
-                console.log('⚠️ No valid session - redirecting to login');
-            }
-        });
+        // Initialize session manager on page load
+        document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 Page loaded - Initializing session manager...');
+    
+    validateSession();  // Just validate, don't initialize yet
+    
+    // Only initialize if valid token exists
+    const token = localStorage.getItem('authToken') || localStorage.getItem('adminToken');
+    if (token && token.startsWith('eyJ')) {
+        initializeSessionManager();
+        console.log('✅ Session manager active');
+    }
+});
+
     </script>
 
 
