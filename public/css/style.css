@@ -1,3 +1,8 @@
+/* ========================================
+   COMPLETE ENHANCED STYLE.CSS
+   Advanced Animations & Superior UI Design
+   ======================================== */
+
 /* CSS Variables */
 :root {
     --primary: #0f3460;
@@ -11,7 +16,7 @@
     --glass-border: rgba(255, 255, 255, 0.2);
 }
 
-/* Enhanced Reset & Base Styles */
+/* ========== RESET & BASE STYLES ========== */
 * {
     margin: 0;
     padding: 0;
@@ -30,7 +35,7 @@ body {
     background: #f8f9fa;
 }
 
-/* Enhanced Navigation */
+/* ========== NAVIGATION ========== */
 nav {
     position: fixed;
     top: 0;
@@ -132,7 +137,7 @@ nav.scrolled {
     border-radius: 2px;
 }
 
-/* Enhanced Hero Section */
+/* ========== HERO SECTION ========== */
 .hero {
     min-height: 100vh;
     display: flex;
@@ -318,7 +323,7 @@ nav.scrolled {
     box-shadow: 0 15px 50px rgba(0, 217, 255, 0.3);
 }
 
-/* Enhanced Features Section */
+/* ========== FEATURES SECTION ========== */
 .features {
     padding: 6rem 2rem;
     background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
@@ -459,7 +464,7 @@ nav.scrolled {
     line-height: 1.8;
 }
 
-/* Enhanced Contact Section */
+/* ========== CONTACT SECTION ========== */
 .contact {
     padding: 6rem 2rem;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -611,7 +616,7 @@ nav.scrolled {
     color: #ff3b30;
 }
 
-/* Enhanced Auth Modal */
+/* ========== AUTH MODAL ========== */
 .modal {
     display: none;
     position: fixed;
@@ -760,7 +765,7 @@ nav.scrolled {
     text-decoration: underline;
 }
 
-/* Enhanced Dashboard */
+/* ========== DASHBOARD ========== */
 .dashboard {
     display: none;
     padding: 100px 2rem 2rem;
@@ -832,7 +837,7 @@ nav.scrolled {
     color: var(--accent);
 }
 
-/* Enhanced Footer */
+/* ========== FOOTER ========== */
 footer {
     background: var(--dark);
     color: var(--light);
@@ -894,7 +899,7 @@ footer {
     box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
 }
 
-/* Loading Spinner */
+/* ========== LOADING SPINNER ========== */
 .spinner {
     display: inline-block;
     width: 20px;
@@ -909,7 +914,7 @@ footer {
     to { transform: rotate(360deg); }
 }
 
-/* Scroll Indicator */
+/* ========== SCROLL INDICATOR ========== */
 .scroll-indicator {
     position: absolute;
     bottom: 30px;
@@ -932,7 +937,7 @@ footer {
     }
 }
 
-/* Responsive Design */
+/* ========== RESPONSIVE DESIGN ========== */
 @media (max-width: 768px) {
     .menu-toggle {
         display: flex;
@@ -1066,3 +1071,5 @@ footer {
         font-size: 0.8rem;
     }
 }
+
+/* ========== END OF COMPLETE CSS ========== */
