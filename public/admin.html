@@ -531,6 +531,31 @@
         let currentToken = null;
         
         // ============================================
+        // ✅ SECURITY: Verify session before loading admin features
+        // ============================================
+        
+        function verifyAdminSession() {
+          const token = localStorage.getItem('authToken') || sessionStorage.getItem('token');
+          const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
+          
+          console.log('🔐 Verifying admin session...');
+          console.log('   Token present:', !!token);
+          console.log('   SessionId present:', !!sessionId);
+          console.log('   SessionManager instance:', !!window.sessionManager);
+          
+          if (!token || !sessionId || !window.sessionManager) {
+            console.error('❌ No valid session found - Redirecting to login');
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/admin.html';
+            return false;
+          }
+          
+          console.log('✅ Session verified\n');
+          return true;
+        }
+        
+        // ============================================
         // HELPER FUNCTIONS
         // ============================================
         
@@ -559,7 +584,7 @@
         }
         
         // ============================================
-        // LOGIN (✅ UPDATED WITH SESSION MANAGER)
+        // ✅ LOGIN (UPDATED WITH SESSION MANAGER)
         // ============================================
         
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -581,22 +606,18 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    console.log('✅ Login successful!');
-                    console.log('   Token received:', data.token.substring(0, 20) + '...');
+                    console.log('\n✅ Admin login successful');
+                    console.log('   Token:', data.token.substring(0, 20) + '...');
+                    console.log('   SessionId:', data.sessionId.substring(0, 20) + '...\n');
                     
-                    // ✅ NEW: Use SessionManager static method
+                    // ✅ USE SessionManager.createFromLoginResponse
                     SessionManager.createFromLoginResponse(data);
                     
-                    // ✅ STORE TOKEN (kept for compatibility)
-                    currentToken = data.token;
-                    localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('adminId', data.admin.id);
-                    localStorage.setItem('adminEmail', data.admin.email);
-                    
-                    console.log('✅ Token stored & SessionManager initialized');
-                    
-                    showDashboard();
+                    // ✅ Wait for SessionManager to initialize
+                    setTimeout(() => {
+                        console.log('🔄 Redirecting to dashboard...');
+                        window.location.href = '/admin.html';
+                    }, 500);
                 } else {
                     showMessage('loginMessage', data.message, 'error');
                 }
@@ -880,18 +901,16 @@
         }
 
         // ============================================
-        // CHECK IF ALREADY LOGGED IN
+        // ✅ CHECK IF ALREADY LOGGED IN & VERIFY SESSION
         // ============================================
         
-        const savedToken = localStorage.getItem('authToken') || localStorage.getItem('token');
-        if (savedToken) {
-            console.log('✅ Found saved token, restoring session...');
-            currentToken = savedToken;
+        document.addEventListener('DOMContentLoaded', () => {
+            // ✅ VERIFY SESSION FIRST - before loading any admin data
+            if (!verifyAdminSession()) return;
+            
+            console.log('📊 Showing dashboard...');
             showDashboard();
-        } else {
-            console.log('❌ No saved token found, showing login screen');
-        }
-
+        });
 
         // ============================================
         // CHANGE PASSWORD MODAL - ALL FUNCTIONS

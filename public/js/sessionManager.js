@@ -6,28 +6,34 @@
 // ============================================
 
 
+
 class SessionManager {
   constructor(options = {}) {
     this.INACTIVITY_TIMEOUT = options.timeout || 10 * 60 * 1000; // 10 minutes
     this.WARNING_TIME = options.warningTime || 9 * 60 * 1000;    // 9 minutes
-    this.sessionId = options.sessionId || localStorage.getItem('sessionId');
-    this.token = options.token || localStorage.getItem('authToken');
+    this.token = options.token || localStorage.getItem('authToken') || sessionStorage.getItem('token');
+    this.sessionId = options.sessionId || localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
     
     this.inactivityTimer = null;
     this.warningShown = false;
     this.lastActivityTime = Date.now();
     
-    console.log('🔍 SessionManager Constructor Debug:');
-    console.log('   Token:', this.token ? this.token.substring(0, 20) + '...' : 'NULL');
-    console.log('   SessionId:', this.sessionId ? this.sessionId.substring(0, 20) + '...' : 'NULL');
+    console.log('🔍 SessionManager Constructor:');
+    console.log('   Token received:', !!options.token, (options.token ? '✅' : '❌'));
+    console.log('   SessionId received:', !!options.sessionId, (options.sessionId ? '✅' : '❌'));
+    console.log('   Token available:', this.token ? this.token.substring(0, 20) + '...' : 'NULL');
+    console.log('   SessionId available:', this.sessionId ? this.sessionId.substring(0, 20) + '...' : 'NULL');
     
-    // ✅ FIX: Only init if we have valid session data
+    // Initialize if we have valid session data
     if (this.token && this.sessionId) {
+      console.log('✅ SessionManager: Valid credentials - Initializing\n');
       this.init();
     } else {
-      console.warn('⚠️  SessionManager: Cannot initialize - missing token or sessionId');
+      console.error('❌ SessionManager: Cannot initialize - missing token or sessionId\n');
+      throw new Error('SessionManager: Missing token or sessionId');
     }
   }
+
 
 
   // ============================================
@@ -51,6 +57,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // TRACK USER ACTIVITY (Reset timer on activity)
   // ============================================
@@ -63,6 +70,7 @@ class SessionManager {
     
     console.log('✅ Activity tracking enabled');
   }
+
 
 
   // ============================================
@@ -92,6 +100,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // START INACTIVITY TIMER
   // ============================================
@@ -117,6 +126,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // SHOW WARNING MODAL
   // ============================================
@@ -137,6 +147,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // HIDE WARNING MODAL
   // ============================================
@@ -147,6 +158,7 @@ class SessionManager {
       console.log('✅ Warning modal hidden');
     }
   }
+
 
 
   // ============================================
@@ -338,6 +350,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // COUNTDOWN DISPLAY
   // ============================================
@@ -365,6 +378,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // SESSION EXPIRED - AUTO LOGOUT
   // ============================================
@@ -379,6 +393,7 @@ class SessionManager {
       this.logout();
     }, 2000);
   }
+
 
 
   // ============================================
@@ -412,17 +427,25 @@ class SessionManager {
       </div>
     `;
     
-    document.body.insertAdjacentHTML('beforeend', expiredHTML);
-    
-    setTimeout(() => {
-      const redirectBtn = document.getElementById('redirectLoginBtn');
-      if (redirectBtn) {
-        redirectBtn.addEventListener('click', () => {
-          window.location.href = '/admin.html';
-        });
-      }
-    }, 100);
+    try {
+      document.body.insertAdjacentHTML('beforeend', expiredHTML);
+      
+      setTimeout(() => {
+        const redirectBtn = document.getElementById('redirectLoginBtn');
+        if (redirectBtn) {
+          redirectBtn.addEventListener('click', () => {
+            console.log('User redirecting to login after session expiry');
+            window.location.href = '/admin.html';
+          });
+        }
+      }, 100);
+    } catch (error) {
+      console.error('❌ Error showing session expired modal:', error.message);
+      // Fallback: Direct redirect
+      window.location.href = '/admin.html';
+    }
   }
+
 
 
   // ============================================
@@ -434,24 +457,23 @@ class SessionManager {
       return;
     }
     
+    console.log('💓 Heartbeat timer started (every 30 seconds)');
+    
     setInterval(() => {
       fetch('/api/health', {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.token}`,
           'X-Session-ID': this.sessionId,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sessionId: this.sessionId,
-          lastActivity: Date.now()
-        })
+        }
       }).catch(error => {
-        // Silently fail for heartbeat (server might not have endpoint yet)
-        console.log('ℹ️  Heartbeat skipped (endpoint not available yet)');
+        // Silently fail - keep session alive with client-side activity tracking
+        console.log('ℹ️  Heartbeat check skipped (no connection)');
       });
     }, 30000); // Send every 30 seconds
   }
+
 
 
   // ============================================
@@ -464,19 +486,23 @@ class SessionManager {
     localStorage.removeItem('authToken');
     localStorage.removeItem('sessionId');
     localStorage.removeItem('user');
+    localStorage.removeItem('isAdmin');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('sessionId');
-    localStorage.removeItem('isAdmin');  // ✅ Add this
+    
     console.log('✅ Cleared session storage');
     
     // Call server logout endpoint
     if (this.token && this.sessionId) {
-      fetch('/logout', {  // ✅ Matches server.js route
-  method: 'GET',
+      fetch('/logout', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.token}`,
           'X-Session-ID': this.sessionId
         }
+      }).catch(error => {
+        console.warn('⚠️  Logout request failed:', error.message);
+        // Continue with redirect anyway
       }).finally(() => {
         // Redirect to login
         console.log('✅ Redirecting to login...');
@@ -486,9 +512,11 @@ class SessionManager {
       });
     } else {
       // No token/session, redirect immediately
+      console.log('ℹ️  No active session - redirecting to login');
       window.location.href = '/admin.html';
     }
   }
+
 
 
   // ============================================
@@ -501,6 +529,7 @@ class SessionManager {
   }
 
 
+
   // ============================================
   // DESTROY SESSION MANAGER
   // ============================================
@@ -511,6 +540,7 @@ class SessionManager {
     console.log('🧹 Session Manager destroyed');
   }
 }
+
 
 
 // ============================================
@@ -563,6 +593,7 @@ SessionManager.createFromLoginResponse = function(response) {
 };
 
 
+
 // ============================================
 // INITIALIZE ON DOCUMENT READY
 // ============================================
@@ -571,26 +602,49 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('📄 DOM Loaded - Checking for existing session...');
   console.log('='.repeat(60));
   
-  // Get session data from storage
-  const token = localStorage.getItem('authToken') || sessionStorage.getItem('token');
-  const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
+  // Get session data from storage - try multiple sources
+  let token = localStorage.getItem('authToken');
+  let sessionId = localStorage.getItem('sessionId');
+  
+  // Fallback to sessionStorage
+  if (!token) token = sessionStorage.getItem('token');
+  if (!sessionId) sessionId = sessionStorage.getItem('sessionId');
   
   console.log('Checking storage:');
   console.log('   localStorage.authToken:', token ? token.substring(0, 20) + '...' : 'NULL');
   console.log('   localStorage.sessionId:', sessionId ? sessionId.substring(0, 20) + '...' : 'NULL');
   
   if (token && sessionId) {
-    console.log('✅ Session found - Initializing SessionManager\n');
-    window.sessionManager = new SessionManager({
-      token: token,
-      sessionId: sessionId,
-      timeout: 10 * 60 * 1000,
-      warningTime: 9 * 60 * 1000
-    });
+    console.log('✅ Session found - Initializing SessionManager');
+    console.log('   Token length:', token.length);
+    console.log('   SessionId length:', sessionId.length);
+    console.log('');
+    
+    try {
+      window.sessionManager = new SessionManager({
+        token: token,
+        sessionId: sessionId,
+        timeout: 10 * 60 * 1000,     // 10 minutes
+        warningTime: 9 * 60 * 1000   // 9 minutes (warning at 1 min before logout)
+      });
+      
+      console.log('✅ SessionManager initialized successfully\n');
+    } catch (error) {
+      console.error('❌ Error initializing SessionManager:', error.message);
+      console.log('   Clearing invalid session...\n');
+      localStorage.clear();
+      sessionStorage.clear();
+    }
   } else {
-    console.log('⚠️  No active session found - User must login\n');
+    console.log('ℹ️  No active session found - User must login\n');
+    // Optional: Clear any partial session data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('sessionId');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('sessionId');
   }
 });
+
 
 
 // Cleanup on page unload
