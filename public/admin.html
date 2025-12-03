@@ -1376,65 +1376,92 @@
     // ============================================
     // APPROVE USER
     // ============================================
-    async function approveUser(userId) {
-        if (!confirm('Approve this user?')) return;
-        try {
-            const response = await fetch(`${API_URL}/auth/admin/approve-user/${userId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${currentToken}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('User approved successfully!');
+    // ✅ FIXED (CORRECT - with delays)
+async function approveUser(userId) {
+    if (!confirm('Approve this user?')) return;
+    try {
+        const response = await fetch(`${API_URL}/auth/admin/approve-user/${userId}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('User approved successfully!');
+            
+            // ✅ Add delays to avoid rate limiting
+            setTimeout(() => {
                 loadStats();
+            }, 500);
+            
+            setTimeout(() => {
                 loadPendingUsers();
-            }
-        } catch (error) {
-            alert('Failed to approve user');
+            }, 1500);
         }
+    } catch (error) {
+        alert('Failed to approve user');
     }
+}
+
 
     // ============================================
     // REJECT USER
     // ============================================
-    async function rejectUser(userId) {
-        if (!confirm('Reject and delete this user?')) return;
-        try {
-            const response = await fetch(`${API_URL}/auth/admin/reject-user/${userId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${currentToken}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('User rejected successfully!');
+    // ✅ FIXED
+async function rejectUser(userId) {
+    if (!confirm('Reject and delete this user?')) return;
+    try {
+        const response = await fetch(`${API_URL}/auth/admin/reject-user/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('User rejected successfully!');
+            
+            // ✅ Add delays
+            setTimeout(() => {
                 loadStats();
+            }, 500);
+            
+            setTimeout(() => {
                 loadPendingUsers();
-            }
-        } catch (error) {
-            alert('Failed to reject user');
+            }, 1500);
         }
+    } catch (error) {
+        alert('Failed to reject user');
     }
+}
+
 
     // ============================================
     // REVOKE USER ACCESS
     // ============================================
-    async function revokeUser(userId) {
-        if (!confirm('Revoke access for this user?')) return;
-        try {
-            const response = await fetch(`${API_URL}/auth/admin/revoke-user/${userId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${currentToken}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('User access revoked!');
+    // ✅ FIXED
+async function revokeUser(userId) {
+    if (!confirm('Revoke access for this user?')) return;
+    try {
+        const response = await fetch(`${API_URL}/auth/admin/revoke-user/${userId}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('User access revoked!');
+            
+            // ✅ Add delays
+            setTimeout(() => {
                 loadStats();
+            }, 500);
+            
+            setTimeout(() => {
                 loadApprovedUsers();
-            }
-        } catch (error) {
-            alert('Failed to revoke access');
+            }, 1500);
         }
+    } catch (error) {
+        alert('Failed to revoke access');
     }
+}
+
 
     // ============================================
     // SWITCH TABS
