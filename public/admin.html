@@ -526,7 +526,7 @@
     </div>
 
     <script>
-            // ✅ FIXED: Correct API URL (changed from /api to just domain)
+        // ✅ FIXED: Correct API URL (changed from /api to just domain)
         const API_URL = 'https://api.fairox.co.in';
         let currentToken = null;
         
@@ -544,9 +544,7 @@
           console.log('   SessionManager instance:', !!window.sessionManager);
           
           if (!token || !sessionId || !window.sessionManager) {
-            console.error('❌ No valid session found - Redirecting to login');
-            localStorage.clear();
-            sessionStorage.clear();
+            console.error('❌ No valid session found - Keeping on login page');
             return false;
           }
           
@@ -554,10 +552,16 @@
           return true;
         }
         
-        // ✅ CHECK IF ON LOGIN PAGE
-        function isOnLoginPage() {
-          return document.getElementById('loginScreen') && 
-                 document.getElementById('loginScreen').style.display !== 'none';
+        // ✅ FIXED: Check if user has valid session in storage
+        function hasValidSession() {
+          const token = localStorage.getItem('authToken') || sessionStorage.getItem('token');
+          const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
+          
+          console.log('🔍 Checking for existing session...');
+          console.log('   Token:', token ? '✅ Found' : '❌ Missing');
+          console.log('   SessionId:', sessionId ? '✅ Found' : '❌ Missing');
+          
+          return !!(token && sessionId);
         }
         
         // ============================================
@@ -598,7 +602,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            console.log('🔐 Attempting admin login...');
+            console.log('\n🔐 Attempting admin login...');
 
             try {
                 // ✅ FIXED: Correct endpoint path
@@ -618,10 +622,10 @@
                     // ✅ USE SessionManager.createFromLoginResponse
                     SessionManager.createFromLoginResponse(data);
                     
-                    // ✅ Wait for SessionManager to initialize
+                    // ✅ Wait for SessionManager to initialize, then show dashboard
                     setTimeout(() => {
-                        console.log('🔄 Redirecting to dashboard...');
-                        window.location.href = '/admin.html';
+                        console.log('🔄 Showing dashboard...\n');
+                        showDashboard();
                     }, 500);
                 } else {
                     showMessage('loginMessage', data.message, 'error');
@@ -906,24 +910,36 @@
         }
 
         // ============================================
-        // ✅ CHECK IF ALREADY LOGGED IN & VERIFY SESSION
+        // ✅ PAGE LOAD - INIT LOGIC COMPLETELY REWRITTEN
         // ============================================
         
         document.addEventListener('DOMContentLoaded', () => {
-            // ✅ ONLY VERIFY IF NOT ON LOGIN PAGE
-            const isLogin = isOnLoginPage();
-            console.log('Is on login page:', isLogin);
+            console.log('\n' + '='.repeat(60));
+            console.log('📄 Admin Page Loaded');
+            console.log('='.repeat(60) + '\n');
             
-            if (isLogin) {
-                console.log('ℹ️  User is on login page - skipping session verification');
-                return;
+            // ✅ CHECK IF USER HAS VALID SESSION
+            if (hasValidSession()) {
+                console.log('✅ User has valid session in storage\n');
+                
+                // ✅ VERIFY WITH SESSION MANAGER
+                if (verifyAdminSession()) {
+                    console.log('✅ SessionManager verified - showing dashboard\n');
+                    showDashboard();
+                    return;
+                } else {
+                    console.log('⚠️  Session verification failed - showing login\n');
+                    // Fall through to show login
+                }
+            } else {
+                console.log('❌ No valid session found - showing login page\n');
+                // Fall through to show login
             }
             
-            // ✅ VERIFY SESSION ONLY FOR DASHBOARD
-            if (!verifyAdminSession()) return;
-            
-            console.log('📊 Showing dashboard...');
-            showDashboard();
+            // ✅ DEFAULT: Show login page
+            console.log('📍 Displaying login form\n');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').classList.remove('active');
         });
 
         // ============================================
