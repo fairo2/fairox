@@ -526,7 +526,7 @@
     </div>
 
     <script>
-        // ✅ FIXED: Correct API URL (changed from /api to just domain)
+            // ✅ FIXED: Correct API URL (changed from /api to just domain)
         const API_URL = 'https://api.fairox.co.in';
         let currentToken = null;
         
@@ -547,12 +547,17 @@
             console.error('❌ No valid session found - Redirecting to login');
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = '/admin.html';
             return false;
           }
           
           console.log('✅ Session verified\n');
           return true;
+        }
+        
+        // ✅ CHECK IF ON LOGIN PAGE
+        function isOnLoginPage() {
+          return document.getElementById('loginScreen') && 
+                 document.getElementById('loginScreen').style.display !== 'none';
         }
         
         // ============================================
@@ -905,7 +910,16 @@
         // ============================================
         
         document.addEventListener('DOMContentLoaded', () => {
-            // ✅ VERIFY SESSION FIRST - before loading any admin data
+            // ✅ ONLY VERIFY IF NOT ON LOGIN PAGE
+            const isLogin = isOnLoginPage();
+            console.log('Is on login page:', isLogin);
+            
+            if (isLogin) {
+                console.log('ℹ️  User is on login page - skipping session verification');
+                return;
+            }
+            
+            // ✅ VERIFY SESSION ONLY FOR DASHBOARD
             if (!verifyAdminSession()) return;
             
             console.log('📊 Showing dashboard...');

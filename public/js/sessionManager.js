@@ -3,6 +3,7 @@
 // File: public/js/sessionManager.js
 // Features: Inactivity tracking, Warning modal, Auto-logout
 // Updated: Dec 3, 2025 - PRODUCTION READY
+// ✅ HEARTBEAT REMOVED - Use client-side tracking only
 // ============================================
 
 
@@ -51,9 +52,6 @@ class SessionManager {
     
     // Start inactivity timer
     this.startInactivityTimer();
-    
-    // Send heartbeat to server
-    this.startHeartbeat();
   }
 
 
@@ -444,34 +442,6 @@ class SessionManager {
       // Fallback: Direct redirect
       window.location.href = '/admin.html';
     }
-  }
-
-
-
-  // ============================================
-  // SEND HEARTBEAT TO SERVER
-  // ============================================
-  startHeartbeat() {
-    if (!this.token || !this.sessionId) {
-      console.warn('⚠️  Heartbeat: Missing token or sessionId');
-      return;
-    }
-    
-    console.log('💓 Heartbeat timer started (every 30 seconds)');
-    
-    setInterval(() => {
-      fetch('/api/health', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'X-Session-ID': this.sessionId,
-          'Content-Type': 'application/json'
-        }
-      }).catch(error => {
-        // Silently fail - keep session alive with client-side activity tracking
-        console.log('ℹ️  Heartbeat check skipped (no connection)');
-      });
-    }, 30000); // Send every 30 seconds
   }
 
 
