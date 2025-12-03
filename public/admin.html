@@ -1169,23 +1169,11 @@
             dashboard.classList.add('active');
         }
 
-        // Update user info
-        const userNameEl = document.getElementById('userName');
-        const userEmailEl = document.getElementById('userEmail');
-        
-        if (userNameEl && currentUser) {
-            userNameEl.textContent = currentUser.name || 'Admin';
-        }
-        
-        if (userEmailEl && currentUser) {
-            userEmailEl.textContent = currentUser.email || '';
-        }
-
-        // Load data with delays (staggered)
-        loadStats();                           // Immediate
-        setTimeout(() => loadPendingUsers(), 300);   // Wait 300ms
-        setTimeout(() => loadApprovedUsers(), 600);  // Wait 600ms
-        setTimeout(() => loadContacts(), 900);       // Wait 900ms
+        // Load data with MUCH LONGER delays
+        loadStats();                                    // 0ms
+        setTimeout(() => loadPendingUsers(), 1500);    // 1.5 seconds ✅
+        setTimeout(() => loadApprovedUsers(), 3000);   // 3 seconds ✅
+        setTimeout(() => loadContacts(), 4500);        // 4.5 seconds ✅
 
         console.log('✅ Dashboard ready');
         
@@ -1193,6 +1181,7 @@
         console.error('❌ Dashboard error:', error);
     }
 }
+
 
 
         function showLoginPage() {
