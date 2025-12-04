@@ -3,22 +3,20 @@
 // File: src/backend/routes/budget.js
 // Database: PostgreSQL
 // Fixed: Dec 4, 2025 - Expense & Credit Card COMBINED for budget calculation
+// ✅ UPDATED: Routes match BUDGET_API_URL format (with underscores)
 // ============================================
-
 
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 
-
 console.log('✅ Budget routes loaded');
-
 
 // ============================================
 // SET BUDGET LIMIT (POST /api/budget/limits)
+// Frontend: fetch(`${BUDGET_API_URL}/limits`, {...})
 // ============================================
-
 
 router.post('/limits', authMiddleware, async (req, res) => {
     try {
@@ -79,14 +77,11 @@ router.post('/limits', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // GET BUDGET STATUS (GET /api/budget/status)
+// Frontend: fetch(`${BUDGET_API_URL}/status`, {...})
 // ✅ COMBINED: Expense + Credit Card spending tracked together
 // ============================================
-
 
 router.get('/status', authMiddleware, async (req, res) => {
     try {
@@ -201,15 +196,12 @@ router.get('/status', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // ✅ GET CATEGORIES FOR BUDGET DROPDOWN
 // (GET /api/budget/categories)
+// Frontend: fetch(`${BUDGET_API_URL}/categories`, {...})
 // FIXED: Only returns unique categories (Expense & Credit Card COMBINED)
 // ============================================
-
 
 router.get('/categories', authMiddleware, async (req, res) => {
     try {
@@ -272,14 +264,11 @@ router.get('/categories', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // GET BUDGET BY ID (GET /api/budget/:id)
+// Frontend: fetch(`${BUDGET_API_URL}/${id}`, {...})
 // ✅ COMBINED: Shows spending from all modes together
 // ============================================
-
 
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
@@ -367,13 +356,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // UPDATE BUDGET LIMIT (PUT /api/budget/:id)
+// Frontend: fetch(`${BUDGET_API_URL}/${id}`, {method: 'PUT', ...})
 // ============================================
-
 
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
@@ -443,13 +429,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // DELETE BUDGET LIMIT (DELETE /api/budget/:id)
+// Frontend: fetch(`${BUDGET_API_URL}/${id}`, {method: 'DELETE', ...})
 // ============================================
-
 
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
@@ -494,16 +477,13 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
-// GET BUDGET ALERTS (GET /api/budget/alerts/all)
+// GET BUDGET ALERTS (GET /api/budget/alerts)
+// Frontend: fetch(`${BUDGET_API_URL}/alerts`, {...})
 // ✅ COMBINED: Shows alerts based on combined spending
 // ============================================
 
-
-router.get('/alerts/all', authMiddleware, async (req, res) => {
+router.get('/alerts', authMiddleware, async (req, res) => {
     try {
         console.log('🔔 GET /api/budget/alerts - Fetching for user:', req.user.id);
         
@@ -596,8 +576,5 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
         });
     }
 });
-
-
-
 
 module.exports = router;

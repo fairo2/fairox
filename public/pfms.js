@@ -5,7 +5,7 @@
 const API_URL = 'https://api.fairox.co.in/api/pfms';
 const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
 const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
-const BUDGETAPIURL = 'https://api.fairox.co.in/api/budget';
+const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
 
 // ✅ Checks multiple keys like admin page does
 function getAuthToken() {
