@@ -2,10 +2,11 @@
 // PFMS FRONTEND JAVASCRIPT - COMPLETE FIXED
 // ============================================
 
-const API_URL = 'https://api.fairox.co.in/api/pfms';
-const PFMS_API_URL = 'https://api.fairox.co.in/api/pfms';
-const RECURRING_API_URL = 'https://api.fairox.co.in/api/recurring';
-const BUDGET_API_URL = 'https://api.fairox.co.in/api/budget';
+const APIURL = 'https://api.fairox.co.in/api/pfms';
+const PFMSAPIURL = 'https://api.fairox.co.in/api/pfms';
+const RECURRINGAPIURL = 'https://api.fairox.co.in/api/recurring';
+const BUDGETAPIURL = 'https://api.fairox.co.in/api/budget';
+
 
 // ✅ Checks multiple keys like admin page does
 function getAuthToken() {
