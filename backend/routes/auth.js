@@ -89,22 +89,6 @@ const apiLimiter = rateLimit({
   }
 });
 
-// ✅ Admin rate limit with proper key generation
-const adminLimiter = rateLimit({
-  windowMs: 60 * 1000,       // 1 minute
-  max: 1000,                 // 1000 requests per minute
-  message: 'Admin rate limit exceeded',
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req, res) => {
-    // Use authenticated user ID
-    return req.user && req.user.id ? `admin_${req.user.id}` : 'admin_unknown';
-  }
-});
-
-
-
-
 // ============================================
 // SECURITY MIDDLEWARE
 // ============================================
@@ -867,7 +851,7 @@ router.post('/contact', apiLimiter, async (req, res) => {
 // ============================================
 
 
-router.get('/admin/stats', authMiddleware, adminMiddleware, adminLimiter, async (req, res) => {
+router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📊 Loading admin stats...');
 
@@ -915,7 +899,7 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, adminLimiter, async 
 // ============================================
 
 
-router.get('/admin/pending-users', authMiddleware, adminMiddleware, adminLimiter, async (req, res) => {
+router.get('/admin/pending-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📋 Loading pending users...');
 
@@ -944,7 +928,7 @@ router.get('/admin/pending-users', authMiddleware, adminMiddleware, adminLimiter
 // ============================================
 
 
-router.get('/admin/approved-users', authMiddleware, adminMiddleware, adminLimiter, async (req, res) => {
+router.get('/admin/approved-users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('✅ Loading approved users...');
 
@@ -1206,7 +1190,7 @@ router.post('/admin/revoke-user/:id', authMiddleware, adminMiddleware, async (re
 // ============================================
 
 
-router.get('/admin/contacts', authMiddleware, adminMiddleware, adminLimiter, async (req, res) => {
+router.get('/admin/contacts', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     console.log('📞 Loading contacts...');
 
