@@ -1519,7 +1519,7 @@ async function loadBudgetCategories() {
             return;
         }
 
-        const response = await fetch(`${BUDGETAPIURL}/categories`, {
+        const response = await fetch(`${BUDGET_API_URL}/categories`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -1602,7 +1602,7 @@ async function setBudgetLimit() {
         
         console.log('📝 Budget Data:', { categoryId, currency, monthlyLimit, alertThreshold });
         
-        const response = await fetch(`${BUDGETAPIURL}/limits`, {
+        const response = await fetch(`${BUDGET_API_URL}/limits`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1645,7 +1645,7 @@ async function loadBudgetStatus() {
     try {
         console.log('📤 Loading budget status...');
         
-        const response = await fetch(`${BUDGETAPIURL}/status`, {
+        const response = await fetch(`${BUDGET_API_URL}/status`, {
             headers: {
                 'Authorization': `Bearer ${getAuthToken()}`
             }
@@ -1827,7 +1827,7 @@ async function deleteBudgetLimit(id) {
     try {
         console.log('🗑️ Deleting budget:', id);
         
-        const response = await fetch(`${BUDGETAPIURL}/${id}`, {
+        const response = await fetch(`${BUDGET_API_URL}/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${getAuthToken()}`
