@@ -1,8 +1,8 @@
 // ============================================
-// ✅ COMPLETE BUDGET.JS - EXPENSE + CREDIT CARD ONLY
+// ✅ COMPLETE BUDGET.JS - COMBINED EXPENSE & CREDIT CARD
 // File: src/backend/routes/budget.js
 // Database: PostgreSQL
-// Fixed: Dec 4, 2025 - Only load Expense & Credit Card categories (NO Income)
+// Fixed: Dec 4, 2025 - Expense & Credit Card COMBINED for budget calculation
 // ============================================
 
 
@@ -84,6 +84,7 @@ router.post('/limits', authMiddleware, async (req, res) => {
 
 // ============================================
 // GET BUDGET STATUS (GET /api/budget/status)
+// ✅ COMBINED: Expense + Credit Card spending tracked together
 // ============================================
 
 
@@ -93,7 +94,8 @@ router.get('/status', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ FIXED: PostgreSQL date functions and parameter syntax
+        // ✅ COMBINED CALCULATION: Expense + Credit Card spending together
+        // This query sums spending from BOTH Expense and Credit Card modes for the same category
         const query = `
             SELECT 
                 bl.id,
@@ -103,8 +105,15 @@ router.get('/status', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                COALESCE(SUM(t.amount), 0) as current_spending,
-                ROUND((COALESCE(SUM(t.amount), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
+                -- ✅ COMBINED: Sum from Expense AND Credit Card modes
+                COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0) as current_spending,
+                ROUND((COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON t.category_id = bl.category_id 
@@ -112,6 +121,7 @@ router.get('/status', authMiddleware, async (req, res) => {
                 AND t.currency = bl.currency
                 AND EXTRACT(YEAR FROM t.transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
                 AND EXTRACT(MONTH FROM t.transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                -- ✅ COMBINED: Include both Expense and Credit Card modes
                 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
             WHERE bl.user_id = $1
             GROUP BY bl.id, bl.user_id, bl.category_id, bl.currency, bl.monthly_limit, bl.alert_threshold, c.name
@@ -124,7 +134,8 @@ router.get('/status', authMiddleware, async (req, res) => {
         const budgets = result.rows;
         
         console.log('✅ Found:', budgets.length, 'budget limits');
-        console.log('📝 Query Details - Including modes: Expense, Credit Card, Debit Card, Cash Payment');
+        console.log('📝 Query Details - COMBINED modes: Expense + Credit Card + Debit Card + Cash Payment');
+        console.log('💡 Calculation: Spending from all modes summed together for accurate budget tracking');
         
         if (!budgets || budgets.length === 0) {
             console.log('⚠️ No budgets set for this user');
@@ -136,16 +147,17 @@ router.get('/status', authMiddleware, async (req, res) => {
             });
         }
         
-        // ✅ Generate alerts
+        // ✅ Generate alerts based on COMBINED spending
         const alerts = budgets
             .filter(b => parseFloat(b.percentage_used) >= parseFloat(b.alert_threshold))
             .map(b => ({
                 budgetId: b.id,
                 categoryName: b.category_name,
-                message: `⚠️ ${b.category_name}: ${b.percentage_used}% of budget used (${b.currency} ${parseFloat(b.current_spending).toFixed(2)} / ${parseFloat(b.monthly_limit).toFixed(2)})`,
+                message: `⚠️ ${b.category_name}: ${b.percentage_used}% of budget used (${b.currency} ${parseFloat(b.current_spending).toFixed(2)} / ${parseFloat(b.monthly_limit).toFixed(2)}) - Combined from Expense + Credit Card`,
                 alertType: parseFloat(b.percentage_used) >= 100 ? 'Critical' : 'Warning',
                 percentageUsed: b.percentage_used,
-                threshold: b.alert_threshold
+                threshold: b.alert_threshold,
+                combinedSpending: true
             }));
         
         // ✅ Map field names for frontend compatibility
@@ -163,16 +175,19 @@ router.get('/status', authMiddleware, async (req, res) => {
             currentspending: parseFloat(b.current_spending),
             current_spending: parseFloat(b.current_spending),
             percentageused: parseFloat(b.percentage_used),
-            percentage_used: parseFloat(b.percentage_used)
+            percentage_used: parseFloat(b.percentage_used),
+            combinedSpending: true,
+            note: 'Combined spending from Expense + Credit Card modes'
         }));
         
-        console.log('✅ Budget status response prepared');
+        console.log('✅ Budget status response prepared with COMBINED calculations');
         
         res.json({
             success: true,
             budget_status: mappedBudgets,
             budgetstatus: mappedBudgets,
-            alerts: alerts
+            alerts: alerts,
+            note: 'All spending modes (Expense, Credit Card, Debit Card, Cash Payment) combined for budget calculation'
         });
         
     } catch (error) {
@@ -192,7 +207,7 @@ router.get('/status', authMiddleware, async (req, res) => {
 // ============================================
 // ✅ GET CATEGORIES FOR BUDGET DROPDOWN
 // (GET /api/budget/categories)
-// FIXED: Only returns Expense & Credit Card modes (NO Income)
+// FIXED: Only returns unique categories (Expense & Credit Card COMBINED)
 // ============================================
 
 
@@ -200,61 +215,52 @@ router.get('/categories', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.id;
 
-
         console.log('📤 GET /api/budget/categories - Fetching for user:', userId);
 
-
-        // ✅ FIXED: Only fetch Expense and Credit Card categories
-        // These are the only categories that need budget tracking
+        // ✅ COMBINED: Get UNIQUE categories (same category may have both Expense and Credit Card modes)
+        // We only need the category ID and name, not the mode
         const query = `
             SELECT DISTINCT 
                 c.id, 
-                c.name, 
-                c.mode,
-                c.user_id
+                c.name
             FROM categories c
             WHERE c.user_id = $1
             AND c.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
-            ORDER BY c.mode ASC, c.name ASC
+            ORDER BY c.name ASC
         `;
-
 
         const result = await db.query(query, [userId]);
         const categories = result.rows;
 
-
-        console.log('✅ Found:', categories.length, 'budget-eligible categories');
-        console.log('📝 Modes included: Expense, Credit Card, Debit Card, Cash Payment');
-        console.log('⚠️ Income categories excluded (no budget tracking needed)');
-
+        console.log('✅ Found:', categories.length, 'unique categories');
+        console.log('📝 Modes COMBINED: Expense + Credit Card + Debit Card + Cash Payment');
+        console.log('💡 Each category can have spending from multiple modes - all tracked together');
 
         if (!categories || categories.length === 0) {
-            console.log('⚠️ No Expense/Credit Card categories found');
+            console.log('⚠️ No categories found for budget tracking');
             return res.json({
                 success: true,
                 categories: [],
                 total: 0,
-                message: 'Please create Expense or Credit Card categories first'
+                message: 'Please create Expense or Credit Card categories first',
+                note: 'Spending from all modes will be combined for budget calculation'
             });
         }
 
-
-        // ✅ Map categories with mode labels for frontend clarity
+        // ✅ Map categories - NO mode shown since we're combining them
         const mappedCategories = categories.map(cat => ({
             id: cat.id,
             name: cat.name,
-            mode: cat.mode,
-            displayName: `${cat.name} (${cat.mode})`
+            displayName: cat.name
         }));
-
 
         res.json({
             success: true,
             categories: mappedCategories,
             total: mappedCategories.length,
-            note: 'Only Expense and Credit Card categories shown - for budget tracking'
+            note: 'Combined budget tracking - Expense, Credit Card, Debit Card, and Cash Payment modes tracked together',
+            combinedTracking: true
         });
-
 
     } catch (error) {
         console.error('❌ Error fetching budget categories:', error.message);
@@ -271,6 +277,7 @@ router.get('/categories', authMiddleware, async (req, res) => {
 
 // ============================================
 // GET BUDGET BY ID (GET /api/budget/:id)
+// ✅ COMBINED: Shows spending from all modes together
 // ============================================
 
 
@@ -281,7 +288,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         
         console.log('📤 GET /api/budget/:id - Fetching:', id);
         
-        // ✅ FIXED: PostgreSQL parameter syntax
+        // ✅ COMBINED: Sum spending from all modes
         const query = `
             SELECT 
                 bl.id,
@@ -291,8 +298,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                COALESCE(SUM(t.amount), 0) as current_spending,
-                ROUND((COALESCE(SUM(t.amount), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used,
+                -- ✅ COMBINED spending
+                COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0) as current_spending,
+                ROUND((COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used,
                 bl.created_at,
                 bl.updated_at
             FROM budget_limits bl
@@ -323,6 +337,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         const budget = budgets[0];
         
         console.log('✅ Budget retrieved:', budget.id);
+        console.log('💡 Spending includes: Expense, Credit Card, Debit Card, Cash Payment modes');
         
         res.json({
             success: true,
@@ -336,7 +351,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
                 current_spending: parseFloat(budget.current_spending),
                 percentage_used: parseFloat(budget.percentage_used),
                 created_at: budget.created_at,
-                updated_at: budget.updated_at
+                updated_at: budget.updated_at,
+                combinedSpending: true,
+                note: 'Spending combined from Expense, Credit Card, Debit Card, and Cash Payment modes'
             }
         });
         
@@ -482,6 +499,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
 // ============================================
 // GET BUDGET ALERTS (GET /api/budget/alerts/all)
+// ✅ COMBINED: Shows alerts based on combined spending
 // ============================================
 
 
@@ -491,7 +509,7 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ Query to get all budgets with their current spending
+        // ✅ COMBINED: Get all budgets with COMBINED spending calculation
         const query = `
             SELECT 
                 bl.id,
@@ -501,8 +519,15 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                COALESCE(SUM(t.amount), 0) as current_spending,
-                ROUND((COALESCE(SUM(t.amount), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
+                -- ✅ COMBINED spending from all modes
+                COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0) as current_spending,
+                ROUND((COALESCE(SUM(CASE 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount 
+                    ELSE 0 
+                END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON t.category_id = bl.category_id 
@@ -521,7 +546,7 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
         // ✅ FIXED: Extract rows array from result
         const budgets = result.rows;
         
-        // Generate detailed alerts
+        // Generate detailed alerts based on COMBINED spending
         const alerts = budgets.map(b => {
             const percentUsed = parseFloat(b.percentage_used);
             const threshold = parseFloat(b.alert_threshold);
@@ -539,13 +564,16 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
                 hasAlert: isAlert,
                 alertType: isCritical ? 'Critical' : (isAlert ? 'Warning' : 'OK'),
                 message: isAlert 
-                    ? `⚠️ ${b.category_name}: ${percentUsed}% of budget used (${b.currency} ${parseFloat(b.current_spending).toFixed(2)} / ${parseFloat(b.monthly_limit).toFixed(2)})`
-                    : `✅ ${b.category_name}: ${percentUsed}% of budget used`,
-                remainingBudget: Math.max(0, parseFloat(b.monthly_limit) - parseFloat(b.current_spending))
+                    ? `⚠️ ${b.category_name}: ${percentUsed}% of budget used (${b.currency} ${parseFloat(b.current_spending).toFixed(2)} / ${parseFloat(b.monthly_limit).toFixed(2)}) - Combined Expense + Credit Card spending`
+                    : `✅ ${b.category_name}: ${percentUsed}% of budget used - Combined Expense + Credit Card spending`,
+                remainingBudget: Math.max(0, parseFloat(b.monthly_limit) - parseFloat(b.current_spending)),
+                combinedSpending: true,
+                note: 'Includes spending from Expense, Credit Card, Debit Card, and Cash Payment modes'
             };
         });
         
-        console.log('✅ Found:', alerts.length, 'budgets');
+        console.log('✅ Found:', alerts.length, 'budgets with COMBINED spending calculation');
+        console.log('💡 Each budget tracks all spending modes together for accurate totals');
         
         res.json({
             success: true,
@@ -555,7 +583,8 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
                 warnings: alerts.filter(a => a.alertType === 'Warning').length,
                 critical: alerts.filter(a => a.alertType === 'Critical').length,
                 ok: alerts.filter(a => a.alertType === 'OK').length
-            }
+            },
+            note: 'All budgets calculated with COMBINED spending from Expense, Credit Card, Debit Card, and Cash Payment modes'
         });
         
     } catch (error) {
