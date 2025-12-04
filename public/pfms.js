@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+
     initPrivacyMode();
     document.getElementById('transactionDate').valueAsDate = new Date();
     loadInitialData();
@@ -52,9 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Recurring transactions initialized!');
     }, 500);
 
+
     if (localStorage.getItem('pfmsTheme') === 'dark') {
         document.body.classList.add('dark-mode');
     }
+
+    // ✅ Initialize Budget - COMBINED CALCULATION
+    setTimeout(() => {
+        console.log('⏳ Initializing budget...');
+        loadBudgetCategories();      // Load unique categories (no duplicates, no undefined)
+        loadBudgetStatus();          // Load combined budget status (all payment modes combined)
+        console.log('✅ Budget initialized');
+    }, 600);
 });
 
 // ✅ API CALL - FIXED
@@ -1490,7 +1500,75 @@ async function deleteRecurringTransaction(id) {
 }
 
 // ============================================
-// BUDGET MANAGEMENT FUNCTIONS
+// ✅ BUDGET MANAGEMENT FUNCTIONS - FIXED
+// Combined Calculation with Proper Frontend
+// ============================================
+
+
+// ============================================
+// 1️⃣ LOAD BUDGET CATEGORIES (FIXED)
+// ============================================
+
+async function loadBudgetCategories() {
+    try {
+        console.log('📥 Fetching budget categories from backend...');
+        
+        const token = getAuthToken();
+        if (!token) {
+            console.error('❌ No auth token found');
+            return;
+        }
+
+        const response = await fetch(`${BUDGETAPIURL}/categories`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Failed to fetch categories:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+        console.log('📊 Categories Response:', data);
+        
+        if (!data.success || !data.categories) {
+            console.warn('⚠️ No categories returned from API');
+            return;
+        }
+
+        console.log('✅ Categories fetched:', data.categories.length);
+        console.log('💡 Each category tracks all payment modes combined');
+
+        const budgetCategorySelect = document.getElementById('budgetCategory');
+        if (!budgetCategorySelect) {
+            console.error('❌ budgetCategory select element not found');
+            return;
+        }
+
+        budgetCategorySelect.innerHTML = '<option value="">Select Category</option>';
+
+        // ✅ FIXED: DON'T show mode - just category name
+        data.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.name; // ✅ NO mode suffix!
+            budgetCategorySelect.appendChild(option);
+        });
+
+        console.log('✅ Budget categories dropdown populated:', data.categories.length);
+
+    } catch (error) {
+        console.error('❌ Error loading budget categories:', error);
+        showMessage('Error loading categories', 'error');
+    }
+}
+
+
+// ============================================
+// 2️⃣ SET BUDGET LIMIT (FIXED)
 // ============================================
 
 async function setBudgetLimit() {
@@ -1507,14 +1585,24 @@ async function setBudgetLimit() {
         const monthlyLimit = limitInput?.value;
         const alertThreshold = thresholdInput?.value;
         
+        console.log('Budget Form Values:', { categoryId, currency, monthlyLimit, alertThreshold });
+        
         if (!categoryId || !currency || !monthlyLimit || !alertThreshold) {
-            alert('❌ Please fill all fields');
+            showMessage('❌ Please fill all required fields', 'error');
+            console.warn('⚠️ Missing required fields');
+            return;
+        }
+        
+        // ✅ Validate threshold
+        const thresholdNum = parseInt(alertThreshold);
+        if (isNaN(thresholdNum) || thresholdNum < 0 || thresholdNum > 100) {
+            showMessage('❌ Alert threshold must be between 0-100', 'error');
             return;
         }
         
         console.log('📝 Budget Data:', { categoryId, currency, monthlyLimit, alertThreshold });
         
-        const response = await fetch(`${BUDGET_API_URL}/limits`, {
+        const response = await fetch(`${BUDGETAPIURL}/limits`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1529,33 +1617,42 @@ async function setBudgetLimit() {
         });
         
         const data = await response.json();
-        console.log('Response:', data);
+        console.log('📤 Response:', data);
         
         if (data.success) {
-            alert('✅ Budget limit set successfully!');
+            showMessage('✅ Budget limit set successfully!', 'success');
             document.getElementById('budgetForm')?.reset();
-            loadBudgetStatus();
+            
+            // ✅ Reload budget info
+            setTimeout(() => {
+                loadBudgetStatus();
+            }, 500);
         } else {
-            alert('❌ Error: ' + data.message);
+            showMessage('❌ Error: ' + data.message, 'error');
         }
     } catch (error) {
         console.error('❌ Error setting budget:', error);
-        alert('❌ Error: ' + error.message);
+        showMessage('❌ Error: ' + error.message, 'error');
     }
 }
+
+
+// ============================================
+// 3️⃣ LOAD BUDGET STATUS (FIXED)
+// ============================================
 
 async function loadBudgetStatus() {
     try {
         console.log('📤 Loading budget status...');
         
-        const response = await fetch(`${BUDGET_API_URL}/status`, {
+        const response = await fetch(`${BUDGETAPIURL}/status`, {
             headers: {
                 'Authorization': `Bearer ${getAuthToken()}`
             }
         });
         
         const data = await response.json();
-        console.log('Budget Status Response:', data);
+        console.log('📈 Budget Status Response:', data);
         
         if (data.success) {
             displayBudgetStatus(
@@ -1567,6 +1664,11 @@ async function loadBudgetStatus() {
         console.error('❌ Error loading budget status:', error);
     }
 }
+
+
+// ============================================
+// 4️⃣ DISPLAY BUDGET STATUS (FIXED FOR COMBINED)
+// ============================================
 
 function displayBudgetStatus(budgets, alerts) {
     console.log('📊 Displaying budgets:', budgets);
@@ -1580,32 +1682,93 @@ function displayBudgetStatus(budgets, alerts) {
         return;
     }
     
-    // ✅ Display Budget Status
+    // ============================================
+    // DISPLAY BUDGET STATUS CARDS
+    // ============================================
+    
     if (!budgets || budgets.length === 0) {
-        statusContainer.innerHTML = '<p style="color: #999; text-align: center;">No budget limits set up</p>';
+        statusContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No budget limits set up yet</p>';
     } else {
         const html = budgets.map(budget => {
+            // ✅ Get category name with fallback for both formats
+            const categoryName = budget.categoryname || budget.category_name || 'Unknown';
+            
+            // ✅ Get spending with fallback for both formats
+            const currentSpending = parseFloat(budget.currentspending || budget.current_spending || 0);
+            
+            // ✅ Get limit with fallback for both formats
+            const monthlyLimit = parseFloat(budget.monthlylimit || budget.monthly_limit || 0);
+            
+            // ✅ Get percentage used
             const percentUsed = parseFloat(budget.percentageused || budget.percentage_used || 0);
-            const barColor = percentUsed >= 100 ? '#ff5252' : 
-                            percentUsed >= (budget.alertthreshold || budget.alert_threshold) ? '#ffa726' : '#66bb6a';
+            
+            // ✅ Get alert threshold
+            const alertThreshold = parseFloat(budget.alertthreshold || budget.alert_threshold || 80);
+            
+            // ✅ Get currency
+            const currency = budget.currency || 'INR';
+            
+            // ✅ Calculate remaining
+            const remaining = Math.max(0, monthlyLimit - currentSpending);
+            
+            // ✅ Determine color based on usage
+            let barColor = '#66bb6a'; // Green - OK
+            if (percentUsed >= 100) {
+                barColor = '#ff5252'; // Red - Over budget
+            } else if (percentUsed >= alertThreshold) {
+                barColor = '#ffa726'; // Orange - Warning
+            }
+            
+            // ✅ Determine status
+            const status = percentUsed >= 100 ? 'OVER BUDGET' : percentUsed >= alertThreshold ? 'WARNING' : 'OK';
             
             return `
                 <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${barColor};">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
-                            <h4 style="margin: 0; color: white;">${budget.categoryname || budget.category_name}</h4>
+                            <!-- Category Name -->
+                            <h4 style="margin: 0; color: white; font-size: 16px;">
+                                ${categoryName}
+                            </h4>
+                            
+                            <!-- Spending Info -->
                             <p style="margin: 8px 0; color: #aaa; font-size: 14px;">
-                                ${budget.currency} ${parseFloat(budget.currentspending || budget.current_spending).toFixed(2)} / ${parseFloat(budget.monthlylimit || budget.monthly_limit).toFixed(2)}
+                                ${currency} ${currentSpending.toFixed(2)} / ${monthlyLimit.toFixed(2)}
                             </p>
-                            <div style="background: #444; height: 8px; border-radius: 4px; margin: 8px 0;">
+                            
+                            <!-- Progress Bar -->
+                            <div style="background: #444; height: 8px; border-radius: 4px; margin: 8px 0; overflow: hidden;">
                                 <div style="background: ${barColor}; height: 100%; width: ${Math.min(percentUsed, 100)}%; border-radius: 4px; transition: width 0.3s;"></div>
                             </div>
+                            
+                            <!-- Percentage & Remaining -->
                             <p style="font-size: 12px; color: #999; margin: 5px 0;">
-                                ${percentUsed.toFixed(1)}% used
+                                ${percentUsed.toFixed(1)}% used - Remaining: ${currency} ${remaining.toFixed(2)}
                             </p>
+                            
+                            <!-- Combined Note ✅ -->
+                            <p style="font-size: 11px; color: #00d9ff; margin: 5px 0; font-style: italic;">
+                                💡 Combined: Expense + Credit Card + Debit Card + Cash Payment
+                            </p>
+                            
+                            <!-- Status Badge -->
+                            <span style="
+                                display: inline-block;
+                                padding: 4px 12px;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                font-weight: bold;
+                                margin-top: 8px;
+                                background: ${status === 'OVER BUDGET' ? '#ffebee' : status === 'WARNING' ? '#fff3e0' : '#e8f5e9'};
+                                color: ${status === 'OVER BUDGET' ? '#ff5252' : status === 'WARNING' ? '#ffa726' : '#66bb6a'};
+                            ">
+                                ${status}
+                            </span>
                         </div>
-                        <button onclick="deleteBudgetLimit(${budget.id})" style="color: #ff5252; background: none; border: none; cursor: pointer; font-weight: bold; margin-left: 10px;">
-                            🗑️ Delete
+                        
+                        <!-- Delete Button -->
+                        <button onclick="deleteBudgetLimit(${budget.id})" style="color: #ff5252; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 18px; margin-left: 10px;" title="Delete budget">
+                            🗑️
                         </button>
                     </div>
                 </div>
@@ -1615,106 +1778,96 @@ function displayBudgetStatus(budgets, alerts) {
         statusContainer.innerHTML = html;
     }
     
-    // ✅ Display Alerts
+    // ============================================
+    // DISPLAY BUDGET ALERTS
+    // ============================================
+    
     if (!alerts || alerts.length === 0) {
-        alertContainer.innerHTML = '<p style="color: #66bb6a; text-align: center;">✅ All budgets are within limits</p>';
+        alertContainer.innerHTML = '<p style="color: #66bb6a; text-align: center; padding: 20px;">✅ All budgets are within limits! Great job! 🎉</p>';
     } else {
-        const alertHtml = alerts.map(alert => `
-            <div style="background: ${alert.alertType === 'Critical' ? '#ffebee' : '#fff3e0'}; 
-                        border-left: 4px solid ${alert.alertType === 'Critical' ? '#ff5252' : '#ffa726'}; 
-                        padding: 12px; margin: 8px 0; border-radius: 4px; color: #333;">
-                <strong>${alert.alertType === 'Critical' ? '🔴 CRITICAL' : '🟠 WARNING'}:</strong> ${alert.message}
-            </div>
-        `).join('');
+        const alertHtml = alerts.map(alert => {
+            const alertType = alert.alertType || 'Warning';
+            const bgColor = alertType === 'Critical' ? '#ffebee' : '#fff3e0';
+            const borderColor = alertType === 'Critical' ? '#ff5252' : '#ffa726';
+            const icon = alertType === 'Critical' ? '🚨' : '⚠️';
+            
+            return `
+                <div style="
+                    background: ${bgColor}; 
+                    border-left: 4px solid ${borderColor}; 
+                    padding: 12px; 
+                    margin: 8px 0; 
+                    border-radius: 4px; 
+                    color: #333;
+                ">
+                    <strong style="color: ${borderColor};">
+                        ${icon} ${alertType === 'Critical' ? 'CRITICAL' : 'WARNING'}
+                    </strong>
+                    <p style="margin: 8px 0; font-size: 14px;">
+                        ${alert.message}
+                    </p>
+                </div>
+            `;
+        }).join('');
         
         alertContainer.innerHTML = alertHtml;
     }
+    
+    console.log('✅ Budget display completed');
 }
+
+
+// ============================================
+// 5️⃣ DELETE BUDGET LIMIT (FIXED)
+// ============================================
 
 async function deleteBudgetLimit(id) {
     if (!confirm('Delete this budget limit?')) return;
     
     try {
-        const response = await fetch(`${BUDGET_API_URL}/${id}`, {
+        console.log('🗑️ Deleting budget:', id);
+        
+        const response = await fetch(`${BUDGETAPIURL}/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${getAuthToken()}`
             }
         });
         
-        if (response.ok) {
-            alert('✅ Budget limit deleted!');
-            loadBudgetStatus();
+        const data = await response.json();
+        console.log('Delete Response:', data);
+        
+        if (response.ok && data.success) {
+            showMessage('✅ Budget limit deleted!', 'success');
+            console.log('✅ Budget deleted successfully');
+            
+            // ✅ Reload budget status
+            setTimeout(() => {
+                loadBudgetStatus();
+            }, 500);
         } else {
-            alert('❌ Error deleting budget');
+            showMessage('❌ Error deleting budget', 'error');
         }
     } catch (error) {
         console.error('❌ Error:', error);
+        showMessage('Error deleting budget: ' + error.message, 'error');
     }
 }
 
-// ✅ Load budget status on page load
-// Add this to your DOMContentLoaded event:
+
+// ============================================
+// 6️⃣ INITIALIZE BUDGET ON PAGE LOAD
+// ============================================
+
+// ✅ Add this to your DOMContentLoaded event:
+/*
 setTimeout(() => {
     console.log('⏳ Initializing budget...');
-    loadBudgetCategories();
-    loadBudgetStatus();
+    loadBudgetCategories();      // Load unique categories
+    loadBudgetStatus();          // Load combined budget status
+    console.log('✅ Budget initialized');
 }, 600);
-
-async function loadBudgetCategories() {
-    try {
-        console.log('📥 Fetching budget categories from backend...');
-        
-        const token = getAuthToken();
-        if (!token) {
-            console.error('❌ No auth token found');
-            return;
-        }
-
-        const response = await fetch(`${BUDGET_API_URL}/categories`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            console.error('❌ Failed to fetch categories:', response.status);
-            return;
-        }
-
-        const data = await response.json();
-        
-        if (!data.success || !data.categories) {
-            console.warn('⚠️ No categories returned from API');
-            return;
-        }
-
-        console.log('✅ Categories fetched:', data.categories.length);
-
-        const budgetCategorySelect = document.getElementById('budgetCategory');
-        if (!budgetCategorySelect) {
-            console.error('❌ budgetCategory select element not found');
-            return;
-        }
-
-        budgetCategorySelect.innerHTML = '<option value="">Select Category</option>';
-
-        data.categories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.id;
-            option.textContent = `${category.name} (${category.mode})`;
-            budgetCategorySelect.appendChild(option);
-        });
-
-        console.log('✅ Budget categories dropdown populated:', data.categories.length);
-
-    } catch (error) {
-        console.error('❌ Error loading budget categories:', error);
-        showMessage('Error loading categories', 'error');
-    }
-}
-
+*/
 
 // ============================================
 // EXPORT TO EXCEL
