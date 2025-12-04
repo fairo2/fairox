@@ -1856,20 +1856,6 @@ async function deleteBudgetLimit(id) {
 
 
 // ============================================
-// 6️⃣ INITIALIZE BUDGET ON PAGE LOAD
-// ============================================
-
-// ✅ Add this to your DOMContentLoaded event:
-/*
-setTimeout(() => {
-    console.log('⏳ Initializing budget...');
-    loadBudgetCategories();      // Load unique categories
-    loadBudgetStatus();          // Load combined budget status
-    console.log('✅ Budget initialized');
-}, 600);
-*/
-
-// ============================================
 // EXPORT TO EXCEL
 // ============================================
 
