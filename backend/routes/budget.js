@@ -1,8 +1,8 @@
 // ============================================
-// ✅ COMPLETE BUDGET.JS - WITH CATEGORIES ENDPOINT
+// ✅ COMPLETE BUDGET.JS - EXPENSE + CREDIT CARD ONLY
 // File: src/backend/routes/budget.js
 // Database: PostgreSQL
-// Fixed: Dec 3, 2025 - Added /categories endpoint
+// Fixed: Dec 4, 2025 - Only load Expense & Credit Card categories (NO Income)
 // ============================================
 
 
@@ -78,6 +78,7 @@ router.post('/limits', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 
 
@@ -187,18 +188,25 @@ router.get('/status', authMiddleware, async (req, res) => {
 
 
 
+
 // ============================================
-// GET CATEGORIES FOR BUDGET DROPDOWN (GET /api/budget/categories)
+// ✅ GET CATEGORIES FOR BUDGET DROPDOWN
+// (GET /api/budget/categories)
+// FIXED: Only returns Expense & Credit Card modes (NO Income)
 // ============================================
+
 
 router.get('/categories', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { mode } = req.query;
+
 
         console.log('📤 GET /api/budget/categories - Fetching for user:', userId);
 
-        let query = `
+
+        // ✅ FIXED: Only fetch Expense and Credit Card categories
+        // These are the only categories that need budget tracking
+        const query = `
             SELECT DISTINCT 
                 c.id, 
                 c.name, 
@@ -206,30 +214,47 @@ router.get('/categories', authMiddleware, async (req, res) => {
                 c.user_id
             FROM categories c
             WHERE c.user_id = $1
+            AND c.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+            ORDER BY c.mode ASC, c.name ASC
         `;
 
-        const params = [userId];
-        let paramIndex = 2;
 
-        // Optional filter by mode
-        if (mode) {
-            query += ` AND c.mode = $${paramIndex}`;
-            params.push(mode);
-            paramIndex++;
-        }
-
-        query += ` ORDER BY c.name ASC`;
-
-        const result = await db.query(query, params);
+        const result = await db.query(query, [userId]);
         const categories = result.rows;
 
-        console.log('✅ Found:', categories.length, 'categories');
+
+        console.log('✅ Found:', categories.length, 'budget-eligible categories');
+        console.log('📝 Modes included: Expense, Credit Card, Debit Card, Cash Payment');
+        console.log('⚠️ Income categories excluded (no budget tracking needed)');
+
+
+        if (!categories || categories.length === 0) {
+            console.log('⚠️ No Expense/Credit Card categories found');
+            return res.json({
+                success: true,
+                categories: [],
+                total: 0,
+                message: 'Please create Expense or Credit Card categories first'
+            });
+        }
+
+
+        // ✅ Map categories with mode labels for frontend clarity
+        const mappedCategories = categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            mode: cat.mode,
+            displayName: `${cat.name} (${cat.mode})`
+        }));
+
 
         res.json({
             success: true,
-            categories: categories,
-            total: categories.length
+            categories: mappedCategories,
+            total: mappedCategories.length,
+            note: 'Only Expense and Credit Card categories shown - for budget tracking'
         });
+
 
     } catch (error) {
         console.error('❌ Error fetching budget categories:', error.message);
@@ -240,6 +265,7 @@ router.get('/categories', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 
 
@@ -326,6 +352,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 
 
+
 // ============================================
 // UPDATE BUDGET LIMIT (PUT /api/budget/:id)
 // ============================================
@@ -401,6 +428,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
 
 
+
 // ============================================
 // DELETE BUDGET LIMIT (DELETE /api/budget/:id)
 // ============================================
@@ -451,8 +479,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
 
 
+
 // ============================================
-// GET BUDGET ALERTS (GET /api/budget/alerts)
+// GET BUDGET ALERTS (GET /api/budget/alerts/all)
 // ============================================
 
 
@@ -538,6 +567,7 @@ router.get('/alerts/all', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 
 
