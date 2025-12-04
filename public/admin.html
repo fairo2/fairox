@@ -909,6 +909,7 @@
                 <h1 class="dashboard-title">Admin Dashboard</h1>
             </div>
             <div class="dashboard-actions">
+                <button class="action-btn" onclick="window.location.href = '/pfms.html'">💰 Personal Finance (PFMS)</button>
                 <button class="action-btn" onclick="openChangePasswordModal()">🔐 Change Password</button>
                 <button class="action-btn logout-btn" onclick="logout()">Logout</button>
             </div>
@@ -967,10 +968,10 @@
 
         <div class="tabs-container">
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('pending')">📋 Pending Approval</button>
+                <button class="tab-btn active" onclick="switchTab('pending', this)">📋 Pending Approval</button>
                 <button class="tab-btn" onclick="switchTab('approved')">✓ Approved Users</button>
                 <button class="tab-btn" onclick="switchTab('contacts')">💬 Contact Messages</button>
-                <button class="tab-btn" onclick="window.location.href = '/pfms.html'">💰 Personal Finance (PFMS)</button>
+                
             </div>
 
             <!-- Pending Users Tab -->
@@ -1223,35 +1224,34 @@
     // ============================================
     // SHOW DASHBOARD
     // ============================================
-    function showDashboard() {
-        // ✅ Prevent duplicate calls
-        if (dashboardInitialized) {
-            console.log('⚠️ Dashboard already initialized, skipping...');
-            return;
-        }
-        dashboardInitialized = true;
-
-        try {
-            // Show dashboard safely
-            const dashboard = document.getElementById('dashboard');
-            if (dashboard) {
-                dashboard.style.display = 'block';
-                dashboard.classList.add('active');
-            }
-
-            // Load data with LONGER delays to prevent rate limiting
-            loadStats();                                    // 0ms
-            setTimeout(() => loadPendingUsers(), 1500);    // 1.5 seconds
-            setTimeout(() => loadApprovedUsers(), 3000);   // 3 seconds
-            setTimeout(() => loadContacts(), 4500);        // 4.5 seconds
-
-            console.log('✅ Dashboard ready');
-            
-        } catch (error) {
-            console.error('❌ Dashboard error:', error);
-            dashboardInitialized = false;  // Reset on error
-        }
+    // ✅ FIXED (longer delays to prevent 429)
+function showDashboard() {
+    if (dashboardInitialized) {
+        console.log('⚠️ Dashboard already initialized, skipping...');
+        return;
     }
+    dashboardInitialized = true;
+
+    try {
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) {
+            dashboard.style.display = 'block';
+            dashboard.classList.add('active');
+        }
+
+        // ✅ MUCH LONGER delays between requests
+        loadStats();                                    // 0ms - load first
+        setTimeout(() => loadPendingUsers(), 2000);    // 2 seconds ✅
+        setTimeout(() => loadApprovedUsers(), 4500);   // 4.5 seconds ✅
+        setTimeout(() => loadContacts(), 7000);        // 7 seconds ✅
+
+        console.log('✅ Dashboard ready');
+        
+    } catch (error) {
+        console.error('❌ Dashboard error:', error);
+        dashboardInitialized = false;
+    }
+}
 
     // ============================================
     // SHOW LOGIN PAGE
@@ -1466,16 +1466,27 @@ async function revokeUser(userId) {
     // ============================================
     // SWITCH TABS
     // ============================================
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById(tab).classList.add('active');
-
-        if (tab === 'approved') loadApprovedUsers();
-        if (tab === 'contacts') loadContacts();
-        if (tab === 'pending') loadPendingUsers();
+    // ✅ FIXED
+function switchTab(tab, element) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Use passed element or fallback to finding it
+    const tabBtn = element || document.querySelector(`[onclick="switchTab('${tab}')"]`);
+    if (tabBtn) {
+        tabBtn.classList.add('active');
     }
+    
+    const tabContent = document.getElementById(tab);
+    if (tabContent) {
+        tabContent.classList.add('active');
+    }
+
+    if (tab === 'approved') loadApprovedUsers();
+    if (tab === 'contacts') loadContacts();
+    if (tab === 'pending') loadPendingUsers();
+}
+
 
     // ============================================
     // CHANGE PASSWORD MODAL
