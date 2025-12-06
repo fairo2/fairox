@@ -1,8 +1,12 @@
 // ============================================
-// ✅ COMPLETE OVERVIEW.JS - PRODUCTION READY
+// ✅ COMPLETE OVERVIEW.JS - FIXED & IMPROVED
 // File: src/backend/routes/overview.js
 // Database: PostgreSQL
-// Fixed: Dec 1, 2025
+// Fixed: Dec 6, 2025
+// ✅ FIXES:
+//  1. Currency symbol handling (INR = ₹, SAR = ﷼)
+//  2. Transaction count formatting (remove leading zeros)
+//  3. Category totals calculation (proper aggregation by mode)
 // ============================================
 
 const express = require('express');
@@ -13,7 +17,19 @@ const { authMiddleware } = require('../middleware/auth');
 console.log('✅ Overview routes loaded');
 
 // ============================================
-// GET OVERVIEW SUMMARY DATA
+// CURRENCY SYMBOL MAP (FIXED)
+// ============================================
+const currencySymbols = {
+    'INR': '₹',
+    'SAR': '﷼',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'AED': 'د.إ'
+};
+
+// ============================================
+// GET OVERVIEW SUMMARY DATA (FIXED)
 // ============================================
 
 router.get('/summary', authMiddleware, async (req, res) => {
@@ -22,7 +38,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ FIXED: PostgreSQL parameters ($1, $2, etc.)
+        // ✅ FIXED: Proper PostgreSQL query
         const transactionQuery = `
             SELECT 
                 t.id,
@@ -34,8 +50,6 @@ router.get('/summary', authMiddleware, async (req, res) => {
         `;
         
         const result = await db.query(transactionQuery, [userId]);
-        
-        // ✅ FIXED: Extract rows array from result object
         const transactions = result.rows;
         
         console.log('   Transactions fetched:', transactions.length);
@@ -47,6 +61,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
             if (!summaryByCurrency[t.currency]) {
                 summaryByCurrency[t.currency] = {
                     currency: t.currency,
+                    symbol: currencySymbols[t.currency] || t.currency,
                     totalIncome: 0,
                     totalExpense: 0,
                     totalBalance: 0,
@@ -72,7 +87,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
         
         res.json({
             success: true,
-            summary: Object.values(summaryByCurrency)
+            summary: Object.values(summaryByCurrency),
+            note: 'Currency symbols properly mapped'
         });
         
     } catch (error) {
@@ -85,9 +101,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
-// GET CATEGORY BREAKDOWN FOR PIE CHART
+// GET CATEGORY BREAKDOWN FOR PIE CHART (FIXED)
 // ============================================
 
 router.get('/category-breakdown', authMiddleware, async (req, res) => {
@@ -108,18 +123,18 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
             year = new Date().getFullYear();
         }
         
-        // ✅ FIXED: PostgreSQL syntax for category breakdown
+        // ✅ FIXED: Proper category breakdown with correct transaction count
         const categoryQuery = `
             SELECT 
                 COALESCE(c.name, 'Uncategorized') as category_name,
                 t.currency,
                 COALESCE(SUM(t.amount), 0) as total_amount,
-                COUNT(t.id) as transaction_count,
+                COUNT(DISTINCT t.id) as transaction_count,
                 STRING_AGG(DISTINCT t.mode, ', ') as modes
             FROM transactions t
             LEFT JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1
-            AND t.mode IN ('Expense', 'Credit Card')
+            AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
             AND EXTRACT(YEAR FROM t.transaction_date) = $2
             AND EXTRACT(MONTH FROM t.transaction_date) = $3
             GROUP BY COALESCE(c.name, 'Uncategorized'), t.currency
@@ -127,11 +142,15 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
         `;
         
         const result = await db.query(categoryQuery, [userId, year, month]);
-        
-        // ✅ FIXED: Extract rows array from PostgreSQL result object
         const categoryData = result.rows;
         
         console.log('📊 Raw category data fetched:', categoryData.length, 'records');
+        console.log('📊 Sample:', categoryData.slice(0, 2).map(c => ({
+            category: c.category_name,
+            amount: c.total_amount,
+            count: c.transaction_count,
+            currency: c.currency
+        })));
         
         if (!categoryData || categoryData.length === 0) {
             console.log('⚠️ No category data found for this month');
@@ -140,14 +159,14 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
                 month: month,
                 year: year,
                 allCurrencies: {},
-                categories: []
+                categories: [],
+                note: 'No transactions found for this period'
             });
         }
         
         // ✅ GROUP BY CURRENCY for frontend
         const allCurrencies = {};
         
-        // ✅ FIXED: Iterate over rows array properly
         categoryData.forEach(item => {
             const currency = item.currency || 'INR';
             
@@ -155,22 +174,38 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
                 allCurrencies[currency] = [];
             }
             
+            // ✅ FIXED: Proper formatting
             allCurrencies[currency].push({
                 category_name: item.category_name || 'Uncategorized',
                 total_amount: parseFloat(item.total_amount),
                 modes: item.modes || 'Expense',
-                transaction_count: item.transaction_count
+                transaction_count: parseInt(item.transaction_count),  // ✅ Proper integer
+                currency_symbol: currencySymbols[currency] || currency
             });
         });
         
         console.log('✅ Grouped by currencies:', Object.keys(allCurrencies));
+        
+        // ✅ Calculate totals per currency
+        const currencyTotals = {};
+        Object.keys(allCurrencies).forEach(currency => {
+            const total = allCurrencies[currency].reduce((sum, cat) => sum + cat.total_amount, 0);
+            const count = allCurrencies[currency].reduce((sum, cat) => sum + cat.transaction_count, 0);
+            currencyTotals[currency] = {
+                total: total,
+                count: count,
+                symbol: currencySymbols[currency] || currency
+            };
+        });
         
         res.json({
             success: true,
             month: month,
             year: year,
             allCurrencies: allCurrencies,
-            categories: categoryData
+            categories: categoryData,
+            currencyTotals: currencyTotals,
+            note: 'Transaction counts are integers (not zero-padded)'
         });
         
     } catch (error) {
@@ -184,9 +219,8 @@ router.get('/category-breakdown', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
-// GET MONTHLY TREND DATA
+// GET MONTHLY TREND DATA (FIXED)
 // ============================================
 
 router.get('/monthly-trend', authMiddleware, async (req, res) => {
@@ -196,14 +230,14 @@ router.get('/monthly-trend', authMiddleware, async (req, res) => {
         const userId = req.user.id;
         const year = parseInt(req.query.year) || new Date().getFullYear();
         
-        // ✅ FIXED: PostgreSQL syntax for monthly trend
+        // ✅ FIXED: Proper monthly trend query
         const trendQuery = `
             SELECT 
-                EXTRACT(MONTH FROM t.transaction_date) as month,
+                EXTRACT(MONTH FROM t.transaction_date)::int as month,
                 t.currency,
-                SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END) as total_income,
-                SUM(CASE WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount ELSE 0 END) as total_expense,
-                COUNT(t.id) as transaction_count
+                SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END)::float as total_income,
+                SUM(CASE WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') THEN t.amount ELSE 0 END)::float as total_expense,
+                COUNT(DISTINCT t.id)::int as transaction_count
             FROM transactions t
             WHERE t.user_id = $1
             AND EXTRACT(YEAR FROM t.transaction_date) = $2
@@ -212,16 +246,21 @@ router.get('/monthly-trend', authMiddleware, async (req, res) => {
         `;
         
         const result = await db.query(trendQuery, [userId, year]);
-        
-        // ✅ FIXED: Extract rows array
         const trendData = result.rows;
         
         console.log('📊 Monthly trend data fetched:', trendData.length, 'records');
         
+        // ✅ Add currency symbols
+        const trendDataWithSymbols = trendData.map(d => ({
+            ...d,
+            currency_symbol: currencySymbols[d.currency] || d.currency,
+            transaction_count: parseInt(d.transaction_count)  // ✅ Proper integer
+        }));
+        
         res.json({
             success: true,
             year: year,
-            data: trendData
+            data: trendDataWithSymbols
         });
         
     } catch (error) {
@@ -234,9 +273,8 @@ router.get('/monthly-trend', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
-// GET TOP EXPENSES
+// GET TOP EXPENSES (FIXED)
 // ============================================
 
 router.get('/top-expenses', authMiddleware, async (req, res) => {
@@ -248,7 +286,7 @@ router.get('/top-expenses', authMiddleware, async (req, res) => {
         const month = parseInt(req.query.month) || new Date().getMonth() + 1;
         const year = parseInt(req.query.year) || new Date().getFullYear();
         
-        // ✅ FIXED: PostgreSQL syntax for top expenses
+        // ✅ FIXED: Proper top expenses query
         const expenseQuery = `
             SELECT 
                 t.id,
@@ -270,17 +308,21 @@ router.get('/top-expenses', authMiddleware, async (req, res) => {
         `;
         
         const result = await db.query(expenseQuery, [userId, year, month, limit]);
-        
-        // ✅ FIXED: Extract rows array
         const expenses = result.rows;
         
         console.log('📊 Top expenses fetched:', expenses.length, 'records');
+        
+        // ✅ Add currency symbols
+        const expensesWithSymbols = expenses.map(e => ({
+            ...e,
+            currency_symbol: currencySymbols[e.currency] || e.currency
+        }));
         
         res.json({
             success: true,
             month: month,
             year: year,
-            expenses: expenses
+            expenses: expensesWithSymbols
         });
         
     } catch (error) {
@@ -293,9 +335,8 @@ router.get('/top-expenses', authMiddleware, async (req, res) => {
     }
 });
 
-
 // ============================================
-// GET SPENDING BY MODE
+// GET SPENDING BY MODE (FIXED)
 // ============================================
 
 router.get('/spending-by-mode', authMiddleware, async (req, res) => {
@@ -306,14 +347,14 @@ router.get('/spending-by-mode', authMiddleware, async (req, res) => {
         const month = parseInt(req.query.month) || new Date().getMonth() + 1;
         const year = parseInt(req.query.year) || new Date().getFullYear();
         
-        // ✅ FIXED: PostgreSQL syntax for spending by mode
+        // ✅ FIXED: Proper spending by mode query
         const modeQuery = `
             SELECT 
                 t.mode,
                 t.currency,
-                COUNT(t.id) as transaction_count,
-                SUM(t.amount) as total_amount,
-                AVG(t.amount) as average_amount
+                COUNT(DISTINCT t.id)::int as transaction_count,
+                SUM(t.amount)::float as total_amount,
+                AVG(t.amount)::float as average_amount
             FROM transactions t
             WHERE t.user_id = $1
             AND EXTRACT(YEAR FROM t.transaction_date) = $2
@@ -323,17 +364,24 @@ router.get('/spending-by-mode', authMiddleware, async (req, res) => {
         `;
         
         const result = await db.query(modeQuery, [userId, year, month]);
-        
-        // ✅ FIXED: Extract rows array
         const modeData = result.rows;
         
         console.log('📊 Spending by mode fetched:', modeData.length, 'records');
+        
+        // ✅ Add currency symbols and fix types
+        const modeDataWithSymbols = modeData.map(m => ({
+            ...m,
+            currency_symbol: currencySymbols[m.currency] || m.currency,
+            transaction_count: parseInt(m.transaction_count),  // ✅ Proper integer
+            total_amount: parseFloat(m.total_amount),
+            average_amount: parseFloat(m.average_amount)
+        }));
         
         res.json({
             success: true,
             month: month,
             year: year,
-            data: modeData
+            data: modeDataWithSymbols
         });
         
     } catch (error) {
@@ -345,7 +393,6 @@ router.get('/spending-by-mode', authMiddleware, async (req, res) => {
         });
     }
 });
-
 
 // ============================================
 // GET OVERVIEW DASHBOARD DATA (ALL IN ONE)
@@ -378,10 +425,11 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
             // Category breakdown
             db.query(
                 `SELECT COALESCE(c.name, 'Uncategorized') as category_name, t.currency,
-                        COALESCE(SUM(t.amount), 0) as total_amount, COUNT(t.id) as transaction_count
+                        COALESCE(SUM(t.amount), 0)::float as total_amount, 
+                        COUNT(DISTINCT t.id)::int as transaction_count
                  FROM transactions t
                  LEFT JOIN categories c ON t.category_id = c.id
-                 WHERE t.user_id = $1 AND t.mode IN ('Expense', 'Credit Card')
+                 WHERE t.user_id = $1 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
                  AND EXTRACT(YEAR FROM t.transaction_date) = $2
                  AND EXTRACT(MONTH FROM t.transaction_date) = $3
                  GROUP BY COALESCE(c.name, 'Uncategorized'), t.currency`,
@@ -390,10 +438,10 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
             
             // Monthly trend
             db.query(
-                `SELECT EXTRACT(MONTH FROM t.transaction_date) as month, t.currency,
-                        SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END) as total_income,
+                `SELECT EXTRACT(MONTH FROM t.transaction_date)::int as month, t.currency,
+                        SUM(CASE WHEN t.mode = 'Income' THEN t.amount ELSE 0 END)::float as total_income,
                         SUM(CASE WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
-                            THEN t.amount ELSE 0 END) as total_expense
+                            THEN t.amount ELSE 0 END)::float as total_expense
                  FROM transactions t
                  WHERE t.user_id = $1 AND EXTRACT(YEAR FROM t.transaction_date) = $2
                  GROUP BY EXTRACT(MONTH FROM t.transaction_date), t.currency`,
@@ -414,7 +462,8 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
             
             // Spending by mode
             db.query(
-                `SELECT t.mode, t.currency, COUNT(t.id) as transaction_count, SUM(t.amount) as total_amount
+                `SELECT t.mode, t.currency, COUNT(DISTINCT t.id)::int as transaction_count, 
+                        SUM(t.amount)::float as total_amount
                  FROM transactions t
                  WHERE t.user_id = $1 AND EXTRACT(YEAR FROM t.transaction_date) = $2
                  AND EXTRACT(MONTH FROM t.transaction_date) = $3
@@ -423,12 +472,30 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
             )
         ]);
         
-        // ✅ FIXED: Extract rows from all results
+        // ✅ Extract rows and add currency symbols
         const summaryData = summaryResult.rows;
-        const categoryData = categoryResult.rows;
-        const trendData = trendResult.rows;
-        const topExpenses = expenseResult.rows;
-        const modeData = modeResult.rows;
+        const categoryData = categoryResult.rows.map(c => ({
+            ...c,
+            total_amount: parseFloat(c.total_amount),
+            transaction_count: parseInt(c.transaction_count),
+            currency_symbol: currencySymbols[c.currency] || c.currency
+        }));
+        const trendData = trendResult.rows.map(t => ({
+            ...t,
+            total_income: parseFloat(t.total_income),
+            total_expense: parseFloat(t.total_expense),
+            currency_symbol: currencySymbols[t.currency] || t.currency
+        }));
+        const topExpenses = expenseResult.rows.map(e => ({
+            ...e,
+            currency_symbol: currencySymbols[e.currency] || e.currency
+        }));
+        const modeData = modeResult.rows.map(m => ({
+            ...m,
+            total_amount: parseFloat(m.total_amount),
+            transaction_count: parseInt(m.transaction_count),
+            currency_symbol: currencySymbols[m.currency] || m.currency
+        }));
         
         console.log('✅ Dashboard data compiled');
         
@@ -440,7 +507,9 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
             categories: categoryData,
             trend: trendData,
             topExpenses: topExpenses,
-            spendingByMode: modeData
+            spendingByMode: modeData,
+            currencySymbols: currencySymbols,
+            note: 'All currency symbols and transaction counts properly formatted'
         });
         
     } catch (error) {
@@ -452,6 +521,5 @@ router.get('/dashboard', authMiddleware, async (req, res) => {
         });
     }
 });
-
 
 module.exports = router;

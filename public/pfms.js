@@ -1902,145 +1902,108 @@ async function exportToExcel() {
 }
 
 // ============================================
-// OVERVIEW - CHART WITH MONTH & CURRENCY FILTERS
+// ✅ OVERVIEW SECTION - FRONTEND FIX (pfms.js)
+// Location: Around line 1900-2300 (displayOverviewCategoryChart function)
+// Date: Dec 6, 2025
 // ============================================
 
-let overviewChart = null;
-let allCategoriesData = {};
-let selectedMonth = new Date().getMonth() + 1;  // 1-12
-let selectedYear = new Date().getFullYear();
+// ✅ FIXED: Update these functions in pfms.js
 
-async function initializeMonthFilter() {
-    const monthDropdown = document.getElementById('overviewMonthFilter');
-    const now = new Date();
+// 1. UPDATE CATEGORY DETAILS TABLE - FIXED CURRENCY & TRANSACTION COUNT
+function updateCategoryDetailsTable(categories, total, currency) {
+    const tbody = document.getElementById('categoryDetailsTable');
+    if (!tbody) return;
     
-    // Generate last 3 months + current month (4 total)
-    const months = [];
-    for (let i = 0; i < 4; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const month = d.getMonth() + 1;
-        const year = d.getFullYear();
-        const monthName = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+    // ✅ FIXED: Use currency symbol from backend or map it
+    const currencySymbolMap = {
+        'INR': '₹',
+        'SAR': '﷼',
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'AED': 'د.إ'
+    };
+    
+    const currencySymbol = currencySymbolMap[currency] || currency;
+    
+    let html = '';
+    
+    categories.forEach((cat, index) => {
+        const amount = parseFloat(cat.total_amount || cat.totalamount || 0);
+        const count = parseInt(cat.transaction_count || cat.transactioncount || 0);  // ✅ FIXED: Convert to integer
+        const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
         
-        months.push({
-            value: `${year}-${month}`,
-            label: monthName,
-            month: month,
-            year: year
-        });
-    }
-    
-    // Add options
-    monthDropdown.innerHTML = '';
-    months.forEach(m => {
-        const option = document.createElement('option');
-        option.value = m.value;
-        option.textContent = m.label;
-        monthDropdown.appendChild(option);
+        const colors = [
+            'FF6384', '36A2EB', 'FFCE56', '4BC0C0', '9966FF', 'FF9F40', 'FF6384',
+            'C9CBCF', '4BC0C0', 'FF6384', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF'
+        ];
+        
+        const bgColor = colors[index % colors.length];
+        
+        html += `
+            <tr style="border-bottom: 1px solid #333; transition: background 0.2s; cursor: pointer;" 
+                onmouseover="this.style.background='rgba(0,217,255,0.05)'" 
+                onmouseout="this.style.background='transparent'">
+                <td style="padding: 10px; color: #aaa; display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #${bgColor}; border-radius: 3px;"></div>
+                    <span style="flex: 1; title="${cat.modes || 'Expense'}">${cat.category_name || 'Uncategorized'}</span>
+                </td>
+                <td style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 500;">
+                    ${currencySymbol}${amount.toFixed(2)}
+                </td>
+                <td style="padding: 10px; text-align: right; color: #66bb6a; font-weight: 500;">
+                    ${percentage}%
+                </td>
+                <td style="padding: 10px; text-align: center; color: #999; font-weight: 500;">
+                    ${count}
+                </td>
+            </tr>
+        `;
     });
     
-    // Set to current month
-    monthDropdown.value = `${selectedYear}-${selectedMonth}`;
+    tbody.innerHTML = html;
 }
 
-async function loadOverviewSummary() {
-    try {
-        console.log('📊 Loading overview summary...');
-        
-        // Initialize month filter first
-        initializeMonthFilter();
-        
-        const categoryResponse = await fetch(
-            `https://api.fairox.co.in/api/overview/category-breakdown?month=${selectedMonth}&year=${selectedYear}`,
-            {
-                headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-            }
-        );
-        
-        const categoryData = await categoryResponse.json();
-        
-        console.log('📊 Response from backend:', categoryData);
-        
-        if (categoryData.success) {
-            if (categoryData.allCurrencies && Object.keys(categoryData.allCurrencies).length > 0) {
-                allCategoriesData = categoryData.allCurrencies;
-                console.log('✅ Using new format (grouped by currency):', Object.keys(categoryData.allCurrencies));
-            } else if (categoryData.categories && Array.isArray(categoryData.categories)) {
-                console.log('⚠️ Using old format (will be grouped)');
-                allCategoriesData = groupCategoriesByCurrency(categoryData.categories);
-            } else {
-                console.error('❌ Unknown API response format');
-                return;
-            }
-            
-            console.log('📊 Available currencies:', Object.keys(allCategoriesData));
-            
-            // Initialize with first available currency
-            const firstCurrency = Object.keys(allCategoriesData);
-            if (firstCurrency) {
-                const dropdown = document.getElementById('overviewCurrencyFilter');
-                dropdown.value = firstCurrency;
-                displayOverviewCategoryChart(allCategoriesData[firstCurrency], firstCurrency);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Error loading overview:', error);
+// 2. UPDATE TOTAL SPENDING DISPLAY - FIXED
+function updateOverviewStats(total, topCategory, categoryCount, transactionCount, currency) {
+    const currencySymbolMap = {
+        'INR': '₹',
+        'SAR': '﷼',
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'AED': 'د.إ'
+    };
+    
+    const currencySymbol = currencySymbolMap[currency] || currency;
+    
+    // ✅ FIXED: Use correct element IDs and format
+    const totalSpendingEl = document.getElementById('totalSpendingAmount');
+    const topCategoryEl = document.getElementById('topCategoryName');
+    const totalCategoriesEl = document.getElementById('totalCategoriesCount');
+    const totalTransactionsEl = document.getElementById('totalTransactionsCount');
+    
+    if (totalSpendingEl) {
+        totalSpendingEl.textContent = currency ? `${currencySymbol}${total.toFixed(2)}` : '0.00';
+    }
+    
+    if (topCategoryEl) {
+        topCategoryEl.textContent = topCategory || '--';
+    }
+    
+    if (totalCategoriesEl) {
+        totalCategoriesEl.textContent = categoryCount || '0';
+    }
+    
+    if (totalTransactionsEl) {
+        // ✅ FIXED: Show as integer without zero-padding
+        totalTransactionsEl.textContent = parseInt(transactionCount || 0).toString();
     }
 }
 
-function handleMonthChange() {
-    const monthDropdown = document.getElementById('overviewMonthFilter');
-    const [year, month] = monthDropdown.value.split('-');
-    
-    selectedMonth = parseInt(month);
-    selectedYear = parseInt(year);
-    
-    console.log(`📅 Month changed to: ${selectedYear}-${selectedMonth}`);
-    loadOverviewSummary();
-}
-
-function groupCategoriesByCurrency(categories) {
-    const grouped = {};
-    
-    if (!Array.isArray(categories)) {
-        console.error('❌ Categories is not an array:', categories);
-        return {};
-    }
-    
-    categories.forEach(cat => {
-        const currency = cat.currency || 'INR';
-        
-        if (!grouped[currency]) {
-            grouped[currency] = [];
-        }
-        
-        grouped[currency].push({
-            category_name: cat.category_name,
-            total_amount: cat.total_amount,
-            modes: cat.modes || cat.mode || 'Expense',
-            transaction_count: cat.transaction_count || 0
-        });
-    });
-    
-    return grouped;
-}
-
-function handleCurrencyChange() {
-    const dropdown = document.getElementById('overviewCurrencyFilter');
-    const selectedCurrency = dropdown.value;
-    
-    if (!selectedCurrency || !allCategoriesData[selectedCurrency]) {
-        console.error('❌ No data for selected currency:', selectedCurrency);
-        return;
-    }
-    
-    console.log(`💱 Currency changed to: ${selectedCurrency}`);
-    displayOverviewCategoryChart(allCategoriesData[selectedCurrency], selectedCurrency);
-}
-
+// 3. DISPLAY OVERVIEW CATEGORY CHART - FIXED (MAIN FUNCTION)
 function displayOverviewCategoryChart(categories, currency = 'INR') {
-    console.log(`📊 Displaying chart for ${currency}:`, categories);
+    console.log('📊 Displaying chart for currency:', currency, 'Categories:', categories);
     
     const container = document.getElementById('overviewCategoryChartContainer');
     if (!container) {
@@ -2054,44 +2017,54 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
         return;
     }
     
-    const filteredCategories = categories.filter(cat => cat && cat.category_name);
+    const filteredCategories = categories.filter(cat => cat.category_name);
     
     if (filteredCategories.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No expense data for this month</p>';
-        document.getElementById('totalSpendingAmount').textContent = currency === 'INR' ? '₹0.00' : '﷼0.00';
-        document.getElementById('topCategoryName').textContent = '--';
-        document.getElementById('totalCategoriesCount').textContent = '0';
-        document.getElementById('totalTransactionsCount').textContent = '0';
+        
+        updateOverviewStats(0, '--', 0, 0, currency);
         return;
     }
     
     const sortedCategories = [...filteredCategories].sort((a, b) => 
-        parseFloat(b.total_amount) - parseFloat(a.total_amount)
+        parseFloat(b.total_amount || b.totalamount || 0) - parseFloat(a.total_amount || a.totalamount || 0)
     );
     
     const labels = sortedCategories.map(c => c.category_name || 'Uncategorized');
-    const data = sortedCategories.map(c => parseFloat(c.total_amount) || 0);
+    const data = sortedCategories.map(c => parseFloat(c.total_amount || c.totalamount || 0));
+    
     const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
-        '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'
+        'FF6384', '36A2EB', 'FFCE56', '4BC0C0', '9966FF', 'FF9F40', 'FF6384',
+        'C9CBCF', '4BC0C0', 'FF6384', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF'
     ];
     
     const total = data.reduce((a, b) => a + b, 0);
-    const currencySymbol = currency === 'INR' ? '₹' : '﷼';
     
-    // Update stats
-    document.getElementById('totalSpendingAmount').textContent = `${currencySymbol}${total.toFixed(2)}`;
-    document.getElementById('topCategoryName').textContent = labels || '--';
-    document.getElementById('totalCategoriesCount').textContent = sortedCategories.length;
-    document.getElementById('totalTransactionsCount').textContent = sortedCategories.reduce((sum, c) => sum + (c.transaction_count || 0), 0);
+    const currencySymbolMap = {
+        'INR': '₹',
+        'SAR': '﷼',
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'AED': 'د.إ'
+    };
+    
+    const currencySymbol = currencySymbolMap[currency] || currency;
+    
+    // ✅ Update stats display
+    updateOverviewStats(total, labels[0] || '--', sortedCategories.length, 
+                       sortedCategories.reduce((sum, c) => sum + parseInt(c.transaction_count || c.transactioncount || 0), 0), 
+                       currency);
     
     // Update month display
-    const monthDisplay = new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-    document.getElementById('monthYearDisplay').textContent = `(${monthDisplay})`;
+    const monthDisplay = new Date(selectedYear, selectedMonth - 1).toLocaleString('default', {
+        month: 'long',
+        year: 'numeric'
+    });
+    const monthEl = document.getElementById('monthYearDisplay');
+    if (monthEl) monthEl.textContent = monthDisplay;
     
-    updateCategoryDetailsTable(sortedCategories, total, currency);
-    
+    // Create canvas if not exists
     let canvas = document.getElementById('overviewChart');
     if (!canvas) {
         const canvasHtml = '<canvas id="overviewChart" style="width: 100%; height: 100%;"></canvas>';
@@ -2099,9 +2072,8 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
         canvas = document.getElementById('overviewChart');
     }
     
-    if (overviewChart) {
-        overviewChart.destroy();
-    }
+    // Destroy existing chart
+    if (overviewChart) overviewChart.destroy();
     
     const ctx = canvas.getContext('2d');
     overviewChart = new Chart(ctx, {
@@ -2110,7 +2082,7 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: colors.slice(0, data.length),
+                backgroundColor: colors.slice(0, data.length).map(c => '#' + c),
                 borderColor: '#1a1a1a',
                 borderWidth: 2,
                 hoverBorderWidth: 3,
@@ -2120,9 +2092,7 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: 0
-            },
+            layout: { padding: 0 },
             animation: {
                 animateRotate: true,
                 animateScale: false
@@ -2132,10 +2102,7 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
                     position: 'right',
                     labels: {
                         color: '#aaa',
-                        font: {
-                            size: 10,
-                            weight: '500'
-                        },
+                        font: { size: 10, weight: 500 },
                         padding: 10,
                         boxWidth: 12,
                         boxHeight: 12,
@@ -2153,73 +2120,73 @@ function displayOverviewCategoryChart(categories, currency = 'INR') {
                     titleFont: { size: 13, weight: 'bold' },
                     bodyFont: { size: 12 },
                     callbacks: {
-                        title: function(context) {
-                            return context.label;
-                        },
-                        label: function(context) {
+                        title: (context) => context[0].label,
+                        label: (context) => {
                             const value = context.raw || 0;
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return [
-                                `Amount: ${currencySymbol}${value.toFixed(2)}`,
-                                `Percentage: ${percentage}%`
-                            ];
+                            const percentage = total > 0 ? (value / total * 100).toFixed(1) : 0;
+                            return `Amount: ${currencySymbol}${value.toFixed(2)}, Percentage: ${percentage}%`;
                         },
-                        afterLabel: function(context) {
+                        afterLabel: (context) => {
                             const index = context.dataIndex;
-                            const transCount = sortedCategories[index].transaction_count || 0;
+                            const transCount = parseInt(sortedCategories[index].transaction_count || sortedCategories[index].transactioncount || 0);
                             const modes = sortedCategories[index].modes || 'Expense';
-                            return [
-                                `Transactions: ${transCount}`,
-                                `Types: ${modes}`
-                            ];
+                            return `Transactions: ${transCount}, Types: ${modes}`;
                         }
                     }
                 }
             }
         }
     });
+    
+    // Update table
+    updateCategoryDetailsTable(sortedCategories, total, currency);
 }
 
-function updateCategoryDetailsTable(categories, total, currency) {
-    const tbody = document.getElementById('categoryDetailsTable');
-    if (!tbody) return;
-    
-    const currencySymbol = currency === 'INR' ? '₹' : '﷼';
-    
-    let html = '';
-    categories.forEach((cat, index) => {
-        const amount = parseFloat(cat.total_amount) || 0;
-        const percentage = total > 0 ? ((amount / total) * 100).toFixed(1) : 0;
+// 4. FIXED: Load overview on page init
+async function loadOverviewSummary() {
+    try {
+        console.log('📊 Loading overview summary...');
         
-        const colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
-            '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'
-        ];
-        const bgColor = colors[index % colors.length];
+        // Initialize month filter first
+        initializeMonthFilter();
         
-        html += `
-            <tr style="border-bottom: 1px solid #333; transition: background 0.2s; cursor: pointer;" 
-                onmouseover="this.style.background='rgba(0,217,255,0.05)'" 
-                onmouseout="this.style.background='transparent'">
-                <td style="padding: 10px; color: #aaa; display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: ${bgColor}; border-radius: 3px;"></div>
-                    <span style="flex: 1;" title="${cat.modes || 'Expense'}">${cat.category_name || 'Uncategorized'}</span>
-                </td>
-                <td style="padding: 10px; text-align: right; color: #00d9ff; font-weight: 500;">${currencySymbol}${amount.toFixed(2)}</td>
-                <td style="padding: 10px; text-align: right; color: #66bb6a; font-weight: 500;">${percentage}%</td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
+        const categoryResponse = await fetch(
+            `https://api.fairox.co.in/api/overview/category-breakdown?month=${selectedMonth}&year=${selectedYear}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${getAuthToken()}`
+                }
+            }
+        );
+        
+        const categoryData = await categoryResponse.json();
+        console.log('📊 Response from backend:', categoryData);
+        
+        if (categoryData.success) {
+            if (categoryData.allCurrencies && Object.keys(categoryData.allCurrencies).length > 0) {
+                allCategoriesData = categoryData.allCurrencies;
+                console.log('✅ Using new format grouped by currency:', Object.keys(categoryData.allCurrencies));
+            } else if (categoryData.categories && Array.isArray(categoryData.categories)) {
+                console.log('✅ Using old format, will be grouped');
+                allCategoriesData = groupCategoriesByCurrency(categoryData.categories);
+            } else {
+                console.error('❌ Unknown API response format');
+                return;
+            }
+            
+            console.log('✅ Available currencies:', Object.keys(allCategoriesData));
+            
+            // Initialize with first available currency
+            const firstCurrency = Object.keys(allCategoriesData)[0];
+            if (firstCurrency) {
+                const dropdown = document.getElementById('overviewCurrencyFilter');
+                if (dropdown) {
+                    dropdown.value = firstCurrency;
+                }
+                displayOverviewCategoryChart(allCategoriesData[firstCurrency], firstCurrency);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading overview:', error);
+    }
 }
-
-// Load overview on page initialization
-setTimeout(() => {
-    console.log('⏳ Initializing overview with month & currency filters...');
-    loadOverviewSummary();
-}, 800);
-
-
-
