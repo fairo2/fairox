@@ -1,10 +1,10 @@
 // ============================================
-// ✅ COMPLETE BUDGET.JS - COMBINED EXPENSE & CREDIT CARD
+// ✅ COMPLETE BUDGET.JS - FIXED VERSION
 // File: src/backend/routes/budget.js
 // Database: PostgreSQL
-// Fixed: Dec 4, 2025 - Expense & Credit Card COMBINED for budget calculation
-// ✅ UPDATED: Routes match BUDGET_API_URL format (with underscores)
-// ✅ FIXED: Combined by category NAME (not ID) - Groups all "Grocery" together
+// Fixed: Dec 6, 2025 - Fixed category_name column error
+// ✅ UPDATED: Uses t.category_id JOIN (not category_name)
+// ✅ FIXED: Combined by category_id + category name matching
 // ============================================
 
 const express = require('express');
@@ -81,7 +81,7 @@ router.post('/limits', authMiddleware, async (req, res) => {
 // ============================================
 // GET BUDGET STATUS (GET /api/budget/status)
 // Frontend: fetch(`${BUDGET_API_URL}/status`, {...})
-// ✅ FIXED: COMBINED by Category Name (Groups "Grocery" & "Groceries" as ONE)
+// ✅ FIXED: Uses t.category_id = c.id JOIN (NOT category_name)
 // ============================================
 
 router.get('/status', authMiddleware, async (req, res) => {
@@ -90,8 +90,8 @@ router.get('/status', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ FIXED: Query NOW groups by CATEGORY NAME (not ID)
-        // This groups all "Grocery" transactions together (regardless of mode or category_id)
+        // ✅ FIXED: Query uses category_id JOIN (correct column)
+        // This groups all transactions with same category_id together
         const query = `
             SELECT 
                 bl.id,
@@ -101,36 +101,28 @@ router.get('/status', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                -- ✅ SUM all transactions with SAME CATEGORY NAME (any mode)
+                -- ✅ SUM all transactions with SAME CATEGORY_ID (any mode)
                 COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0) as current_spending,
                 ROUND((COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON (
-                -- ✅ MATCH by category NAME (not ID) and mode
-                LOWER(TRIM(t.category_name)) = LOWER(TRIM(c.name))
-                OR (
-                    -- Also try to match by category_id from transactions table if it exists
-                    t.category_id IN (
-                        SELECT id FROM categories 
-                        WHERE LOWER(TRIM(name)) = LOWER(TRIM(c.name)) 
-                        AND user_id = bl.user_id
-                    )
-                )
-            )
+                -- ✅ FIXED: Use category_id JOIN (not category_name)
+                t.category_id = c.id
                 AND t.user_id = bl.user_id 
                 AND t.currency = bl.currency
                 AND EXTRACT(YEAR FROM t.transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
                 AND EXTRACT(MONTH FROM t.transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+            )
             WHERE bl.user_id = $1
             GROUP BY bl.id, bl.user_id, bl.category_id, bl.currency, bl.monthly_limit, bl.alert_threshold, c.name
             ORDER BY bl.created_at DESC
@@ -142,8 +134,8 @@ router.get('/status', authMiddleware, async (req, res) => {
         const budgets = result.rows;
         
         console.log('✅ Found:', budgets.length, 'budget limits');
-        console.log('📝 COMBINED by Category NAME: All "Grocery" transactions grouped together');
-        console.log('💡 Matches: Category name + currency + month + modes (Expense, Credit Card, Debit Card, Cash Payment)');
+        console.log('📝 COMBINED by Category ID: All transactions with same category grouped together');
+        console.log('💡 Matches: Category ID + currency + month + modes (Expense, Credit Card, Debit Card, Cash Payment)');
         
         if (!budgets || budgets.length === 0) {
             console.log('⚠️ No budgets set for this user');
@@ -185,7 +177,7 @@ router.get('/status', authMiddleware, async (req, res) => {
             percentageused: parseFloat(b.percentage_used),
             percentage_used: parseFloat(b.percentage_used),
             combinedSpending: true,
-            note: 'Combined spending from ALL modes with same category name'
+            note: 'Combined spending from ALL modes with same category ID'
         }));
         
         console.log('✅ Budget status response prepared with COMBINED calculations');
@@ -195,7 +187,7 @@ router.get('/status', authMiddleware, async (req, res) => {
             budget_status: mappedBudgets,
             budgetstatus: mappedBudgets,
             alerts: alerts,
-            note: 'All transactions grouped by category NAME (not ID) - Expense, Credit Card, Debit Card, Cash Payment combined'
+            note: 'All transactions grouped by category ID - Expense, Credit Card, Debit Card, Cash Payment combined'
         });
         
     } catch (error) {
@@ -213,7 +205,7 @@ router.get('/status', authMiddleware, async (req, res) => {
 // ✅ GET CATEGORIES FOR BUDGET DROPDOWN
 // (GET /api/budget/categories)
 // Frontend: fetch(`${BUDGET_API_URL}/categories`, {...})
-// ✅ FIXED: Returns UNIQUE category names (one entry per category name)
+// ✅ FIXED: Returns UNIQUE category names
 // ============================================
 
 router.get('/categories', authMiddleware, async (req, res) => {
@@ -222,25 +214,24 @@ router.get('/categories', authMiddleware, async (req, res) => {
 
         console.log('📤 GET /api/budget/categories - Fetching for user:', userId);
 
-        // ✅ FIXED: Get UNIQUE category NAMES (groups "Grocery" & "Groceries" together)
-        // Return one category per unique NAME
+        // ✅ FIXED: Get all Expense/Credit Card categories
+        // Return one category per unique ID
         const query = `
-            SELECT DISTINCT 
-                LOWER(TRIM(name)) as category_key,
-                name as display_name,
-                MIN(id) as id
+            SELECT 
+                id,
+                name,
+                mode,
+                user_id
             FROM categories c
             WHERE c.user_id = $1
             AND c.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
-            GROUP BY LOWER(TRIM(name)), name
-            ORDER BY display_name ASC
+            ORDER BY name ASC
         `;
 
         const result = await db.query(query, [userId]);
         const categories = result.rows;
 
-        console.log('✅ Found:', categories.length, 'unique categories (by name)');
-        console.log('📝 NOTE: "Grocery" and "Groceries" will be treated as ONE category');
+        console.log('✅ Found:', categories.length, 'categories');
         console.log('💡 All spending modes combined: Expense + Credit Card + Debit Card + Cash Payment');
 
         if (!categories || categories.length === 0) {
@@ -250,23 +241,23 @@ router.get('/categories', authMiddleware, async (req, res) => {
                 categories: [],
                 total: 0,
                 message: 'Please create Expense or Credit Card categories first',
-                note: 'Categories with same name (case-insensitive) will be grouped together'
+                note: 'Categories with expense/credit card modes will be available for budget tracking'
             });
         }
 
-        // ✅ Map categories - ONE entry per category name
+        // ✅ Map categories - each unique category ID
         const mappedCategories = categories.map(cat => ({
             id: cat.id,
-            name: cat.display_name,
-            displayName: cat.display_name,
-            key: cat.category_key
+            name: cat.name,
+            displayName: cat.name,
+            mode: cat.mode
         }));
 
         res.json({
             success: true,
             categories: mappedCategories,
             total: mappedCategories.length,
-            note: 'Categories grouped by name (case-insensitive) - all modes combined',
+            note: 'Categories grouped by ID - all modes combined (Expense, Credit Card, Debit Card, Cash Payment)',
             combinedTracking: true
         });
 
@@ -283,7 +274,7 @@ router.get('/categories', authMiddleware, async (req, res) => {
 // ============================================
 // GET BUDGET BY ID (GET /api/budget/:id)
 // Frontend: fetch(`${BUDGET_API_URL}/${id}`, {...})
-// ✅ COMBINED by Category Name
+// ✅ FIXED: Uses category_id JOIN
 // ============================================
 
 router.get('/:id', authMiddleware, async (req, res) => {
@@ -293,7 +284,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         
         console.log('📤 GET /api/budget/:id - Fetching:', id);
         
-        // ✅ FIXED: Query groups by category NAME
+        // ✅ FIXED: Query uses category_id JOIN
         const query = `
             SELECT 
                 bl.id,
@@ -303,14 +294,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                -- ✅ COMBINED spending by category name
+                -- ✅ COMBINED spending by category_id
                 COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0) as current_spending,
                 ROUND((COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used,
@@ -319,18 +310,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON (
-                LOWER(TRIM(t.category_name)) = LOWER(TRIM(c.name))
-                OR t.category_id IN (
-                    SELECT id FROM categories 
-                    WHERE LOWER(TRIM(name)) = LOWER(TRIM(c.name)) 
-                    AND user_id = bl.user_id
-                )
-            )
+                -- ✅ FIXED: Use category_id JOIN
+                t.category_id = c.id
                 AND t.user_id = bl.user_id 
                 AND t.currency = bl.currency
                 AND EXTRACT(YEAR FROM t.transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
                 AND EXTRACT(MONTH FROM t.transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+            )
             WHERE bl.id = $1 AND bl.user_id = $2
             GROUP BY bl.id, bl.user_id, bl.category_id, bl.currency, bl.monthly_limit, bl.alert_threshold, c.name
         `;
@@ -351,7 +338,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         const budget = budgets[0];
         
         console.log('✅ Budget retrieved:', budget.id);
-        console.log('💡 Spending grouped by category name - includes all modes');
+        console.log('💡 Spending grouped by category ID - includes all modes');
         
         res.json({
             success: true,
@@ -367,7 +354,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
                 created_at: budget.created_at,
                 updated_at: budget.updated_at,
                 combinedSpending: true,
-                note: 'Spending combined from all modes with same category name'
+                note: 'Spending combined from all modes with same category ID'
             }
         });
         
@@ -505,7 +492,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // ============================================
 // GET BUDGET ALERTS (GET /api/budget/alerts)
 // Frontend: fetch(`${BUDGET_API_URL}/alerts`, {...})
-// ✅ COMBINED by Category Name
+// ✅ FIXED: Uses category_id JOIN
 // ============================================
 
 router.get('/alerts', authMiddleware, async (req, res) => {
@@ -514,7 +501,7 @@ router.get('/alerts', authMiddleware, async (req, res) => {
         
         const userId = req.user.id;
         
-        // ✅ FIXED: Query groups by category NAME
+        // ✅ FIXED: Query uses category_id JOIN
         const query = `
             SELECT 
                 bl.id,
@@ -524,32 +511,28 @@ router.get('/alerts', authMiddleware, async (req, res) => {
                 bl.monthly_limit,
                 bl.alert_threshold,
                 c.name as category_name,
-                -- ✅ COMBINED spending by category name
+                -- ✅ COMBINED spending by category_id
                 COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0) as current_spending,
                 ROUND((COALESCE(SUM(CASE 
-                    WHEN c.name IS NOT NULL AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
+                    WHEN t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment') 
                     THEN t.amount 
                     ELSE 0 
                 END), 0)::NUMERIC / bl.monthly_limit::NUMERIC) * 100, 2) as percentage_used
             FROM budget_limits bl
             LEFT JOIN categories c ON bl.category_id = c.id
             LEFT JOIN transactions t ON (
-                LOWER(TRIM(t.category_name)) = LOWER(TRIM(c.name))
-                OR t.category_id IN (
-                    SELECT id FROM categories 
-                    WHERE LOWER(TRIM(name)) = LOWER(TRIM(c.name)) 
-                    AND user_id = bl.user_id
-                )
-            )
+                -- ✅ FIXED: Use category_id JOIN
+                t.category_id = c.id
                 AND t.user_id = bl.user_id 
                 AND t.currency = bl.currency
                 AND EXTRACT(YEAR FROM t.transaction_date) = EXTRACT(YEAR FROM CURRENT_DATE)
                 AND EXTRACT(MONTH FROM t.transaction_date) = EXTRACT(MONTH FROM CURRENT_DATE)
                 AND t.mode IN ('Expense', 'Credit Card', 'Debit Card', 'Cash Payment')
+            )
             WHERE bl.user_id = $1
             GROUP BY bl.id, bl.user_id, bl.category_id, bl.currency, bl.monthly_limit, bl.alert_threshold, c.name
             ORDER BY percentage_used DESC
@@ -582,12 +565,12 @@ router.get('/alerts', authMiddleware, async (req, res) => {
                     : `✅ ${b.category_name}: ${percentUsed}% of budget used - Combined all modes`,
                 remainingBudget: Math.max(0, parseFloat(b.monthly_limit) - parseFloat(b.current_spending)),
                 combinedSpending: true,
-                note: 'Combined spending by category name - all modes included'
+                note: 'Combined spending by category ID - all modes included'
             };
         });
         
         console.log('✅ Found:', alerts.length, 'budgets with COMBINED spending calculation');
-        console.log('💡 Each budget combines all transactions with matching category name');
+        console.log('💡 Each budget combines all transactions with same category ID');
         
         res.json({
             success: true,
@@ -598,7 +581,7 @@ router.get('/alerts', authMiddleware, async (req, res) => {
                 critical: alerts.filter(a => a.alertType === 'Critical').length,
                 ok: alerts.filter(a => a.alertType === 'OK').length
             },
-            note: 'Budgets grouped by category NAME (case-insensitive) - all modes combined'
+            note: 'Budgets grouped by category ID - all modes combined'
         });
         
     } catch (error) {
