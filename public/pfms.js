@@ -103,7 +103,7 @@ async function apiCall(url, options = {}) {
             headers
         });
 
-        const data = await response.json();
+        
 
         if (response.status === 401) {
             console.error('❌ Token expired');
@@ -116,6 +116,8 @@ async function apiCall(url, options = {}) {
             showMessage(`❌ ${data.message}`, 'error');
             return null;
         }
+
+        const data = await response.json();
 
         console.log('✅ Success');
         return data;
