@@ -1539,27 +1539,6 @@ function switchTab(tab, element) {
     }
 
     // ============================================
-    // LOGOUT
-    // ============================================
-    function logout() {
-        console.log('👋 Logging out...');
-        
-        clearTimeout(sessionTimeoutId);
-        clearTimeout(sessionWarningTimeoutId);
-        clearInterval(heartbeatIntervalId);
-        
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
-        
-        currentToken = null;
-        dashboardInitialized = false;
-        
-        showLoginPage();
-        document.getElementById('loginForm').reset();
-    }
-
-    // ============================================
     // SHOW MESSAGE
     // ============================================
     function showMessage(id, message, type) {
@@ -1852,24 +1831,111 @@ function switchTab(tab, element) {
     }
 
     // ============================================
-    // LOGOUT USER
+    // LOGOUT USER - COMPLETE CLEANUP
     // ============================================
-    function logoutUser() {
-        console.log('👋 Logging out user...');
-        
+    function logout() {
+    console.log('👋 Logging out user...');
+    
+    // Clear timers
+    try {
         clearTimeout(sessionTimeoutId);
         clearTimeout(sessionWarningTimeoutId);
         clearInterval(heartbeatIntervalId);
-        
+    } catch (error) {
+        console.warn('Warning clearing timers:', error.message);
+    }
+    
+    // Clear all storage
+    try {
         localStorage.removeItem('authToken');
         localStorage.removeItem('token');
+        localStorage.removeItem('pfmsTheme');
+        localStorage.removeItem('pfmsPrivacyMode');
+        
         sessionStorage.removeItem('token');
-        
-        currentToken = null;
-        dashboardInitialized = false;
-        
-        window.location.href = '/admin.html';
+        sessionStorage.clear();
+    } catch (error) {
+        console.error('Error clearing storage:', error.message);
     }
+    
+    // Reset variables
+    currentToken = null;
+    dashboardInitialized = false;
+    
+    console.log('✅ Logout complete, redirecting...');
+    
+    // Ensure cleanup completes before redirect
+    setTimeout(() => {
+        window.location.href = '/admin.html';
+    }, 500);
+}
+
+
+    // ============================================
+// PFMS ACCESS FUNCTION - Add to admin.html <script>
+// ============================================
+
+function accessPFMS() {
+    console.log('🔐 Requesting PFMS access...');
+    
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+        console.error('❌ No token found');
+        alert('❌ Session expired. Please login again.');
+        window.location.href = '/admin.html';
+        return;
+    }
+    
+    console.log('✅ Token found, verifying access...');
+    console.log('Token (first 30 chars):', token.substring(0, 30) + '...');
+    
+    // Option 1: Direct navigation (Frontend will check token)
+    // This is simpler and works because pfms.html frontend will verify
+    console.log('🔐 Navigating to PFMS page...');
+    window.location.href = '/pfms';
+    
+    /* Option 2: Verify with server first (More secure, commented out)
+    // Uncomment this block if you want server-side pre-verification
+    
+    fetch('/pfms/access', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error('❌ Access denied by server');
+            alert('❌ You do not have access to PFMS');
+            return null;
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (!data) return;
+        
+        if (data.success) {
+            console.log('✅ PFMS access verified by server');
+            console.log('User:', data.user);
+            
+            // Now navigate to PFMS
+            window.location.href = '/pfms';
+        } else {
+            console.error('❌ Server denied access:', data.message);
+            alert('❌ ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error:', error);
+        alert('❌ Failed to verify PFMS access. Please try again.');
+    });
+    */
+}
 </script>
 
 

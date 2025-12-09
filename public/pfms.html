@@ -4,6 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Finance Management System (PFMS)</title>
+    <script>
+    // ============================================
+    // PFMS SECURITY CHECK - FRONTEND PROTECTION
+    // ============================================
+    
+    // ✅ Immediately check for authentication
+    (function() {
+        console.log('🔐 PFMS Page Security Check Started...');
+        
+        // Get token from multiple sources
+        const token = 
+            localStorage.getItem('authToken') ||
+            localStorage.getItem('token') ||
+            sessionStorage.getItem('token');
+        
+        if (!token || !token.startsWith('eyJ')) {
+            console.error('❌ UNAUTHORIZED ACCESS ATTEMPT');
+            console.error('   No valid token found');
+            
+            // Show alert and redirect
+            alert('⚠️ Unauthorized Access!\n\nYou must login through Admin page first.');
+            
+            // Redirect to admin login
+            window.location.href = '/admin.html?redirect=pfms&error=unauthorized';
+            
+            return;
+        }
+        
+        console.log('✅ Token validation passed');
+        console.log('   Token (first 30 chars):', token.substring(0, 30) + '...');
+        
+    })();
+</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -552,5 +585,117 @@
     <hr style="border: none; border-top: 1px solid #333; margin: 30px 0;">
 
     <script src="pfms.js"></script>
+    <!-- ✅ PASTE THIS SECURITY CODE HERE (BEFORE </body>) -->
+    <script>
+    // ============================================
+    // PFMS SECURITY - BACKEND PROTECTION
+    // ============================================
+
+    // Get auth token
+    function getAuthToken() {
+        const token = 
+            localStorage.getItem('authToken') ||
+            localStorage.getItem('token') ||
+            sessionStorage.getItem('token');
+        
+        if (!token || !token.startsWith('eyJ')) {
+            console.error('❌ No valid token found');
+            return null;
+        }
+        
+        return token;
+    }
+
+    // Check authentication on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = getAuthToken();
+        
+        // ✅ SECURITY CHECK #1: Token existence
+        if (!token) {
+            console.error('🚨 SECURITY ALERT: No authentication token found!');
+            
+            // Show security warning
+            document.body.innerHTML = `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    font-family: Arial, sans-serif;
+                    color: white;
+                ">
+                    <div style="text-align: center; background: rgba(0,0,0,0.3); padding: 40px; border-radius: 10px;">
+                        <h1 style="margin: 0; font-size: 2.5em;">🔒 Access Denied</h1>
+                        <p style="font-size: 1.2em; margin: 20px 0;">Unauthorized access attempt detected</p>
+                        <p style="margin: 20px 0;">Please login through the Admin page first</p>
+                        <button onclick="window.location.href='/admin.html'" style="
+                            padding: 10px 30px;
+                            font-size: 1em;
+                            background: white;
+                            color: #667eea;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">
+                            Go to Admin Login
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Redirect after 3 seconds
+            setTimeout(() => {
+                window.location.href = '/admin.html?error=unauthorized';
+            }, 3000);
+            
+            return;
+        }
+        
+        console.log('✅ Token validation successful');
+        console.log('✅ PFMS page access GRANTED');
+    });
+
+    // ✅ SECURITY CHECK #2: API calls must include token
+    async function apiCall(url, options = {}) {
+        const token = getAuthToken();
+        
+        if (!token) {
+            console.error('❌ No token for API call');
+            alert('Session expired. Redirecting to login...');
+            window.location.href = '/admin.html';
+            return null;
+        }
+        
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+        
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+            
+            const data = await response.json();
+            
+            // Check for 401 Unauthorized
+            if (response.status === 401) {
+                console.error('❌ Token expired (401)');
+                localStorage.clear();
+                window.location.href = '/admin.html?error=session_expired';
+                return null;
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ API call error:', error);
+            return null;
+        }
+    }
+    </script>
 </body>
 </html>

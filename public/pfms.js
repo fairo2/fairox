@@ -2327,3 +2327,26 @@ async function loadOverviewSummary() {
         showMessage('Error loading overview data', 'error');
     }
 }
+
+// ============================================
+// LOGOUT FUNCTION
+// ============================================
+function logout() {
+    console.log('👋 Logging out from PFMS...');
+    
+    // Clear all storage
+    try {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
+        localStorage.removeItem('pfmsTheme');
+        localStorage.removeItem('pfmsPrivacyMode');
+        
+        sessionStorage.removeItem('token');
+        sessionStorage.clear();
+    } catch (error) {
+        console.error('Error clearing storage:', error.message);
+    }
+    
+    // Redirect to login page
+    window.location.href = '/admin.html';
+}

@@ -15,6 +15,7 @@ const cron = require('node-cron');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const pfmsProtectionRoutes = require('./routes/pfms-protection');
 
 
 // Load environment variables
@@ -105,6 +106,8 @@ const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 // IMPORT ROUTES (CORRECT WAY)
 // ============================================
 
+// ✅ 1. Mount protection routes FIRST (highest priority)
+app.use('/', pfmsProtectionRoutes);
 
 // ✅ Import route ROUTER objects (not middleware)
 const authRoutes = require('./routes/auth');

@@ -349,10 +349,8 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-
     // ✅ Step 2: Get authorization header
     const authHeader = req.headers.authorization;
-
 
     if (!authHeader) {
       console.log('❌ No authorization header provided');
@@ -362,10 +360,8 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-
     // ✅ Step 3: Parse Bearer token
     const parts = authHeader.split(' ');
-
 
     if (parts.length !== 2) {
       console.log('❌ Invalid authorization header format');
@@ -375,7 +371,6 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-
     if (parts[0] !== 'Bearer') {
       console.log('❌ Invalid authentication scheme');
       return res.status(401).json({
@@ -384,9 +379,7 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-
     const token = parts[1];
-
 
     if (!token || typeof token !== 'string') {
       console.log('❌ Invalid token format');
@@ -395,7 +388,6 @@ const authMiddleware = (req, res, next) => {
         message: 'Invalid token format'
       });
     }
-
 
     // ✅ Step 4: Verify JWT signature and expiration
     let decoded;
@@ -418,10 +410,8 @@ const authMiddleware = (req, res, next) => {
       throw jwtError;
     }
 
-
     // ✅ Step 5: Extract and validate user ID
     const userId = decoded.id || decoded.userId;
-
 
     if (!userId) {
       console.log('❌ No user ID in token');
@@ -431,14 +421,11 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-
     // ✅ Step 6: Optional session validation (if sessionId provided)
     const sessionId = req.headers['x-session-id'];
 
-
     if (sessionId) {
       const sessionValidation = validateSession(userId, sessionId);
-
 
       if (!sessionValidation.valid) {
         console.log(`❌ Session invalid: ${sessionValidation.reason}`);
@@ -449,7 +436,6 @@ const authMiddleware = (req, res, next) => {
         });
       }
 
-
       // Send warning header if session expiring soon
       if (sessionValidation.warningNeeded) {
         res.set('X-Session-Warning', 'EXPIRING_SOON');
@@ -457,7 +443,6 @@ const authMiddleware = (req, res, next) => {
         console.log(`⚠️ Session warning sent for user ${userId} - ${sessionValidation.remainingTime}s remaining`);
       }
     }
-
 
     // ✅ Step 7: Attach user to request
     req.user = {
@@ -468,17 +453,13 @@ const authMiddleware = (req, res, next) => {
       iat: decoded.iat
     };
 
-
     req.userId = userId;
 
-
     console.log(`✅ Authentication successful for user: ${userId}`);
-
 
     next();
   } catch (error) {
     console.error('❌ Authentication error:', error.name, '-', error.message);
-
 
     return res.status(401).json({
       success: false,
