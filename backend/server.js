@@ -239,7 +239,13 @@ app.get('/admin.html', (req, res) => {
 });
 
 
-app.get('/pfms.html', (req, res) => {
+app.get('/pfms.html', authMiddleware, (req, res) => {
+  if (!req.user) {
+    console.warn('❌ Unauthorized PFMS access attempt');
+    return res.status(401).redirect('/admin.html?error=unauthorized');
+  }
+  
+  console.log(`✅ PFMS access granted to user: ${req.user.email}`);
   res.sendFile(path.join(__dirname, '../public/pfms.html'));
 });
 

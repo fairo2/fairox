@@ -5,38 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Finance Management System (PFMS)</title>
     <script>
-    // ============================================
-    // PFMS SECURITY CHECK - FRONTEND PROTECTION
-    // ============================================
+// ============================================
+// STRICT SECURITY CHECK
+// ============================================
+(function() {
+    console.log('🔐 PFMS Security Check');
     
-    // ✅ Immediately check for authentication
-    (function() {
-        console.log('🔐 PFMS Page Security Check Started...');
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    
+    if (!token || !token.startsWith('eyJ')) {
+        console.error('❌ NO VALID TOKEN');
+        window.location.href = '/admin.html?error=unauthorized';
+        return;
+    }
+    
+    // ✅ Validate JWT expiry
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000);
         
-        // Get token from multiple sources
-        const token = 
-            localStorage.getItem('authToken') ||
-            localStorage.getItem('token') ||
-            sessionStorage.getItem('token');
-        
-        if (!token || !token.startsWith('eyJ')) {
-            console.error('❌ UNAUTHORIZED ACCESS ATTEMPT');
-            console.error('   No valid token found');
-            
-            // Show alert and redirect
-            alert('⚠️ Unauthorized Access!\n\nYou must login through Admin page first.');
-            
-            // Redirect to admin login
-            window.location.href = '/admin.html?redirect=pfms&error=unauthorized';
-            
+        if (payload.exp && payload.exp < now) {
+            console.error('❌ TOKEN EXPIRED');
+            localStorage.clear();
+            window.location.href = '/admin.html?error=session_expired';
             return;
         }
         
-        console.log('✅ Token validation passed');
-        console.log('   Token (first 30 chars):', token.substring(0, 30) + '...');
-        
-    })();
+        console.log('✅ Token valid');
+    } catch (e) {
+        console.error('❌ Token error:', e);
+        localStorage.clear();
+        window.location.href = '/admin.html?error=unauthorized';
+    }
+})();
 </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
